@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Component, ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom';
 import { 
   collection, 
   query, 
@@ -1025,7 +1025,7 @@ function BaseballApp() {
           <div className="w-20 h-20 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg rotate-3">
             <Trophy size={40} />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Baseball Lineup Pro</h1>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Lineup+</h1>
           <p className="text-slate-600 mb-8">Organize your team, manage your roster, and win the game.</p>
           <button 
             onClick={handleLogin}
@@ -1047,7 +1047,7 @@ function BaseballApp() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 font-bold text-xl">
               <Trophy className="text-slate-900" size={24} />
-              <span>Lineup Pro</span>
+              <span>Lineup+</span>
             </div>
             <nav className="hidden md:flex items-center gap-1">
               <button 
@@ -2150,9 +2150,9 @@ function BaseballApp() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <HashRouter>
         <BaseballApp />
-      </BrowserRouter>
+      </HashRouter>
     </ErrorBoundary>
   );
 }

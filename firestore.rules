@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: players
+    // Document ID: {playerId}
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //   - positions: list (required, strings 1-50 chars)
+    //   - battingOrder: number (optional, 1-15)
+    //   - uid: string (required, matches auth.uid)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: games
+    // Document ID: {gameId}
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //   - date: timestamp (required)
+    //   - rsvps: map (required, player ID to RSVP status)
+    //   - uid: string (required, matches auth.uid)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidPlayer(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.positions is list && data.positions.size() > 0 && data.positions.size() <= 10 &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.createdAt is timestamp &&
+             (!('battingOrder' in data) || (data.battingOrder is int && data.battingOrder >= 1 && data.battingOrder <= 15));
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email.lower() == "tylercarringtonwa@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidSettings(data) {
+      return (data.uid == request.auth.uid || !('uid' in data)) &&
+             (!('allowAnyOutfielder' in data) || data.allowAnyOutfielder is bool) &&
+             (!('allowDesignatedHitter' in data) || data.allowDesignatedHitter is bool);
+    }
+
+    function isValidGame(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.date is timestamp &&
+             data.rsvps is map &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.createdAt is timestamp &&
+             (!('battingOrder' in data) || data.battingOrder is list) &&
+             (!('isLocked' in data) || data.isLocked is bool);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /players/{playerId} {
+      // Users can only read their own players
+      allow read: if (isAuthenticated() && request.auth.uid == resource.data.uid) || isAdmin();
+      
+      // Users can create players for themselves
+      allow create: if isAuthenticated() && 
+                      isValidPlayer(request.resource.data) && 
+                      uidUnchanged() &&
+                      hasRequiredFields(['name', 'positions', 'uid', 'createdAt']);
+      
+      // Users can update their own players
+      allow update: if (isDocOwner() || isAdmin()) && 
+                      isValidPlayer(request.resource.data) && 
+                      uidNotModified();
+      
+      // Users can delete their own players
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /settings/{userId} {
+      allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
+      allow create: if (isAuthenticated() && request.auth.uid == userId) && isValidSettings(request.resource.data);
+      allow update: if (isAuthenticated() && request.auth.uid == userId) && isValidSettings(request.resource.data);
+    }
+
+    match /games/{gameId} {
+      allow read: if (isAuthenticated() && request.auth.uid == resource.data.uid) || isAdmin();
+      allow create: if isAuthenticated() && 
+                      isValidGame(request.resource.data) && 
+                      uidUnchanged() &&
+                      hasRequiredFields(['name', 'date', 'rsvps', 'uid', 'createdAt']);
+      allow update: if (isDocOwner() || isAdmin()) && 
+                      isValidGame(request.resource.data) && 
+                      uidNotModified();
+      allow delete: if isDocOwner() || isAdmin();
+    }
+  }
+}

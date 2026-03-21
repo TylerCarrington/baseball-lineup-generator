@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "Player": {
+      "title": "Player",
+      "description": "A baseball player in the lineup.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The player's full name."
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The player's positions."
+        },
+        "battingOrder": {
+          "type": "integer",
+          "description": "The player's position in the batting lineup."
+        },
+        "uid": {
+          "type": "string",
+          "description": "The ID of the user who added the player."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the player was added."
+        }
+      },
+      "required": ["name", "positions", "uid", "createdAt"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Team-level settings.",
+      "type": "object",
+      "properties": {
+        "allowAnyOutfielder": {
+          "type": "boolean",
+          "description": "Whether to allow 'Any Outfielder' as a position."
+        },
+        "allowDesignatedHitter": {
+          "type": "boolean",
+          "description": "Whether to allow 'Designated Hitter' as a position."
+        },
+        "avoidOutfieldTwiceInRow": {
+          "type": "boolean",
+          "description": "Whether to avoid assigning the same player to an outfield position in consecutive innings."
+        },
+        "uid": {
+          "type": "string",
+          "description": "The ID of the user who owns these settings."
+        }
+      },
+      "required": ["allowAnyOutfielder", "allowDesignatedHitter", "uid"]
+    },
+    "Game": {
+      "title": "Game",
+      "description": "A scheduled baseball game.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the game."
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time of the game."
+        },
+        "rsvps": {
+          "type": "object",
+          "description": "A map of player IDs to their RSVP status."
+        },
+        "battingOrder": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The ordered list of player IDs for the batting lineup."
+        },
+        "lineup": {
+          "type": "object",
+          "description": "A map of innings to positions to player IDs."
+        },
+        "isLocked": {
+          "type": "boolean",
+          "description": "Whether the game lineup and batting order are locked."
+        },
+        "uid": {
+          "type": "string",
+          "description": "The ID of the user who created the game."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the game was created."
+        }
+      },
+      "required": ["name", "date", "rsvps", "uid", "createdAt"]
+    }
+  },
+  "firestore": {
+    "players/{playerId}": {
+      "schema": "Player",
+      "description": "Collection of baseball players."
+    },
+    "settings/{userId}": {
+      "schema": "Settings",
+      "description": "Team-level settings for a user."
+    },
+    "games/{gameId}": {
+      "schema": "Game",
+      "description": "Collection of scheduled baseball games."
+    }
+  }
+}

@@ -34,7 +34,7 @@ async function testConnection() {
 }
 testConnection();
 
-import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Types ---
@@ -180,6 +180,27 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
+// --- Helper Functions ---
+
+const getPositionAbbreviation = (pos: string) => {
+  const mapping: Record<string, string> = {
+    "Starting Pitcher": "SP",
+    "Relief Pitcher": "RP",
+    "Pitcher": "P",
+    "Catcher": "C",
+    "First Base": "1B",
+    "Second Base": "2B",
+    "Third Base": "3B",
+    "Shortstop": "SS",
+    "Left Field": "LF",
+    "Center Field": "CF",
+    "Right Field": "RF",
+    "Any Outfielder": "OF",
+    "Designated Hitter": "DH"
+  };
+  return mapping[pos] || pos;
+};
+
 // --- Main App Component ---
 
 function BaseballApp() {
@@ -189,6 +210,7 @@ function BaseballApp() {
   const [loading, setLoading] = useState(true);
   
   // Lineup Creation State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreatingLineup, setIsCreatingLineup] = useState(false);
   const [gameName, setGameName] = useState('');
   const [gameDate, setGameDate] = useState(new Date().toISOString().split('T')[0]);
@@ -993,14 +1015,67 @@ function BaseballApp() {
               <span>{user.displayName}</span>
             </div>
             <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 text-slate-500 hover:text-slate-900 transition-colors"
+              title="Menu"
+            >
+              <Menu size={20} />
+            </button>
+            <button 
               onClick={handleLogout}
-              className="p-2 text-slate-500 hover:text-slate-900 transition-colors"
+              className="hidden md:flex p-2 text-slate-500 hover:text-slate-900 transition-colors"
               title="Logout"
             >
               <LogOut size={20} />
             </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="md:hidden border-t border-slate-100 overflow-hidden bg-white"
+            >
+              <div className="p-4 flex flex-col gap-2">
+                <button 
+                  onClick={() => { setActiveTab('roster'); setIsMobileMenuOpen(false); }}
+                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'roster' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                >
+                  Roster
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('games'); setIsMobileMenuOpen(false); }}
+                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'games' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                >
+                  Games
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}
+                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                >
+                  Settings
+                </button>
+                <div className="sm:hidden border-t border-slate-100 mt-2 pt-2 px-4 flex items-center gap-2 text-sm text-slate-600">
+                  <UserIcon size={16} />
+                  <span>{user.displayName}</span>
+                </div>
+                <div className="border-t border-slate-100 mt-2 pt-2">
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-rose-500 hover:bg-rose-50 transition-colors flex items-center gap-2"
+                  >
+                    <LogOut size={18} />
+                    Log Out
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
@@ -1015,9 +1090,9 @@ function BaseballApp() {
             >
               <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
                 <div className="p-8 border-b border-slate-100 bg-slate-50/50">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
                     <div>
-                      <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
+                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
                         {games.find(g => g.id === selectedGameId)?.name || 'Game Details'}
                       </h2>
                       <p className="text-slate-500 mt-1">
@@ -1028,7 +1103,7 @@ function BaseballApp() {
                           return gameDateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
                         })()}
                       </p>
-                      <div className="flex items-center gap-2 mt-4">
+                      <div className="flex flex-wrap items-center gap-2 mt-4">
                         {(() => {
                           const game = games.find(g => g.id === selectedGameId);
                           if (!game) return null;
@@ -1075,11 +1150,11 @@ function BaseballApp() {
                 </div>
 
                 <div className="p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex bg-slate-100 p-1 rounded-2xl gap-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                    <div className="flex bg-slate-100 p-1 rounded-2xl gap-1 w-full sm:w-auto">
                       <button 
                         onClick={() => setGameViewTab('batting')}
-                        className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
+                        className={`flex-1 sm:flex-none px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
                           gameViewTab === 'batting' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                         }`}
                       >
@@ -1088,7 +1163,7 @@ function BaseballApp() {
                       </button>
                       <button 
                         onClick={() => setGameViewTab('lineup')}
-                        className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
+                        className={`flex-1 sm:flex-none px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
                           gameViewTab === 'lineup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                         }`}
                       >
@@ -1096,7 +1171,7 @@ function BaseballApp() {
                         Field Lineup
                       </button>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 justify-end">
                       {(() => {
                         const game = games.find(g => g.id === selectedGameId);
                         if (!game) return null;
@@ -1192,15 +1267,7 @@ function BaseballApp() {
                                         let position = "Bench";
                                         for (const [pos, pId] of Object.entries(inningLineup)) {
                                           if (pId === playerId) {
-                                            position = pos === "Shortstop" ? "SS" : 
-                                                       pos === "Pitcher" ? "P" :
-                                                       pos === "Catcher" ? "C" :
-                                                       pos === "First Base" ? "1B" :
-                                                       pos === "Second Base" ? "2B" :
-                                                       pos === "Third Base" ? "3B" :
-                                                       pos === "Left Field" ? "LF" :
-                                                       pos === "Center Field" ? "CF" :
-                                                       pos === "Right Field" ? "RF" : pos;
+                                            position = getPositionAbbreviation(pos);
                                             break;
                                           }
                                         }
@@ -1573,9 +1640,14 @@ function BaseballApp() {
 
             {/* Right Column: Player List */}
             <div className={isAddingPlayer ? "lg:col-span-2" : "lg:col-span-1"}>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
+              <div className="mb-6 space-y-4">
+                <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-slate-900">Team Roster</h2>
+                  <span className="px-3 py-1 bg-slate-200 text-slate-700 rounded-full text-xs font-bold">
+                    {players.length} / 15 Players
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
                   <button 
                     onClick={() => setIsAddingPlayer(!isAddingPlayer)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-sm font-semibold border ${
@@ -1595,9 +1667,6 @@ function BaseballApp() {
                     Add Game
                   </button>
                 </div>
-                <span className="px-3 py-1 bg-slate-200 text-slate-700 rounded-full text-xs font-bold">
-                  {players.length} / 15 Players
-                </span>
               </div>
 
               <div className="space-y-3">
@@ -1673,8 +1742,8 @@ function BaseballApp() {
                               <h3 className="font-bold text-slate-900">{player.name}</h3>
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {(player.positions || []).map(pos => (
-                                  <span key={pos} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-semibold">
-                                    {pos}
+                                  <span key={pos} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider">
+                                    {getPositionAbbreviation(pos)}
                                   </span>
                                 ))}
                               </div>

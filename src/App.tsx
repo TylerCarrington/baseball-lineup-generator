@@ -64,6 +64,8 @@ interface Game {
   battingOrder?: string[];
   lineup?: Record<string, Record<string, string>>; // Inning -> Position -> PlayerId
   isLocked?: boolean;
+  lockedInnings?: number[];
+  lockedPositions?: string[];
   uid: string;
   createdAt: any;
 }
@@ -363,39 +365,69 @@ function SharedView() {
       <main className="max-w-5xl mx-auto px-4 py-8">
         <AnimatePresence mode="wait">
           {gameId && selectedGame ? (
-            <motion.div
-              key="game-detail"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <button 
-                onClick={() => navigate(`/shared/${ownerId}/games`)}
-                className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm mb-6 transition-colors"
+            !selectedGame.isLocked ? (
+              <motion.div
+                key="game-not-published"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="max-w-xl mx-auto"
               >
-                <ChevronLeft size={18} />
-                Back to Schedule
-              </button>
+                <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm">
+                  <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
+                    <Lock size={32} className="text-slate-300" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">Lineup Not Published</h3>
+                  <p className="text-slate-500 mb-8 max-w-xs mx-auto">
+                    The lineup for this game is still being finalized. Please check back later.
+                  </p>
+                  <button 
+                    onClick={() => navigate(`/shared/${ownerId}/games`)}
+                    className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all"
+                  >
+                    Back to Schedule
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="game-detail"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                <button 
+                  onClick={() => navigate(`/shared/${ownerId}/games`)}
+                  className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm mb-6 transition-colors"
+                >
+                  <ChevronLeft size={18} />
+                  Back to Schedule
+                </button>
 
-              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden mb-8">
-                <div className="p-6 sm:p-8 bg-slate-900 text-white">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h2 className="text-2xl sm:text-3xl font-black tracking-tight">{selectedGame.name}</h2>
-                      <div className="flex items-center gap-2 text-slate-400 mt-1">
-                        <Calendar size={16} />
-                        <span className="text-sm font-medium">
-                          {(() => {
-                            const date = selectedGame.date;
-                            if (!date) return 'No Date';
-                            const d = date.toDate ? date.toDate() : new Date(date);
-                            return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                          })()}
-                        </span>
+                <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden mb-8">
+                  <div className="p-6 sm:p-8 bg-slate-900 text-white">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="px-2 py-0.5 bg-emerald-500 text-white rounded text-[10px] font-bold uppercase tracking-wider">
+                            Published
+                          </span>
+                          <h2 className="text-2xl sm:text-3xl font-black tracking-tight">{selectedGame.name}</h2>
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-400 mt-1">
+                          <Calendar size={16} />
+                          <span className="text-sm font-medium">
+                            {(() => {
+                              const date = selectedGame.date;
+                              if (!date) return 'No Date';
+                              const d = date.toDate ? date.toDate() : new Date(date);
+                              return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                            })()}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
                 <div className="p-6 sm:p-8">
                   {/* Tabs */}
@@ -499,7 +531,8 @@ function SharedView() {
                 </div>
               </div>
             </motion.div>
-          ) : (
+          )
+        ) : (
             <motion.div
               key="schedule-list"
               initial={{ opacity: 0, y: 20 }}
@@ -521,15 +554,32 @@ function SharedView() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {games.map((game) => {
                     const gameDate = game.date?.toDate ? game.date.toDate() : new Date(game.date);
+                    const isPublished = game.isLocked || false;
+                    
                     return (
                       <button
                         key={game.id}
-                        onClick={() => navigate(`/shared/${ownerId}/games/${game.id}`)}
-                        className="group bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-slate-900 transition-all text-left relative overflow-hidden"
+                        onClick={() => {
+                          if (isPublished) {
+                            navigate(`/shared/${ownerId}/games/${game.id}`);
+                          }
+                        }}
+                        className={`group bg-white p-6 rounded-3xl border border-slate-200 shadow-sm transition-all text-left relative overflow-hidden ${
+                          isPublished 
+                            ? 'hover:shadow-xl hover:border-slate-900 cursor-pointer' 
+                            : 'opacity-70 cursor-default'
+                        }`}
                       >
-                        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ChevronRight size={20} className="text-slate-900" />
-                        </div>
+                        {!isPublished && (
+                          <div className="absolute top-3 right-3 px-2 py-0.5 bg-slate-100 text-slate-400 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200">
+                            Draft
+                          </div>
+                        )}
+                        {isPublished && (
+                          <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ChevronRight size={20} className="text-slate-400" />
+                          </div>
+                        )}
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 bg-slate-100 rounded-2xl flex flex-col items-center justify-center shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-colors">
                             <span className="text-[10px] font-black uppercase tracking-tighter opacity-50">
@@ -930,7 +980,7 @@ function BaseballApp() {
     if (!game) return;
 
     if (game.isLocked) {
-      alert("This game is locked. Please unlock it to reshuffle the batting order.");
+      alert("This game is published. Please unpublish it to reshuffle the batting order.");
       return;
     }
 
@@ -954,7 +1004,7 @@ function BaseballApp() {
     if (!game) return;
 
     if (game.isLocked) {
-      alert("This game is locked. Please unlock it to regenerate the lineup.");
+      alert("This game is published. Please unpublish it to regenerate the lineup.");
       return;
     }
 
@@ -984,6 +1034,8 @@ function BaseballApp() {
     const sortedPositions = [...fieldPositions].sort((a, b) => rarity[a] - rarity[b]);
 
     const lineup: Record<string, Record<string, string>> = {};
+    const lockedInnings = game.lockedInnings || [];
+    const lockedPositions = game.lockedPositions || [];
     let lastBenched: Set<string> = new Set();
     const previousPitchers: Set<string> = new Set();
     const benchCounts: Record<string, number> = {};
@@ -991,114 +1043,181 @@ function BaseballApp() {
 
     for (let inning = 1; inning <= 6; inning++) {
       const inningKey = inning.toString();
-      lineup[inningKey] = {};
+      const isLocked = lockedInnings.includes(inning);
       const assignedThisInning: Set<string> = new Set();
 
-      // Helper to pick candidate with highest bench count
-      const pickBestCandidate = (candidates: Player[]) => {
-        if (candidates.length === 0) return null;
-        const maxBench = Math.max(...candidates.map(p => benchCounts[p.id]));
-        const topCandidates = candidates.filter(p => benchCounts[p.id] === maxBench);
-        return topCandidates[Math.floor(Math.random() * topCandidates.length)];
-      };
-
-      // 1. Handle Pitcher (Special Rules)
-      let pitcherId = "";
-      if (inning === 1 || inning === 2) {
-        // Starting Pitcher for 2 innings
-        if (inning === 1) {
-          const starters = availablePlayers.filter(p => p.positions.includes("Starting Pitcher"));
-          const pool = starters.length > 0 ? starters : availablePlayers.filter(p => canPlay(p, "Pitcher"));
-          pitcherId = pickBestCandidate(pool)?.id || pool[0].id;
-          previousPitchers.add(pitcherId);
-        } else {
-          pitcherId = lineup["1"]["Pitcher"];
+      if (isLocked && game.lineup?.[inningKey]) {
+        // Use existing data for locked inning
+        lineup[inningKey] = { ...game.lineup[inningKey] };
+        Object.values(lineup[inningKey]).forEach(playerId => {
+          assignedThisInning.add(playerId);
+        });
+        
+        // Update previousPitchers if needed
+        if (lineup[inningKey]["Pitcher"]) {
+          previousPitchers.add(lineup[inningKey]["Pitcher"]);
         }
       } else {
-        // Relief Pitchers for 1 inning each
-        const relievers = availablePlayers.filter(p => p.positions.includes("Relief Pitcher") && !previousPitchers.has(p.id));
-        const pool = relievers.length > 0 ? relievers : availablePlayers.filter(p => canPlay(p, "Pitcher") && !previousPitchers.has(p.id));
-        
-        // Prioritize those benched last inning if possible
-        const filteredPool = pool.filter(p => lastBenched.has(p.id));
-        const finalPool = filteredPool.length > 0 ? filteredPool : pool;
-        
-        const selected = pickBestCandidate(finalPool);
-        if (selected) {
-          pitcherId = selected.id;
-          previousPitchers.add(pitcherId);
-        } else {
-          // Absolute fallback if everyone has pitched (unlikely but safe)
-          pitcherId = availablePlayers[Math.floor(Math.random() * availablePlayers.length)].id;
-        }
-      }
+        // Generate new data for unlocked inning
+        lineup[inningKey] = {};
 
-      lineup[inningKey]["Pitcher"] = pitcherId;
-      assignedThisInning.add(pitcherId);
-
-      // 2. Assign other positions based on rarity
-      const remainingPositions = sortedPositions.filter(pos => pos !== "Pitcher");
-      
-      // Players available for other positions this inning
-      let pool = availablePlayers.filter(p => p.id !== pitcherId);
-
-      for (const pos of remainingPositions) {
-        // Find players who can play this position
-        let candidates = pool.filter(p => canPlay(p, pos) && !assignedThisInning.has(p.id));
-        
-        // Apply Catcher constraints
-        if (pos === "Catcher") {
-          candidates = candidates.filter(p => {
-            // 1. Max 4 innings in a game
-            let totalCaught = 0;
-            for (let i = 1; i < inning; i++) {
-              if (lineup[i.toString()]["Catcher"] === p.id) totalCaught++;
+        // Pre-assign ALL locked positions for this inning first
+        fieldPositions.forEach(pos => {
+          if (lockedPositions.includes(pos) && game.lineup?.[inningKey]?.[pos]) {
+            const pId = game.lineup[inningKey][pos];
+            lineup[inningKey][pos] = pId;
+            assignedThisInning.add(pId);
+            if (pos === "Pitcher") {
+              previousPitchers.add(pId);
             }
-            if (totalCaught >= 4) return false;
+          }
+        });
 
-            // 2. Max 2 innings in a row
-            if (inning > 2) {
-              const caughtLast = lineup[(inning - 1).toString()]["Catcher"] === p.id;
-              const caughtTwoAgo = lineup[(inning - 2).toString()]["Catcher"] === p.id;
-              if (caughtLast && caughtTwoAgo) return false;
+        // Helper to pick candidate with highest bench count
+        const pickBestCandidate = (candidates: Player[]) => {
+          // Filter out players already assigned this inning (including locked positions)
+          const filteredCandidates = candidates.filter(p => !assignedThisInning.has(p.id));
+          if (filteredCandidates.length === 0) return null;
+          const maxBench = Math.max(...filteredCandidates.map(p => benchCounts[p.id]));
+          const topCandidates = filteredCandidates.filter(p => benchCounts[p.id] === maxBench);
+          return topCandidates[Math.floor(Math.random() * topCandidates.length)];
+        };
+
+        // 1. Handle Pitcher (Special Rules)
+        if (!lineup[inningKey]["Pitcher"]) {
+          let pitcherId = "";
+          if (inning === 1 || inning === 2) {
+            // Starting Pitcher for 2 innings
+            if (inning === 1) {
+              const starters = availablePlayers.filter(p => p.positions.includes("Starting Pitcher"));
+              const pool = starters.length > 0 ? starters : availablePlayers.filter(p => canPlay(p, "Pitcher"));
+              pitcherId = pickBestCandidate(pool)?.id || pool.filter(p => !assignedThisInning.has(p.id))[0]?.id;
+              if (pitcherId) previousPitchers.add(pitcherId);
+            } else {
+              // If inning 1 was locked, we should still try to match its pitcher if possible
+              pitcherId = lineup["1"]?.["Pitcher"] || "";
+              // Ensure the pitcher from inning 1 isn't locked in another position in inning 2
+              if (pitcherId && assignedThisInning.has(pitcherId)) {
+                pitcherId = "";
+              }
+              
+              if (!pitcherId) {
+                const starters = availablePlayers.filter(p => p.positions.includes("Starting Pitcher"));
+                const pool = starters.length > 0 ? starters : availablePlayers.filter(p => canPlay(p, "Pitcher"));
+                pitcherId = pickBestCandidate(pool)?.id || pool.filter(p => !assignedThisInning.has(p.id))[0]?.id;
+              }
             }
+          } else {
+            // Relief Pitchers for 1 inning each
+            const relievers = availablePlayers.filter(p => p.positions.includes("Relief Pitcher") && !previousPitchers.has(p.id));
+            const pool = relievers.length > 0 ? relievers : availablePlayers.filter(p => canPlay(p, "Pitcher") && !previousPitchers.has(p.id));
             
-            return true;
-          });
-        }
-
-        // Apply "Avoid Outfield Twice in Row" logic (default behavior)
-        if (!settings?.allowOutfieldTwiceInRow && (pos === "Left Field" || pos === "Center Field" || pos === "Right Field")) {
-          const outfieldPositions = ["Left Field", "Center Field", "Right Field"];
-          const prevInningKey = (inning - 1).toString();
-          const prevLineup = inning > 1 ? lineup[prevInningKey] : null;
-          
-          if (prevLineup) {
-            // Avoid players who played outfield last inning
-            const filteredNoRepeat = candidates.filter(p => {
-              const playedOutfieldLastInning = outfieldPositions.some(op => prevLineup[op] === p.id);
-              return !playedOutfieldLastInning;
-            });
+            // Prioritize those benched last inning if possible
+            const filteredPool = pool.filter(p => lastBenched.has(p.id));
+            const finalPool = filteredPool.length > 0 ? filteredPool : pool;
             
-            if (filteredNoRepeat.length > 0) {
-              candidates = filteredNoRepeat;
+            const selected = pickBestCandidate(finalPool);
+            if (selected) {
+              pitcherId = selected.id;
+              previousPitchers.add(pitcherId);
+            } else {
+              // Absolute fallback if everyone has pitched (unlikely but safe)
+              const fallbackPool = availablePlayers.filter(p => !assignedThisInning.has(p.id));
+              pitcherId = fallbackPool[Math.floor(Math.random() * fallbackPool.length)]?.id;
             }
+          }
+
+          if (pitcherId) {
+            lineup[inningKey]["Pitcher"] = pitcherId;
+            assignedThisInning.add(pitcherId);
           }
         }
 
-        if (candidates.length === 0) {
-          // Fallback: anyone who isn't assigned (to avoid empty spots if roster is tight/restricted)
-          candidates = pool.filter(p => !assignedThisInning.has(p.id));
-        }
-
-        // Prioritize players who were benched last inning (MUST play)
-        const mustPlay = candidates.filter(p => lastBenched.has(p.id));
-        const finalCandidates = mustPlay.length > 0 ? mustPlay : candidates;
+        // 2. Assign other positions based on rarity
+        const remainingPositions = sortedPositions.filter(pos => pos !== "Pitcher");
         
-        const selected = pickBestCandidate(finalCandidates);
-        if (selected) {
-          lineup[inningKey][pos] = selected.id;
-          assignedThisInning.add(selected.id);
+        // Players available for other positions this inning
+        let pool = availablePlayers.filter(p => !assignedThisInning.has(p.id));
+
+        for (const pos of remainingPositions) {
+          if (lineup[inningKey][pos]) continue; // Already assigned because it was locked
+
+          // Find players who can play this position
+          let candidates = pool.filter(p => canPlay(p, pos) && !assignedThisInning.has(p.id));
+          
+          // Apply Catcher constraints
+          if (pos === "Catcher") {
+            candidates = candidates.filter(p => {
+              // 1. Max 4 innings in a game
+              let totalCaught = 0;
+              for (let i = 1; i < inning; i++) {
+                if (lineup[i.toString()]["Catcher"] === p.id) totalCaught++;
+              }
+              if (totalCaught >= 4) return false;
+
+              // 2. Max 2 innings in a row
+              if (inning > 2) {
+                const caughtLast = lineup[(inning - 1).toString()]["Catcher"] === p.id;
+                const caughtTwoAgo = lineup[(inning - 2).toString()]["Catcher"] === p.id;
+                if (caughtLast && caughtTwoAgo) return false;
+              }
+
+              // 3. Cannot catch if already pitched 2 innings in the game
+              let totalPitched = 0;
+              for (let i = 1; i < inning; i++) {
+                if (lineup[i.toString()]["Pitcher"] === p.id) totalPitched++;
+              }
+              if (totalPitched >= 2) return false;
+
+              // 4. Cannot catch then pitch then catch again
+              let hasCaughtBefore = false;
+              let hasPitchedAfterCatching = false;
+              for (let i = 1; i < inning; i++) {
+                if (lineup[i.toString()]["Catcher"] === p.id) {
+                  hasCaughtBefore = true;
+                } else if (hasCaughtBefore && lineup[i.toString()]["Pitcher"] === p.id) {
+                  hasPitchedAfterCatching = true;
+                }
+              }
+              if (hasCaughtBefore && hasPitchedAfterCatching) return false;
+              
+              return true;
+            });
+          }
+
+          // Apply "Avoid Outfield Twice in Row" logic (default behavior)
+          if (!settings?.allowOutfieldTwiceInRow && (pos === "Left Field" || pos === "Center Field" || pos === "Right Field")) {
+            const outfieldPositions = ["Left Field", "Center Field", "Right Field"];
+            const prevInningKey = (inning - 1).toString();
+            const prevLineup = inning > 1 ? lineup[prevInningKey] : null;
+            
+            if (prevLineup) {
+              // Avoid players who played outfield last inning
+              const filteredNoRepeat = candidates.filter(p => {
+                const playedOutfieldLastInning = outfieldPositions.some(op => prevLineup[op] === p.id);
+                return !playedOutfieldLastInning;
+              });
+              
+              if (filteredNoRepeat.length > 0) {
+                candidates = filteredNoRepeat;
+              }
+            }
+          }
+
+          if (candidates.length === 0) {
+            // Fallback: anyone who isn't assigned (to avoid empty spots if roster is tight/restricted)
+            candidates = pool.filter(p => !assignedThisInning.has(p.id));
+          }
+
+          // Prioritize players who were benched last inning (MUST play)
+          const mustPlay = candidates.filter(p => lastBenched.has(p.id));
+          const finalCandidates = mustPlay.length > 0 ? mustPlay : candidates;
+          
+          const selected = pickBestCandidate(finalCandidates);
+          if (selected) {
+            lineup[inningKey][pos] = selected.id;
+            assignedThisInning.add(selected.id);
+          }
         }
       }
 
@@ -1122,180 +1241,53 @@ function BaseballApp() {
     }
   };
 
-  const handleGenerateInning = async (gameId: string | null, targetInning: number) => {
-    if (!gameId) return;
+  const handleTogglePositionLock = async (gameId: string, position: string) => {
     const game = games.find(g => g.id === gameId);
     if (!game) return;
 
-    if (game.isLocked) {
-      alert("This game is locked. Please unlock it to regenerate the inning.");
-      return;
-    }
-
-    const availablePlayers = players.filter(p => game.rsvps[p.id] !== RSVPStatus.NO);
-    if (availablePlayers.length < 8) {
-      alert("At least 8 players are required to generate a lineup.");
-      return;
-    }
-
-    const fieldPositions = [
-      "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
-      "Shortstop", "Left Field", "Center Field", "Right Field"
-    ];
-
-    const canPlay = (player: Player, pos: string) => {
-      if (pos === "Pitcher") return player.positions.includes("Starting Pitcher") || player.positions.includes("Relief Pitcher");
-      return player.positions.includes(pos);
-    };
-
-    // Calculate position rarity
-    const rarity: Record<string, number> = {};
-    fieldPositions.forEach(pos => {
-      rarity[pos] = availablePlayers.filter(p => canPlay(p, pos)).length;
-    });
-    const sortedPositions = [...fieldPositions].sort((a, b) => rarity[a] - rarity[b]);
-
-    const currentLineup = { ...(game.lineup || {}) };
-    
-    // Calculate constraints from PREVIOUS innings
-    let lastBenched: Set<string> = new Set();
-    const previousPitchers: Set<string> = new Set();
-    const totalCaught: Record<string, number> = {};
-    const benchCounts: Record<string, number> = {};
-    availablePlayers.forEach(p => benchCounts[p.id] = 0);
-
-    for (let i = 1; i < targetInning; i++) {
-      const inningKey = i.toString();
-      const inningData = currentLineup[inningKey] || {};
-      const assignedIds = Object.values(inningData);
-      
-      // Bench
-      lastBenched = new Set();
-      availablePlayers.forEach(p => {
-        if (!assignedIds.includes(p.id)) {
-          lastBenched.add(p.id);
-          benchCounts[p.id]++;
-        }
-      });
-
-      // Pitchers
-      if (inningData["Pitcher"]) previousPitchers.add(inningData["Pitcher"]);
-
-      // Catchers
-      if (inningData["Catcher"]) {
-        totalCaught[inningData["Catcher"]] = (totalCaught[inningData["Catcher"]] || 0) + 1;
-      }
-    }
-
-    // Helper to pick candidate with highest bench count
-    const pickBestCandidate = (candidates: Player[]) => {
-      if (candidates.length === 0) return null;
-      const maxBench = Math.max(...candidates.map(p => benchCounts[p.id]));
-      const topCandidates = candidates.filter(p => benchCounts[p.id] === maxBench);
-      return topCandidates[Math.floor(Math.random() * topCandidates.length)];
-    };
-
-    // Special case for Inning 2: must match Inning 1 pitcher
-    let pitcherId = "";
-    if (targetInning === 2) {
-      pitcherId = currentLineup["1"]?.["Pitcher"] || "";
-      if (!pitcherId) {
-         alert("Please generate Inning 1 first.");
-         return;
-      }
-    } else if (targetInning === 1) {
-       const starters = availablePlayers.filter(p => p.positions.includes("Starting Pitcher"));
-       const pool = starters.length > 0 ? starters : availablePlayers.filter(p => canPlay(p, "Pitcher"));
-       pitcherId = pickBestCandidate(pool)?.id || pool[0].id;
+    const currentLocked = game.lockedPositions || [];
+    let newLocked: string[];
+    if (currentLocked.includes(position)) {
+      newLocked = currentLocked.filter(p => p !== position);
     } else {
-       // Relief Pitchers
-       const relievers = availablePlayers.filter(p => p.positions.includes("Relief Pitcher") && !previousPitchers.has(p.id));
-       const pool = relievers.length > 0 ? relievers : availablePlayers.filter(p => canPlay(p, "Pitcher") && !previousPitchers.has(p.id));
-       
-       // Prioritize those benched last inning if possible
-       const filteredPool = pool.filter(p => lastBenched.has(p.id));
-       const finalPool = filteredPool.length > 0 ? filteredPool : pool;
-       
-       pitcherId = pickBestCandidate(finalPool)?.id || availablePlayers[Math.floor(Math.random() * availablePlayers.length)].id;
-    }
-
-    const newInningLineup: Record<string, string> = {};
-    newInningLineup["Pitcher"] = pitcherId;
-    const assignedThisInning: Set<string> = new Set([pitcherId]);
-
-    const remainingPositions = sortedPositions.filter(pos => pos !== "Pitcher");
-    let pool = availablePlayers.filter(p => p.id !== pitcherId);
-
-    for (const pos of remainingPositions) {
-      let candidates = pool.filter(p => canPlay(p, pos) && !assignedThisInning.has(p.id));
-      
-      if (pos === "Catcher") {
-        candidates = candidates.filter(p => {
-          if ((totalCaught[p.id] || 0) >= 4) return false;
-          if (targetInning > 2) {
-            const caughtLast = currentLineup[(targetInning - 1).toString()]?.["Catcher"] === p.id;
-            const caughtTwoAgo = currentLineup[(targetInning - 2).toString()]?.["Catcher"] === p.id;
-            if (caughtLast && caughtTwoAgo) return false;
-          }
-          return true;
-        });
-      }
-
-      // Apply "Avoid Outfield Twice in Row" logic (default behavior)
-      if (!settings?.allowOutfieldTwiceInRow && (pos === "Left Field" || pos === "Center Field" || pos === "Right Field")) {
-        const outfieldPositions = ["Left Field", "Center Field", "Right Field"];
-        const prevLineup = targetInning > 1 ? currentLineup[(targetInning - 1).toString()] : null;
-        if (prevLineup) {
-          const filteredNoRepeat = candidates.filter(p => !outfieldPositions.some(op => prevLineup[op] === p.id));
-          if (filteredNoRepeat.length > 0) candidates = filteredNoRepeat;
-        }
-      }
-
-      if (candidates.length === 0) candidates = pool.filter(p => !assignedThisInning.has(p.id));
-      const mustPlay = candidates.filter(p => lastBenched.has(p.id));
-      const finalCandidates = mustPlay.length > 0 ? mustPlay : candidates;
-      
-      const selected = pickBestCandidate(finalCandidates);
-      if (selected) {
-        newInningLineup[pos] = selected.id;
-        assignedThisInning.add(selected.id);
-      }
-    }
-
-    currentLineup[targetInning.toString()] = newInningLineup;
-
-    if (targetInning === 1 && currentLineup["2"]) {
-      currentLineup["2"]["Pitcher"] = pitcherId;
+      newLocked = [...currentLocked, position];
     }
 
     try {
-      await updateDoc(doc(db, 'games', gameId), { lineup: currentLineup });
+      await updateDoc(doc(db, 'games', gameId), {
+        lockedPositions: newLocked
+      });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
     }
   };
 
-  const handleToggleLock = async (gameId: string, currentStatus: boolean) => {
+  const handleToggleInningLock = async (gameId: string, inning: number) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    const currentLocked = game.lockedInnings || [];
+    let newLocked: number[];
+    if (currentLocked.includes(inning)) {
+      newLocked = currentLocked.filter(i => i !== inning);
+    } else {
+      newLocked = [...currentLocked, inning];
+    }
+
+    try {
+      await updateDoc(doc(db, 'games', gameId), {
+        lockedInnings: newLocked
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+    }
+  };
+
+  const handleTogglePublish = async (gameId: string, currentStatus: boolean) => {
     try {
       await updateDoc(doc(db, 'games', gameId), {
         isLocked: !currentStatus
       });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
-    }
-  };
-
-  const handleSwapInnings = async (gameId: string, inningA: number, inningB: number) => {
-    const game = games.find(g => g.id === gameId);
-    if (!game || !game.lineup || game.isLocked) return;
-
-    const newLineup = { ...game.lineup };
-    const temp = newLineup[inningA.toString()];
-    newLineup[inningA.toString()] = newLineup[inningB.toString()];
-    newLineup[inningB.toString()] = temp;
-
-    try {
-      await updateDoc(doc(db, 'games', gameId), { lineup: newLineup });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
     }
@@ -1583,15 +1575,15 @@ function BaseballApp() {
                           return (
                             <>
                               <button 
-                                onClick={() => handleToggleLock(game.id, isLocked)}
+                                onClick={() => handleTogglePublish(game.id, isLocked)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-sm font-semibold border ${
                                   isLocked 
-                                    ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
                                     : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                                 }`}
                               >
-                                {isLocked ? <Unlock size={16} /> : <Lock size={16} />}
-                                {isLocked ? 'Unlock' : 'Lock'}
+                                {isLocked ? <RotateCcw size={16} /> : <Check size={16} />}
+                                {isLocked ? 'Unpublish' : 'Publish'}
                               </button>
                               <button 
                                 onClick={() => {
@@ -1757,9 +1749,14 @@ function BaseballApp() {
                                             break;
                                           }
                                         }
+                                        const isBench = position === "Bench";
                                         return (
-                                          <span key={inning} className="text-[9px] font-bold text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-100">
-                                            <span className="text-slate-300 mr-1">{inning}</span>
+                                          <span key={inning} className={`text-[9px] font-bold px-1.5 py-0.5 rounded border transition-colors ${
+                                            isBench 
+                                              ? 'text-amber-600 bg-amber-50 border-amber-100' 
+                                              : 'text-slate-500 bg-white border-slate-100'
+                                          }`}>
+                                            <span className={`${isBench ? 'text-amber-300' : 'text-slate-300'} mr-1`}>{inning}</span>
                                             {position}
                                           </span>
                                         );
@@ -1812,9 +1809,9 @@ function BaseballApp() {
                               <div className="flex items-center gap-3">
                                 <h3 className="text-xl font-bold text-slate-900">Field Lineup</h3>
                                 {isLocked && (
-                                  <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-bold uppercase tracking-wider">
-                                    <Lock size={10} />
-                                    Locked
+                                  <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold uppercase tracking-wider">
+                                    <Check size={10} />
+                                    Published
                                   </span>
                                 )}
                               </div>
@@ -1829,33 +1826,15 @@ function BaseballApp() {
                                       <th key={inning} className="text-center py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
                                         <div className="flex flex-col items-center gap-1">
                                           <div className="flex items-center gap-1">
-                                            {inning > 1 && !isLocked && (
-                                              <button 
-                                                onClick={() => handleSwapInnings(selectedGameId, inning, inning - 1)}
-                                                className="p-0.5 text-slate-300 hover:text-slate-900 transition-colors"
-                                                title="Move Left"
-                                              >
-                                                <ChevronLeft size={10} />
-                                              </button>
-                                            )}
                                             <span>Inn {inning}</span>
-                                            {inning < 6 && !isLocked && (
-                                              <button 
-                                                onClick={() => handleSwapInnings(selectedGameId, inning, inning + 1)}
-                                                className="p-0.5 text-slate-300 hover:text-slate-900 transition-colors"
-                                                title="Move Right"
-                                              >
-                                                <ChevronRight size={10} />
-                                              </button>
-                                            )}
                                           </div>
                                           {!isLocked && (
                                             <button 
-                                              onClick={() => handleGenerateInning(selectedGameId, inning)}
-                                              className="p-1 text-slate-300 hover:text-slate-900 transition-colors"
-                                              title={`Regenerate Inning ${inning}`}
+                                              onClick={() => handleToggleInningLock(selectedGameId, inning)}
+                                              className={`p-1 rounded transition-colors ${game.lockedInnings?.includes(inning) ? 'text-emerald-600 bg-emerald-50' : 'text-slate-300 hover:text-slate-900'}`}
+                                              title={game.lockedInnings?.includes(inning) ? "Unlock Inning" : "Lock Inning"}
                                             >
-                                              <RefreshCw size={10} />
+                                              {game.lockedInnings?.includes(inning) ? <Lock size={12} /> : <Unlock size={12} />}
                                             </button>
                                           )}
                                         </div>
@@ -1867,8 +1846,19 @@ function BaseballApp() {
                                 {fieldPositions.map(pos => (
                                   <tr key={pos} className="group hover:bg-slate-50/50">
                                     <td className="py-4 px-4 border-b border-slate-50 font-bold text-slate-900 text-sm">
-                                      <span className="sm:hidden">{getPositionAbbreviation(pos)}</span>
-                                      <span className="hidden sm:inline">{pos}</span>
+                                      <div className="flex items-center gap-2">
+                                        {!isLocked && (
+                                          <button 
+                                            onClick={() => handleTogglePositionLock(selectedGameId, pos)}
+                                            className={`p-1 rounded transition-colors ${game.lockedPositions?.includes(pos) ? 'text-emerald-600 bg-emerald-50' : 'text-slate-300 hover:text-slate-900'}`}
+                                            title={game.lockedPositions?.includes(pos) ? "Unlock Position" : "Lock Position"}
+                                          >
+                                            {game.lockedPositions?.includes(pos) ? <Lock size={12} /> : <Unlock size={12} />}
+                                          </button>
+                                        )}
+                                        <span className="sm:hidden">{getPositionAbbreviation(pos)}</span>
+                                        <span className="hidden sm:inline">{pos}</span>
+                                      </div>
                                     </td>
                                     {[1, 2, 3, 4, 5, 6].map(inning => {
                                       const playerId = game.lineup?.[inning.toString()]?.[pos];

@@ -117,7 +117,7 @@ service cloud.firestore {
 
     match /settings/{userId} {
       allow read: if (isAuthenticated() && request.auth.uid == userId) || 
-                   isPublicSchedule(userId) || 
+                   (resource != null && resource.data.publicSchedule == true) || 
                    isAdmin();
       allow create: if (isAuthenticated() && request.auth.uid == userId) && isValidSettings(request.resource.data);
       allow update: if (isAuthenticated() && request.auth.uid == userId) && isValidSettings(request.resource.data);

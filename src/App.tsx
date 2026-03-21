@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Component, ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom';
 import { 
   collection, 
   query, 
@@ -202,6 +203,8 @@ const getPositionAbbreviation = (pos: string) => {
 // --- Main App Component ---
 
 function BaseballApp() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [settings, setSettings] = useState<TeamSettings | null>(null);
@@ -243,6 +246,39 @@ function BaseballApp() {
   const [editGameDate, setEditGameDate] = useState('');
   const [gameViewTab, setGameViewTab] = useState<'batting' | 'lineup'>('batting');
   const [games, setGames] = useState<Game[]>([]);
+
+  // Sync state with URL
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/') {
+      navigate('/games', { replace: true });
+    } else if (path === '/games') {
+      setActiveTab('games');
+      setSelectedGameId(null);
+      setIsCreatingLineup(false);
+    } else if (path.startsWith('/games/')) {
+      setActiveTab('games');
+      const gameId = path.split('/games/')[1];
+      if (gameId === 'new') {
+        setSelectedGameId(null);
+        setIsCreatingLineup(true);
+      } else {
+        setSelectedGameId(gameId);
+        setIsCreatingLineup(false);
+      }
+    } else if (path === '/roster') {
+      setActiveTab('roster');
+      setSelectedGameId(null);
+    } else if (path === '/settings') {
+      setActiveTab('settings');
+      setSelectedGameId(null);
+    }
+  }, [location.pathname, navigate]);
+
+  const handleTabChange = (tab: 'roster' | 'games' | 'settings') => {
+    navigate(`/${tab}`);
+    setIsMobileMenuOpen(false);
+  };
 
   const POSITIONS = [
     "Starting Pitcher",
@@ -392,6 +428,7 @@ function BaseballApp() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      navigate('/games');
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -405,7 +442,7 @@ function BaseballApp() {
     setPlayerRSVPs(initialRSVPs);
     setGameName('');
     setGameDate(new Date().toISOString().split('T')[0]);
-    setIsCreatingLineup(true);
+    navigate('/games/new');
   };
 
   const handleRSVPChange = (playerId: string, status: RSVPStatus) => {
@@ -435,10 +472,9 @@ function BaseballApp() {
         uid: user.uid,
         createdAt: serverTimestamp()
       });
-      setIsCreatingLineup(false);
+      navigate('/games');
       setGameName('');
       setGameDate(new Date().toISOString().split('T')[0]);
-      setActiveTab('games');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'games');
     }
@@ -463,7 +499,7 @@ function BaseballApp() {
       }
     }
 
-    setSelectedGameId(gameId);
+    navigate(`/games/${gameId}`);
     setIsEditingRSVPs(false);
     setGameViewTab('batting');
   };
@@ -926,7 +962,7 @@ function BaseballApp() {
         await deleteDoc(doc(db, 'players', id));
       } else {
         await deleteDoc(doc(db, 'games', id));
-        if (selectedGameId === id) setSelectedGameId(null);
+        if (selectedGameId === id) navigate('/games');
       }
       setDeleteConfirmation(prev => ({ ...prev, isOpen: false }));
     } catch (error) {
@@ -1015,19 +1051,19 @@ function BaseballApp() {
             </div>
             <nav className="hidden md:flex items-center gap-1">
               <button 
-                onClick={() => setActiveTab('roster')}
+                onClick={() => handleTabChange('roster')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'roster' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
               >
                 Roster
               </button>
               <button 
-                onClick={() => setActiveTab('games')}
+                onClick={() => handleTabChange('games')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'games' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
               >
                 Games
               </button>
               <button 
-                onClick={() => setActiveTab('settings')}
+                onClick={() => handleTabChange('settings')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
               >
                 Settings
@@ -1067,19 +1103,19 @@ function BaseballApp() {
             >
               <div className="p-4 flex flex-col gap-2">
                 <button 
-                  onClick={() => { setActiveTab('roster'); setIsMobileMenuOpen(false); }}
+                  onClick={() => handleTabChange('roster')}
                   className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'roster' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
                 >
                   Roster
                 </button>
                 <button 
-                  onClick={() => { setActiveTab('games'); setIsMobileMenuOpen(false); }}
+                  onClick={() => handleTabChange('games')}
                   className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'games' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
                 >
                   Games
                 </button>
                 <button 
-                  onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}
+                  onClick={() => handleTabChange('settings')}
                   className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
                 >
                   Settings
@@ -1207,7 +1243,7 @@ function BaseballApp() {
                       </div>
                     </div>
                     <button 
-                      onClick={() => setSelectedGameId(null)}
+                      onClick={() => navigate('/games')}
                       className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl transition-all border border-transparent hover:border-slate-200"
                     >
                       <X size={24} />
@@ -1502,7 +1538,7 @@ function BaseballApp() {
 
                 <div className="p-8 bg-slate-50 border-t border-slate-100">
                   <button 
-                    onClick={() => setSelectedGameId(null)}
+                    onClick={() => navigate('/games')}
                     className="w-full py-4 bg-white text-slate-600 border border-slate-200 rounded-2xl font-bold hover:bg-slate-100 transition-all active:scale-[0.98]"
                   >
                     Back to Schedule
@@ -1526,7 +1562,7 @@ function BaseballApp() {
                       <p className="text-sm sm:text-base text-slate-500 mt-1">Set player availability for this game</p>
                     </div>
                     <button 
-                      onClick={() => setIsCreatingLineup(false)}
+                      onClick={() => navigate('/games')}
                       className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl transition-all border border-transparent hover:border-slate-200"
                     >
                       <X size={24} />
@@ -1607,7 +1643,7 @@ function BaseballApp() {
                     Add Game
                   </button>
                   <button 
-                    onClick={() => setIsCreatingLineup(false)}
+                    onClick={() => navigate('/games')}
                     className="flex-1 py-4 bg-white text-slate-600 border border-slate-200 rounded-2xl font-bold hover:bg-slate-100 transition-all active:scale-[0.98]"
                   >
                     Cancel
@@ -2114,7 +2150,9 @@ function BaseballApp() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <BaseballApp />
+      <BrowserRouter>
+        <BaseballApp />
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

@@ -204,8 +204,14 @@ const getPositionAbbreviation = (pos: string) => {
 // --- Shared View Component ---
 
 function SharedView() {
-  const { ownerId, gameId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  
+  // Manually parse params since SharedView is rendered directly by BaseballApp
+  const pathParts = location.pathname.split('/');
+  const ownerId = pathParts[2];
+  const gameId = pathParts[4];
+  
   const [games, setGames] = useState<Game[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [settings, setSettings] = useState<TeamSettings | null>(null);
@@ -213,7 +219,12 @@ function SharedView() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!ownerId) return;
+    console.log("SharedView mounted, ownerId:", ownerId);
+    if (!ownerId) {
+      setError("Invalid share link.");
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -221,8 +232,10 @@ function SharedView() {
     // 1. Fetch Settings to check if publicSchedule is enabled
     const settingsRef = doc(db, 'settings', ownerId);
     const unsubSettings = onSnapshot(settingsRef, (snapshot) => {
+      console.log("Settings snapshot received, exists:", snapshot.exists());
       if (snapshot.exists()) {
         const data = snapshot.data() as TeamSettings;
+        console.log("Settings data:", data);
         if (data.publicSchedule) {
           setSettings({ id: snapshot.id, ...data });
         } else {
@@ -235,7 +248,7 @@ function SharedView() {
       }
     }, (err) => {
       console.error("Error fetching settings:", err);
-      setError("Unable to load schedule.");
+      setError("Unable to load schedule. Please check the link.");
       setLoading(false);
     });
 
@@ -245,6 +258,7 @@ function SharedView() {
   useEffect(() => {
     if (!settings || !ownerId) return;
 
+    console.log("Fetching games for owner:", ownerId);
     // 2. Fetch Games
     const gamesQuery = query(
       collection(db, 'games'),
@@ -252,6 +266,7 @@ function SharedView() {
       orderBy('date', 'desc')
     );
     const unsubGames = onSnapshot(gamesQuery, (snapshot) => {
+      console.log("Games snapshot received, count:", snapshot.size);
       const gamesData: Game[] = [];
       snapshot.forEach((doc) => {
         gamesData.push({ id: doc.id, ...doc.data() } as Game);

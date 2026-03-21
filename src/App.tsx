@@ -34,7 +34,7 @@ async function testConnection() {
 }
 testConnection();
 
-import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, Menu, Calendar, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Types ---
@@ -49,9 +49,8 @@ interface Player {
 
 interface TeamSettings {
   id?: string;
-  allowAnyOutfielder: boolean;
   allowDesignatedHitter: boolean;
-  avoidOutfieldTwiceInRow: boolean;
+  allowOutfieldTwiceInRow: boolean;
   uid: string;
 }
 
@@ -195,7 +194,6 @@ const getPositionAbbreviation = (pos: string) => {
     "Left Field": "LF",
     "Center Field": "CF",
     "Right Field": "RF",
-    "Any Outfielder": "OF",
     "Designated Hitter": "DH"
   };
   return mapping[pos] || pos;
@@ -227,6 +225,22 @@ function BaseballApp() {
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [isEditingRSVPs, setIsEditingRSVPs] = useState(false);
+  const [showPastGames, setShowPastGames] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    type: 'player' | 'game';
+    id: string;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: 'player',
+    id: '',
+    title: '',
+    message: ''
+  });
+  const [editGameName, setEditGameName] = useState('');
+  const [editGameDate, setEditGameDate] = useState('');
   const [gameViewTab, setGameViewTab] = useState<'batting' | 'lineup'>('batting');
   const [games, setGames] = useState<Game[]>([]);
 
@@ -244,7 +258,6 @@ function BaseballApp() {
   ];
 
   const ALL_POSITIONS = [
-    ...(settings?.allowAnyOutfielder ? ["Any Outfielder"] : []),
     ...POSITIONS,
     ...(settings?.allowDesignatedHitter ? ["Designated Hitter"] : [])
   ];
@@ -252,18 +265,6 @@ function BaseballApp() {
   const togglePosition = (pos: string, isEdit: boolean) => {
     const update = (prev: string[]) => {
       let next = prev.includes(pos) ? prev.filter(p => p !== pos) : [...prev, pos];
-      
-      // Special logic for Any Outfielder
-      if (pos === "Any Outfielder") {
-        if (next.includes("Any Outfielder")) {
-          // Add all OF positions
-          next = Array.from(new Set([...next, "Left Field", "Center Field", "Right Field"]));
-        } else {
-          // Remove all OF positions? Or just Any Outfielder?
-          // User said "enable Right, Left, and Center Field by default when set to true"
-          // Let's just keep it simple.
-        }
-      }
       return next;
     };
 
@@ -349,11 +350,10 @@ function BaseballApp() {
       if (snapshot.exists()) {
         const data = snapshot.data();
         // Migration: Ensure all fields exist
-        if (data.allowDesignatedHitter === undefined || data.allowAnyOutfielder === undefined || data.avoidOutfieldTwiceInRow === undefined) {
+        if (data.allowDesignatedHitter === undefined || data.allowOutfieldTwiceInRow === undefined) {
           updateDoc(settingsDocRef, {
-            allowAnyOutfielder: data.allowAnyOutfielder ?? false,
             allowDesignatedHitter: data.allowDesignatedHitter ?? false,
-            avoidOutfieldTwiceInRow: data.avoidOutfieldTwiceInRow ?? false,
+            allowOutfieldTwiceInRow: data.allowOutfieldTwiceInRow ?? false,
             uid: user.uid
           });
         }
@@ -363,9 +363,8 @@ function BaseballApp() {
         const createDefault = async () => {
           try {
             await setDoc(settingsDocRef, {
-              allowAnyOutfielder: false,
               allowDesignatedHitter: false,
-              avoidOutfieldTwiceInRow: false,
+              allowOutfieldTwiceInRow: false,
               uid: user.uid
             });
           } catch (error) {
@@ -497,6 +496,20 @@ function BaseballApp() {
     }
   };
 
+  const handleUpdateGameDetails = async () => {
+    if (!selectedGameId || !editGameName.trim()) return;
+    try {
+      const gameRef = doc(db, 'games', selectedGameId);
+      await updateDoc(gameRef, {
+        name: editGameName.trim(),
+        date: new Date(editGameDate + 'T12:00:00')
+      });
+      setIsEditingRSVPs(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${selectedGameId}`);
+    }
+  };
+
   const handleReshuffleLineup = async (gameId: string | null) => {
     if (!gameId) return;
     const game = games.find(g => g.id === gameId);
@@ -544,9 +557,6 @@ function BaseballApp() {
 
     const canPlay = (player: Player, pos: string) => {
       if (pos === "Pitcher") return player.positions.includes("Starting Pitcher") || player.positions.includes("Relief Pitcher");
-      if (pos === "Left Field" || pos === "Center Field" || pos === "Right Field") {
-        return player.positions.includes(pos) || player.positions.includes("Any Outfielder");
-      }
       return player.positions.includes(pos);
     };
 
@@ -643,8 +653,8 @@ function BaseballApp() {
           });
         }
 
-        // Apply "Avoid Outfield Twice in Row" logic
-        if (settings?.avoidOutfieldTwiceInRow && (pos === "Left Field" || pos === "Center Field" || pos === "Right Field")) {
+        // Apply "Avoid Outfield Twice in Row" logic (default behavior)
+        if (!settings?.allowOutfieldTwiceInRow && (pos === "Left Field" || pos === "Center Field" || pos === "Right Field")) {
           const outfieldPositions = ["Left Field", "Center Field", "Right Field"];
           const prevInningKey = (inning - 1).toString();
           const prevLineup = inning > 1 ? lineup[prevInningKey] : null;
@@ -721,9 +731,6 @@ function BaseballApp() {
 
     const canPlay = (player: Player, pos: string) => {
       if (pos === "Pitcher") return player.positions.includes("Starting Pitcher") || player.positions.includes("Relief Pitcher");
-      if (pos === "Left Field" || pos === "Center Field" || pos === "Right Field") {
-        return player.positions.includes(pos) || player.positions.includes("Any Outfielder");
-      }
       return player.positions.includes(pos);
     };
 
@@ -820,7 +827,8 @@ function BaseballApp() {
         });
       }
 
-      if (settings?.avoidOutfieldTwiceInRow && (pos === "Left Field" || pos === "Center Field" || pos === "Right Field")) {
+      // Apply "Avoid Outfield Twice in Row" logic (default behavior)
+      if (!settings?.allowOutfieldTwiceInRow && (pos === "Left Field" || pos === "Center Field" || pos === "Right Field")) {
         const outfieldPositions = ["Left Field", "Center Field", "Right Field"];
         const prevLineup = targetInning > 1 ? currentLineup[(targetInning - 1).toString()] : null;
         if (prevLineup) {
@@ -901,11 +909,28 @@ function BaseballApp() {
     }
   };
 
-  const handleDeletePlayer = async (id: string) => {
+  const handleDeletePlayer = (player: Player) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      type: 'player',
+      id: player.id,
+      title: 'Delete Player',
+      message: `Are you sure you want to delete ${player.name}? This will remove them from the roster and all future game lineups.`
+    });
+  };
+
+  const confirmDelete = async () => {
+    const { type, id } = deleteConfirmation;
     try {
-      await deleteDoc(doc(db, 'players', id));
+      if (type === 'player') {
+        await deleteDoc(doc(db, 'players', id));
+      } else {
+        await deleteDoc(doc(db, 'games', id));
+        if (selectedGameId === id) setSelectedGameId(null);
+      }
+      setDeleteConfirmation(prev => ({ ...prev, isOpen: false }));
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `players/${id}`);
+      handleFirestoreError(error, OperationType.DELETE, `${type}s/${id}`);
     }
   };
 
@@ -1091,18 +1116,45 @@ function BaseballApp() {
               <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
                 <div className="p-8 border-b border-slate-100 bg-slate-50/50">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
-                    <div>
-                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                        {games.find(g => g.id === selectedGameId)?.name || 'Game Details'}
-                      </h2>
-                      <p className="text-slate-500 mt-1">
-                        {(() => {
-                          const game = games.find(g => g.id === selectedGameId);
-                          if (!game) return '';
-                          const gameDateObj = game.date?.toDate ? game.date.toDate() : new Date(game.date);
-                          return gameDateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-                        })()}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      {isEditingRSVPs ? (
+                        <div className="space-y-4 max-w-md">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Game Name</label>
+                            <input 
+                              type="text" 
+                              value={editGameName}
+                              onChange={(e) => setEditGameName(e.target.value)}
+                              className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-slate-900 shadow-sm"
+                              placeholder="Game Name"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Game Date</label>
+                            <input 
+                              type="date" 
+                              value={editGameDate}
+                              onChange={(e) => setEditGameDate(e.target.value)}
+                              className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-slate-900 shadow-sm"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight truncate">
+                            {games.find(g => g.id === selectedGameId)?.name || 'Game Details'}
+                          </h2>
+                          <p className="text-slate-500 mt-1 flex items-center gap-2">
+                            <Calendar size={16} className="text-slate-400" />
+                            {(() => {
+                              const game = games.find(g => g.id === selectedGameId);
+                              if (!game) return '';
+                              const gameDateObj = game.date?.toDate ? game.date.toDate() : new Date(game.date);
+                              return gameDateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+                            })()}
+                          </p>
+                        </>
+                      )}
                       <div className="flex flex-wrap items-center gap-2 mt-4">
                         {(() => {
                           const game = games.find(g => g.id === selectedGameId);
@@ -1122,18 +1174,32 @@ function BaseballApp() {
                                 {isLocked ? 'Unlock' : 'Lock'}
                               </button>
                               <button 
-                                onClick={() => !isLocked && setIsEditingRSVPs(!isEditingRSVPs)}
+                                onClick={() => {
+                                  if (!isLocked) {
+                                    if (isEditingRSVPs) {
+                                      handleUpdateGameDetails();
+                                    } else {
+                                      const game = games.find(g => g.id === selectedGameId);
+                                      if (game) {
+                                        setEditGameName(game.name);
+                                        const dateStr = game.date?.toDate ? game.date.toDate().toISOString().split('T')[0] : new Date(game.date).toISOString().split('T')[0];
+                                        setEditGameDate(dateStr);
+                                      }
+                                      setIsEditingRSVPs(true);
+                                    }
+                                  }
+                                }}
                                 disabled={isLocked}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-sm font-semibold border ${
                                   isLocked
                                     ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'
                                     : isEditingRSVPs 
-                                      ? 'bg-slate-900 text-white border-slate-900' 
+                                      ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20' 
                                       : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
                                 }`}
                               >
-                                <Edit2 size={16} />
-                                {isEditingRSVPs ? 'Finish' : 'Edit RSVPs'}
+                                {isEditingRSVPs ? <Save size={16} /> : <Edit2 size={16} />}
+                                {isEditingRSVPs ? 'Save' : 'Edit'}
                               </button>
                             </>
                           );
@@ -1211,7 +1277,7 @@ function BaseballApp() {
                                   </div>
                                   <div>
                                     <p className="font-bold text-slate-900">{player.name}</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{(player.positions || []).join(', ')}</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
                                   </div>
                                 </div>
                                 <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
@@ -1280,7 +1346,7 @@ function BaseballApp() {
                                       })}
                                     </div>
                                   ) : (
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{(player.positions || []).join(', ')}</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
                                   )}
                                 </div>
                               </div>
@@ -1380,7 +1446,10 @@ function BaseballApp() {
                               <tbody>
                                 {fieldPositions.map(pos => (
                                   <tr key={pos} className="group hover:bg-slate-50/50">
-                                    <td className="py-4 px-4 border-b border-slate-50 font-bold text-slate-900 text-sm">{pos}</td>
+                                    <td className="py-4 px-4 border-b border-slate-50 font-bold text-slate-900 text-sm">
+                                      <span className="sm:hidden">{getPositionAbbreviation(pos)}</span>
+                                      <span className="hidden sm:inline">{pos}</span>
+                                    </td>
                                     {[1, 2, 3, 4, 5, 6].map(inning => {
                                       const playerId = game.lineup?.[inning.toString()]?.[pos];
                                       const player = players.find(p => p.id === playerId);
@@ -1447,14 +1516,14 @@ function BaseballApp() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="max-w-3xl mx-auto"
+              className="max-w-3xl mx-auto px-4 sm:px-0"
             >
               <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-                <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+                <div className="p-6 sm:p-8 border-b border-slate-100 bg-slate-50/50">
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Add New Game</h2>
-                      <p className="text-slate-500 mt-1">Set player availability for this game</p>
+                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Add New Game</h2>
+                      <p className="text-sm sm:text-base text-slate-500 mt-1">Set player availability for this game</p>
                     </div>
                     <button 
                       onClick={() => setIsCreatingLineup(false)}
@@ -1464,30 +1533,30 @@ function BaseballApp() {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div className="space-y-2">
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Game Name</label>
+                      <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Game Name</label>
                       <input 
                         type="text" 
                         value={gameName}
                         onChange={(e) => setGameName(e.target.value)}
                         placeholder="e.g. May 20th - Vipers"
-                        className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all text-lg font-medium"
+                        className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all text-base sm:text-lg font-medium"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Game Date</label>
+                      <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Game Date</label>
                       <input 
                         type="date" 
                         value={gameDate}
                         onChange={(e) => setGameDate(e.target.value)}
-                        className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all text-lg font-medium"
+                        className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all text-base sm:text-lg font-medium"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="p-8">
+                <div className="p-6 sm:p-8">
                   <div className="flex items-center justify-between mb-4 px-2">
                     <h3 className="font-bold text-slate-900">Player RSVP</h3>
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{players.length} Total</span>
@@ -1495,23 +1564,23 @@ function BaseballApp() {
 
                   <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                     {[...players].sort((a, b) => a.name.localeCompare(b.name)).map((player) => (
-                      <div key={player.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-slate-200 transition-all">
+                      <div key={player.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-slate-200 transition-all gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-900 font-bold border border-slate-200">
+                          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-900 font-bold border border-slate-200 shrink-0">
                             {player.name.charAt(0)}
                           </div>
-                          <div>
-                            <p className="font-bold text-slate-900">{player.name}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{(player.positions || []).join(', ')}</p>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 truncate">{player.name}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
                           </div>
                         </div>
 
-                        <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
                           {[RSVPStatus.YES, RSVPStatus.TENTATIVE, RSVPStatus.NO].map((status) => (
                             <button
                               key={status}
                               onClick={() => handleRSVPChange(player.id, status)}
-                              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
                                 playerRSVPs[player.id] === status
                                   ? status === RSVPStatus.YES 
                                     ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
@@ -1530,7 +1599,7 @@ function BaseballApp() {
                   </div>
                 </div>
 
-                <div className="p-8 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row gap-4">
+                <div className="p-6 sm:p-8 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <button 
                     onClick={handleCreateGame}
                     className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-[0.98]"
@@ -1613,7 +1682,7 @@ function BaseballApp() {
                               onChange={() => togglePosition(pos, false)}
                               className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
                             />
-                            <span className="text-sm text-slate-700">{pos}</span>
+                            <span className="text-sm text-slate-700">{pos} <span className="text-[10px] font-bold text-slate-400">({getPositionAbbreviation(pos)})</span></span>
                           </label>
                         ))}
                       </div>
@@ -1728,7 +1797,7 @@ function BaseballApp() {
                                     onChange={() => togglePosition(pos, true)}
                                     className="w-3 h-3 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
                                   />
-                                  <span className="text-xs text-slate-600">{pos}</span>
+                                  <span className="text-xs text-slate-600">{pos} <span className="text-[9px] font-bold text-slate-400">({getPositionAbbreviation(pos)})</span></span>
                                 </label>
                               ))}
                             </div>
@@ -1776,7 +1845,7 @@ function BaseballApp() {
                                 <Edit2 size={18} />
                               </button>
                               <button 
-                                onClick={() => handleDeletePlayer(player.id)}
+                                onClick={() => handleDeletePlayer(player)}
                                 className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                               >
                                 <Trash2 size={18} />
@@ -1793,37 +1862,76 @@ function BaseballApp() {
           </div>
         ) : activeTab === 'games' ? (
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
               <div>
-                <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Game Schedule</h2>
-                <p className="text-slate-500 mt-1">Manage your upcoming games and lineups</p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Game Schedule</h2>
+                <p className="text-sm sm:text-base text-slate-500 mt-1">Manage your {showPastGames ? 'past' : 'upcoming'} games and lineups</p>
               </div>
-              <button 
-                onClick={startCreateLineup}
-                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-all font-bold shadow-lg shadow-slate-900/20 active:scale-[0.95]"
-              >
-                <Plus size={20} />
-                New Game
-              </button>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button 
+                  onClick={() => setShowPastGames(!showPastGames)}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl transition-all font-bold border flex-1 sm:flex-none ${
+                    showPastGames 
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/20' 
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <History size={18} />
+                  {showPastGames ? 'Showing Past' : 'Show Past'}
+                </button>
+                <button 
+                  onClick={startCreateLineup}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-all font-bold shadow-lg shadow-slate-900/20 active:scale-[0.95] flex-1 sm:flex-none"
+                >
+                  <Plus size={20} />
+                  New Game
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              {games.length === 0 ? (
-                <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-16 text-center">
-                  <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
-                    <ClipboardList size={32} />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">No games scheduled</h3>
-                  <p className="text-slate-500 mb-8 max-w-xs mx-auto">Create your first game to start managing your team's lineup and availability.</p>
-                  <button 
-                    onClick={startCreateLineup}
-                    className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all"
-                  >
-                    Schedule First Game
-                  </button>
-                </div>
-              ) : (
-                games.map((game) => {
+              {(() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const filteredGames = games.filter(game => {
+                  const gameDate = game.date?.toDate ? game.date.toDate() : new Date(game.date);
+                  gameDate.setHours(0, 0, 0, 0);
+                  return showPastGames ? gameDate < today : gameDate >= today;
+                }).sort((a, b) => {
+                  const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
+                  const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
+                  return showPastGames ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
+                });
+
+                if (filteredGames.length === 0) {
+                  return (
+                    <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-8 sm:p-16 text-center">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
+                        <ClipboardList size={28} className="sm:hidden" />
+                        <ClipboardList size={32} className="hidden sm:block" />
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">
+                        {showPastGames ? 'No past games' : 'No upcoming games'}
+                      </h3>
+                      <p className="text-sm sm:text-base text-slate-500 mb-8 max-w-xs mx-auto">
+                        {showPastGames 
+                          ? "You haven't completed any games yet." 
+                          : "Create your first game to start managing your team's lineup and availability."}
+                      </p>
+                      {!showPastGames && (
+                        <button 
+                          onClick={startCreateLineup}
+                          className="px-6 sm:px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all w-full sm:w-auto"
+                        >
+                          Schedule First Game
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
+
+                return filteredGames.map((game) => {
                   const rsvpCounts = (Object.values(game.rsvps) as string[]).reduce((acc, status) => {
                     acc[status] = (acc[status] || 0) + 1;
                     return acc;
@@ -1837,124 +1945,113 @@ function BaseballApp() {
                       layout
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 hover:border-slate-300 transition-all group"
+                      onClick={() => handleViewGame(game.id)}
+                      className="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-200 hover:border-slate-900 hover:shadow-md transition-all group cursor-pointer"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                        <div className="flex items-start gap-5">
-                          <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex flex-col items-center justify-center shadow-md">
-                            <span className="text-[10px] font-bold uppercase tracking-tighter opacity-70">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
+                        <div className="flex items-center sm:items-start gap-4 sm:gap-5">
+                          <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center shadow-md shrink-0 transition-colors ${
+                            showPastGames ? 'bg-slate-100 text-slate-400' : 'bg-slate-900 text-white'
+                          }`}>
+                            <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-tighter opacity-70">
                               {gameDateObj.toLocaleDateString('en-US', { month: 'short' })}
                             </span>
-                            <span className="text-xl font-bold leading-none">
+                            <span className="text-lg sm:text-xl font-bold leading-none">
                               {gameDateObj.getDate()}
                             </span>
                           </div>
-                          <div>
-                            <h3 className="text-xl font-bold text-slate-900 group-hover:text-slate-900 transition-colors">{game.name}</h3>
-                            <div className="flex items-center gap-3 mt-1">
-                              <span className="text-sm text-slate-500 font-medium">
-                                {gameDateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric' })}
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-lg sm:text-xl font-bold text-slate-900 truncate group-hover:text-slate-900">{game.name}</h3>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                              <span className="text-xs sm:text-sm text-slate-500 font-medium whitespace-nowrap">
+                                {gameDateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric' })}
                               </span>
-                              <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                              <span className="hidden sm:block w-1 h-1 bg-slate-300 rounded-full"></span>
                               <div className="flex items-center gap-2">
-                                <div className="flex -space-x-2">
+                                <div className="flex -space-x-1.5">
                                   {[...Array(Math.min(3, rsvpCounts[RSVPStatus.YES] || 0))].map((_, i) => (
-                                    <div key={i} className="w-5 h-5 rounded-full bg-emerald-100 border-2 border-white flex items-center justify-center">
-                                      <Check size={10} className="text-emerald-600" />
+                                    <div key={i} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-100 border-2 border-white flex items-center justify-center">
+                                      <Check size={8} className="text-emerald-600 sm:hidden" />
+                                      <Check size={10} className="text-emerald-600 hidden sm:block" />
                                     </div>
                                   ))}
                                 </div>
-                                <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest">
-                                  {rsvpCounts[RSVPStatus.YES] || 0} Attending
+                                <span className="text-[10px] sm:text-xs font-bold text-emerald-600 uppercase tracking-widest">
+                                  {rsvpCounts[RSVPStatus.YES] || 0} In
                                 </span>
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <div className="flex flex-col items-end mr-2">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">RSVP Status</span>
-                            <div className="flex gap-2">
-                              <div className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold border border-emerald-100">
-                                {rsvpCounts[RSVPStatus.YES] || 0} Yes
-                              </div>
-                              <div className="px-2 py-1 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-bold border border-amber-100">
-                                {rsvpCounts[RSVPStatus.TENTATIVE] || 0} ?
-                              </div>
-                              <div className="px-2 py-1 bg-rose-50 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-100">
-                                {rsvpCounts[RSVPStatus.NO] || 0} No
-                              </div>
+                        <div className="flex items-center justify-between sm:justify-end gap-3 pt-3 sm:pt-0 border-t border-slate-100 sm:border-0">
+                          <div className="flex gap-1.5 sm:mr-2">
+                            <div className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold border border-emerald-100">
+                              {rsvpCounts[RSVPStatus.YES] || 0} Yes
+                            </div>
+                            <div className="px-2 py-1 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-bold border border-amber-100">
+                              {rsvpCounts[RSVPStatus.TENTATIVE] || 0} ?
+                            </div>
+                            <div className="px-2 py-1 bg-rose-50 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-100">
+                              {rsvpCounts[RSVPStatus.NO] || 0} No
                             </div>
                           </div>
-                          <button 
-                            onClick={() => handleViewGame(game.id)}
-                            className="p-3 bg-slate-50 text-slate-900 rounded-2xl hover:bg-slate-100 transition-all border border-slate-200"
-                          >
-                            <ClipboardList size={20} />
-                          </button>
-                          <button 
-                            onClick={async () => {
-                              try {
-                                await deleteDoc(doc(db, 'games', game.id));
-                              } catch (error) {
-                                handleFirestoreError(error, OperationType.DELETE, `games/${game.id}`);
-                              }
-                            }}
-                            className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all border border-transparent hover:border-rose-100"
-                          >
-                            <Trash2 size={20} />
-                          </button>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                setDeleteConfirmation({
+                                  isOpen: true,
+                                  type: 'game',
+                                  id: game.id,
+                                  title: 'Delete Game',
+                                  message: `Are you sure you want to delete "${game.name}"? This action cannot be undone.`
+                                });
+                              }}
+                              className="p-2.5 sm:p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl sm:rounded-2xl transition-all border border-transparent hover:border-rose-100"
+                              title="Delete Game"
+                            >
+                              <Trash2 size={18} className="sm:hidden" />
+                              <Trash2 size={20} className="hidden sm:block" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </motion.div>
                   );
-                })
-              )}
+                });
+              })()}
             </div>
           </div>
         ) : (
           <div className="max-w-2xl mx-auto">
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+            <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
               <h2 className="text-2xl font-bold mb-6">Team Settings</h2>
               
               <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <div>
-                    <h3 className="font-bold text-slate-900">Allow Any Outfielder</h3>
-                    <p className="text-sm text-slate-500">Enable "Any Outfielder" as a position option. Selecting it will automatically include Left, Center, and Right Field.</p>
-                  </div>
-                  <button 
-                    onClick={() => handleUpdateSettings({ allowAnyOutfielder: !settings?.allowAnyOutfielder })}
-                    className={`w-14 h-8 rounded-full transition-colors relative ${settings?.allowAnyOutfielder ? 'bg-slate-900' : 'bg-slate-200'}`}
-                  >
-                    <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.allowAnyOutfielder ? 'left-7' : 'left-1'}`} />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <div>
+                <div className="flex items-start sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 gap-4">
+                  <div className="flex-1">
                     <h3 className="font-bold text-slate-900">Allow Designated Hitter</h3>
                     <p className="text-sm text-slate-500">Enable "Designated Hitter" as a position option for your lineup.</p>
                   </div>
                   <button 
                     onClick={() => handleUpdateSettings({ allowDesignatedHitter: !settings?.allowDesignatedHitter })}
-                    className={`w-14 h-8 rounded-full transition-colors relative ${settings?.allowDesignatedHitter ? 'bg-slate-900' : 'bg-slate-200'}`}
+                    className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${settings?.allowDesignatedHitter ? 'bg-slate-900' : 'bg-slate-200'}`}
                   >
                     <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.allowDesignatedHitter ? 'left-7' : 'left-1'}`} />
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <div>
-                    <h3 className="font-bold text-slate-900">Avoid Outfield Twice in Row</h3>
-                    <p className="text-sm text-slate-500">Try to avoid assigning the same player to an outfield position in consecutive innings, and avoid bench-to-outfield transitions.</p>
+                <div className="flex items-start sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 gap-4">
+                  <div className="flex-1">
+                    <h3 className="font-bold text-slate-900">Allow Outfield Twice in Row</h3>
+                    <p className="text-sm text-slate-500">Allow assigning the same player to an outfield position in consecutive innings. By default, the app tries to avoid this.</p>
                   </div>
                   <button 
-                    onClick={() => handleUpdateSettings({ avoidOutfieldTwiceInRow: !settings?.avoidOutfieldTwiceInRow })}
-                    className={`w-14 h-8 rounded-full transition-colors relative ${settings?.avoidOutfieldTwiceInRow ? 'bg-slate-900' : 'bg-slate-200'}`}
+                    onClick={() => handleUpdateSettings({ allowOutfieldTwiceInRow: !settings?.allowOutfieldTwiceInRow })}
+                    className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${settings?.allowOutfieldTwiceInRow ? 'bg-slate-900' : 'bg-slate-200'}`}
                   >
-                    <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.avoidOutfieldTwiceInRow ? 'left-7' : 'left-1'}`} />
+                    <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.allowOutfieldTwiceInRow ? 'left-7' : 'left-1'}`} />
                   </button>
                 </div>
               </div>
@@ -1964,8 +2061,53 @@ function BaseballApp() {
       </motion.div>
     )}
   </AnimatePresence>
-</main>
-</div>
+      </main>
+
+      <AnimatePresence>
+        {deleteConfirmation.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteConfirmation(prev => ({ ...prev, isOpen: false }))}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative bg-white rounded-3xl shadow-2xl border border-slate-200 p-8 max-w-md w-full overflow-hidden"
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center shrink-0">
+                  <AlertCircle size={24} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-slate-900">{deleteConfirmation.title}</h3>
+                  <p className="text-slate-500 text-sm mt-1">{deleteConfirmation.message}</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => setDeleteConfirmation(prev => ({ ...prev, isOpen: false }))}
+                  className="flex-1 px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-6 py-3 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/20"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
 );
 }
 

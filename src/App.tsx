@@ -183,6 +183,21 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 // --- Helper Functions ---
 
+const POSITION_ORDER: Record<string, number> = {
+  "Pitcher": 1,
+  "Starting Pitcher": 1,
+  "Relief Pitcher": 1,
+  "Catcher": 2,
+  "First Base": 3,
+  "Second Base": 4,
+  "Third Base": 5,
+  "Shortstop": 6,
+  "Left Field": 7,
+  "Center Field": 8,
+  "Right Field": 9,
+  "Designated Hitter": 10
+};
+
 const getPositionAbbreviation = (pos: string) => {
   const mapping: Record<string, string> = {
     "Starting Pitcher": "SP",
@@ -217,6 +232,7 @@ function SharedView() {
   const [settings, setSettings] = useState<TeamSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'batting' | 'fielding'>('batting');
 
   useEffect(() => {
     console.log("SharedView mounted, ownerId:", ownerId);
@@ -368,72 +384,117 @@ function SharedView() {
                       <h2 className="text-2xl sm:text-3xl font-black tracking-tight">{selectedGame.name}</h2>
                       <div className="flex items-center gap-2 text-slate-400 mt-1">
                         <Calendar size={16} />
-                        <span className="text-sm font-medium">{new Date(selectedGame.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                        <span className="text-sm font-medium">
+                          {(() => {
+                            const date = selectedGame.date;
+                            if (!date) return 'No Date';
+                            const d = date.toDate ? date.toDate() : new Date(date);
+                            return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                          })()}
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="p-6 sm:p-8">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Tabs */}
+                  <div className="flex p-1 bg-slate-100 rounded-2xl mb-8">
+                    <button
+                      onClick={() => setActiveTab('batting')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${
+                        activeTab === 'batting'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <ClipboardList size={18} />
+                      Batting Order
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('fielding')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${
+                        activeTab === 'fielding'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <LayoutGrid size={18} />
+                      Fielding Lineup
+                    </button>
+                  </div>
+
+                  <div>
                     {/* Batting Order */}
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <ClipboardList size={20} className="text-slate-400" />
-                        Batting Order
-                      </h3>
-                      <div className="space-y-2">
-                        {selectedGame.battingOrder && selectedGame.battingOrder.length > 0 ? (
-                          selectedGame.battingOrder.map((playerId, index) => {
-                            const player = players.find(p => p.id === playerId);
-                            return (
-                              <div key={index} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                <span className="w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
-                                  {index + 1}
-                                </span>
-                                <span className="font-bold text-slate-700">{player?.name || 'Unknown Player'}</span>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <p className="text-sm text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-slate-100 border-dashed text-center">
-                            No batting order set yet.
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                    {activeTab === 'batting' && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                      >
+                        <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                          <ClipboardList size={20} className="text-slate-400" />
+                          Batting Order
+                        </h3>
+                        <div className="space-y-2">
+                          {selectedGame.battingOrder && selectedGame.battingOrder.length > 0 ? (
+                            selectedGame.battingOrder.map((playerId, index) => {
+                              const player = players.find(p => p.id === playerId);
+                              return (
+                                <div key={index} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                  <span className="w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
+                                    {index + 1}
+                                  </span>
+                                  <span className="font-bold text-slate-700">{player?.name || 'Unknown Player'}</span>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="text-sm text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-slate-100 border-dashed text-center">
+                              No batting order set yet.
+                            </p>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
 
                     {/* Fielding Lineup */}
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <LayoutGrid size={20} className="text-slate-400" />
-                        Fielding Lineup
-                      </h3>
-                      <div className="space-y-4">
-                        {selectedGame.lineup && Object.keys(selectedGame.lineup).length > 0 ? (
-                          Object.entries(selectedGame.lineup).sort(([a], [b]) => Number(a) - Number(b)).map(([inningNum, inning]) => (
-                            <div key={inningNum} className="bg-slate-50 rounded-2xl border border-slate-100 p-4">
-                              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Inning {inningNum}</h4>
-                              <div className="grid grid-cols-2 gap-2">
-                                {Object.entries(inning).map(([pos, playerId]) => {
-                                  const player = players.find(p => p.id === playerId);
-                                  return (
-                                    <div key={pos} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-100 shadow-sm">
-                                      <span className="text-[10px] font-black text-slate-400 w-6 shrink-0">{getPositionAbbreviation(pos)}</span>
-                                      <span className="text-xs font-bold text-slate-700 truncate">{player?.name || 'Bench'}</span>
-                                    </div>
-                                  );
-                                })}
+                    {activeTab === 'fielding' && (
+                      <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                      >
+                        <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                          <LayoutGrid size={20} className="text-slate-400" />
+                          Fielding Lineup
+                        </h3>
+                        <div className="space-y-4">
+                          {selectedGame.lineup && Object.keys(selectedGame.lineup).length > 0 ? (
+                            Object.entries(selectedGame.lineup).sort(([a], [b]) => Number(a) - Number(b)).map(([inningNum, inning]) => (
+                              <div key={inningNum} className="bg-slate-50 rounded-2xl border border-slate-100 p-4">
+                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Inning {inningNum}</h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {Object.entries(inning)
+                                    .sort(([posA], [posB]) => (POSITION_ORDER[posA] || 99) - (POSITION_ORDER[posB] || 99))
+                                    .map(([pos, playerId]) => {
+                                      const player = players.find(p => p.id === playerId);
+                                      return (
+                                        <div key={pos} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-100 shadow-sm">
+                                          <span className="text-[10px] font-black text-slate-400 w-6 shrink-0">{getPositionAbbreviation(pos)}</span>
+                                          <span className="text-xs font-bold text-slate-700 truncate">{player?.name || 'Bench'}</span>
+                                        </div>
+                                      );
+                                    })}
+                                </div>
                               </div>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-sm text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-slate-100 border-dashed text-center">
-                            No fielding lineup set yet.
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-slate-100 border-dashed text-center">
+                              No fielding lineup set yet.
+                            </p>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -458,41 +519,44 @@ function SharedView() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {games.map((game) => (
-                    <button
-                      key={game.id}
-                      onClick={() => navigate(`/shared/${ownerId}/games/${game.id}`)}
-                      className="group bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-slate-900 transition-all text-left relative overflow-hidden"
-                    >
-                      <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ChevronRight size={20} className="text-slate-900" />
-                      </div>
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-slate-100 rounded-2xl flex flex-col items-center justify-center shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-colors">
-                          <span className="text-[10px] font-black uppercase tracking-tighter opacity-50">
-                            {new Date(game.date).toLocaleDateString('en-US', { month: 'short' })}
-                          </span>
-                          <span className="text-lg font-black leading-none">
-                            {new Date(game.date).getDate()}
-                          </span>
+                  {games.map((game) => {
+                    const gameDate = game.date?.toDate ? game.date.toDate() : new Date(game.date);
+                    return (
+                      <button
+                        key={game.id}
+                        onClick={() => navigate(`/shared/${ownerId}/games/${game.id}`)}
+                        className="group bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-slate-900 transition-all text-left relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ChevronRight size={20} className="text-slate-900" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-black text-xl text-slate-900 truncate group-hover:text-slate-900 transition-colors">{game.name}</h3>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                              <Calendar size={12} />
-                              {new Date(game.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-slate-100 rounded-2xl flex flex-col items-center justify-center shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                            <span className="text-[10px] font-black uppercase tracking-tighter opacity-50">
+                              {gameDate.toLocaleDateString('en-US', { month: 'short' })}
                             </span>
-                            <span className="w-1 h-1 bg-slate-200 rounded-full" />
-                            <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                              <ClipboardList size={12} />
-                              {game.battingOrder.length} Players
+                            <span className="text-lg font-black leading-none">
+                              {gameDate.getDate()}
                             </span>
                           </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-black text-xl text-slate-900 truncate group-hover:text-slate-900 transition-colors">{game.name}</h3>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                                <Calendar size={12} />
+                                {gameDate.toLocaleDateString('en-US', { weekday: 'short' })}
+                              </span>
+                              <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                              <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                                <ClipboardList size={12} />
+                                {game.battingOrder?.length || 0} Players
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </motion.div>

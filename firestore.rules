@@ -70,7 +70,14 @@ service cloud.firestore {
     function isValidSettings(data) {
       return (data.uid == request.auth.uid || !('uid' in data)) &&
              (!('allowAnyOutfielder' in data) || data.allowAnyOutfielder is bool) &&
-             (!('allowDesignatedHitter' in data) || data.allowDesignatedHitter is bool);
+             (!('allowDesignatedHitter' in data) || data.allowDesignatedHitter is bool) &&
+             (!('avoidOutfieldTwiceInRow' in data) || data.avoidOutfieldTwiceInRow is bool) &&
+             (!('publicSchedule' in data) || data.publicSchedule is bool);
+    }
+
+    function isPublicSchedule(userId) {
+      return exists(/databases/$(database)/documents/settings/$(userId)) && 
+             get(/databases/$(database)/documents/settings/$(userId)).data.publicSchedule == true;
     }
 
     function isValidGame(data) {
@@ -88,8 +95,10 @@ service cloud.firestore {
     // ===============================================================
 
     match /players/{playerId} {
-      // Users can only read their own players
-      allow read: if (isAuthenticated() && request.auth.uid == resource.data.uid) || isAdmin();
+      // Users can only read their own players, or if the schedule is public
+      allow read: if (isAuthenticated() && request.auth.uid == resource.data.uid) || 
+                   isPublicSchedule(resource.data.uid) || 
+                   isAdmin();
       
       // Users can create players for themselves
       allow create: if isAuthenticated() && 
@@ -107,13 +116,17 @@ service cloud.firestore {
     }
 
     match /settings/{userId} {
-      allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
+      allow read: if (isAuthenticated() && request.auth.uid == userId) || 
+                   isPublicSchedule(userId) || 
+                   isAdmin();
       allow create: if (isAuthenticated() && request.auth.uid == userId) && isValidSettings(request.resource.data);
       allow update: if (isAuthenticated() && request.auth.uid == userId) && isValidSettings(request.resource.data);
     }
 
     match /games/{gameId} {
-      allow read: if (isAuthenticated() && request.auth.uid == resource.data.uid) || isAdmin();
+      allow read: if (isAuthenticated() && request.auth.uid == resource.data.uid) || 
+                   isPublicSchedule(resource.data.uid) || 
+                   isAdmin();
       allow create: if isAuthenticated() && 
                       isValidGame(request.resource.data) && 
                       uidUnchanged() &&

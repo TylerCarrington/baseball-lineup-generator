@@ -35,7 +35,7 @@ async function testConnection() {
 }
 testConnection();
 
-import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, Menu, Calendar, History } from 'lucide-react';
+import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, Menu, Calendar, History, Share2, ExternalLink, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Types ---
@@ -52,6 +52,7 @@ interface TeamSettings {
   id?: string;
   allowDesignatedHitter: boolean;
   allowOutfieldTwiceInRow: boolean;
+  publicSchedule?: boolean;
   uid: string;
 }
 
@@ -200,6 +201,293 @@ const getPositionAbbreviation = (pos: string) => {
   return mapping[pos] || pos;
 };
 
+// --- Shared View Component ---
+
+function SharedView() {
+  const { ownerId, gameId } = useParams();
+  const navigate = useNavigate();
+  const [games, setGames] = useState<Game[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [settings, setSettings] = useState<TeamSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!ownerId) return;
+
+    setLoading(true);
+    setError(null);
+
+    // 1. Fetch Settings to check if publicSchedule is enabled
+    const settingsRef = doc(db, 'settings', ownerId);
+    const unsubSettings = onSnapshot(settingsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data() as TeamSettings;
+        if (data.publicSchedule) {
+          setSettings({ id: snapshot.id, ...data });
+        } else {
+          setError("This schedule is not public.");
+          setLoading(false);
+        }
+      } else {
+        setError("Schedule not found.");
+        setLoading(false);
+      }
+    }, (err) => {
+      console.error("Error fetching settings:", err);
+      setError("Unable to load schedule.");
+      setLoading(false);
+    });
+
+    return () => unsubSettings();
+  }, [ownerId]);
+
+  useEffect(() => {
+    if (!settings || !ownerId) return;
+
+    // 2. Fetch Games
+    const gamesQuery = query(
+      collection(db, 'games'),
+      where('uid', '==', ownerId),
+      orderBy('date', 'desc')
+    );
+    const unsubGames = onSnapshot(gamesQuery, (snapshot) => {
+      const gamesData: Game[] = [];
+      snapshot.forEach((doc) => {
+        gamesData.push({ id: doc.id, ...doc.data() } as Game);
+      });
+      setGames(gamesData);
+      setLoading(false);
+    }, (err) => {
+      console.error("Error fetching games:", err);
+      setLoading(false);
+    });
+
+    // 3. Fetch Players (for names in lineups)
+    const playersQuery = query(
+      collection(db, 'players'),
+      where('uid', '==', ownerId)
+    );
+    const unsubPlayers = onSnapshot(playersQuery, (snapshot) => {
+      const playersData: Player[] = [];
+      snapshot.forEach((doc) => {
+        playersData.push({ id: doc.id, ...doc.data() } as Player);
+      });
+      setPlayers(playersData);
+    });
+
+    return () => {
+      unsubGames();
+      unsubPlayers();
+    };
+  }, [settings, ownerId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-500 font-medium">Loading schedule...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-slate-200 p-8 text-center">
+          <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Lock size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Restricted</h2>
+          <p className="text-slate-500 mb-8">{error}</p>
+          <button 
+            onClick={() => navigate('/')}
+            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg"
+          >
+            Go to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const selectedGame = gameId ? games.find(g => g.id === gameId) : null;
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 font-bold text-xl">
+            <Trophy className="text-slate-900" size={24} />
+            <span>Lineup+</span>
+          </div>
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+            Shared View
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-8">
+        <AnimatePresence mode="wait">
+          {gameId && selectedGame ? (
+            <motion.div
+              key="game-detail"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <button 
+                onClick={() => navigate(`/shared/${ownerId}/games`)}
+                className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm mb-6 transition-colors"
+              >
+                <ChevronLeft size={18} />
+                Back to Schedule
+              </button>
+
+              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden mb-8">
+                <div className="p-6 sm:p-8 bg-slate-900 text-white">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-black tracking-tight">{selectedGame.name}</h2>
+                      <div className="flex items-center gap-2 text-slate-400 mt-1">
+                        <Calendar size={16} />
+                        <span className="text-sm font-medium">{new Date(selectedGame.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 sm:p-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Batting Order */}
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <ClipboardList size={20} className="text-slate-400" />
+                        Batting Order
+                      </h3>
+                      <div className="space-y-2">
+                        {selectedGame.battingOrder && selectedGame.battingOrder.length > 0 ? (
+                          selectedGame.battingOrder.map((playerId, index) => {
+                            const player = players.find(p => p.id === playerId);
+                            return (
+                              <div key={index} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                <span className="w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
+                                  {index + 1}
+                                </span>
+                                <span className="font-bold text-slate-700">{player?.name || 'Unknown Player'}</span>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-sm text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-slate-100 border-dashed text-center">
+                            No batting order set yet.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Fielding Lineup */}
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <LayoutGrid size={20} className="text-slate-400" />
+                        Fielding Lineup
+                      </h3>
+                      <div className="space-y-4">
+                        {selectedGame.lineup && Object.keys(selectedGame.lineup).length > 0 ? (
+                          Object.entries(selectedGame.lineup).sort(([a], [b]) => Number(a) - Number(b)).map(([inningNum, inning]) => (
+                            <div key={inningNum} className="bg-slate-50 rounded-2xl border border-slate-100 p-4">
+                              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Inning {inningNum}</h4>
+                              <div className="grid grid-cols-2 gap-2">
+                                {Object.entries(inning).map(([pos, playerId]) => {
+                                  const player = players.find(p => p.id === playerId);
+                                  return (
+                                    <div key={pos} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-100 shadow-sm">
+                                      <span className="text-[10px] font-black text-slate-400 w-6 shrink-0">{getPositionAbbreviation(pos)}</span>
+                                      <span className="text-xs font-bold text-slate-700 truncate">{player?.name || 'Bench'}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-slate-100 border-dashed text-center">
+                            No fielding lineup set yet.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="schedule-list"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <div className="mb-8">
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Game Schedule</h2>
+                <p className="text-slate-500 mt-1">View upcoming games and lineups</p>
+              </div>
+
+              {games.length === 0 ? (
+                <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-12 text-center">
+                  <Calendar size={48} className="text-slate-200 mx-auto mb-4" />
+                  <h3 className="text-lg font-bold text-slate-900">No games scheduled</h3>
+                  <p className="text-slate-500">Check back later for updates.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {games.map((game) => (
+                    <button
+                      key={game.id}
+                      onClick={() => navigate(`/shared/${ownerId}/games/${game.id}`)}
+                      className="group bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-slate-900 transition-all text-left relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ChevronRight size={20} className="text-slate-900" />
+                      </div>
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-slate-100 rounded-2xl flex flex-col items-center justify-center shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                          <span className="text-[10px] font-black uppercase tracking-tighter opacity-50">
+                            {new Date(game.date).toLocaleDateString('en-US', { month: 'short' })}
+                          </span>
+                          <span className="text-lg font-black leading-none">
+                            {new Date(game.date).getDate()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-black text-xl text-slate-900 truncate group-hover:text-slate-900 transition-colors">{game.name}</h3>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                              <Calendar size={12} />
+                              {new Date(game.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                            </span>
+                            <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                            <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                              <ClipboardList size={12} />
+                              {game.battingOrder.length} Players
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+    </div>
+  );
+}
+
 // --- Main App Component ---
 
 function BaseballApp() {
@@ -229,6 +517,13 @@ function BaseballApp() {
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [isEditingRSVPs, setIsEditingRSVPs] = useState(false);
   const [showPastGames, setShowPastGames] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  const handleCopyLink = (link: string) => {
+    navigator.clipboard.writeText(link);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
+  };
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     type: 'player' | 'game';
@@ -250,6 +545,10 @@ function BaseballApp() {
   // Sync state with URL
   useEffect(() => {
     const path = location.pathname;
+    if (path.startsWith('/shared/')) {
+      // Shared view handles its own state
+      return;
+    }
     if (path === '/') {
       navigate('/games', { replace: true });
     } else if (path === '/games') {
@@ -1014,6 +1313,11 @@ function BaseballApp() {
     );
   }
 
+  // Handle Shared View
+  if (location.pathname.startsWith('/shared/')) {
+    return <SharedView />;
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
@@ -1034,6 +1338,7 @@ function BaseballApp() {
             <LogIn size={20} />
             Sign in with Google
           </button>
+          <p className="mt-8 text-xs text-slate-400 font-medium uppercase tracking-widest">Secure Baseball Management</p>
         </motion.div>
       </div>
     );
@@ -1905,6 +2210,24 @@ function BaseballApp() {
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <button 
+                  onClick={() => {
+                    if (settings?.publicSchedule) {
+                      handleCopyLink(`${window.location.origin}${window.location.pathname}#/shared/${user?.uid}/games`);
+                    } else {
+                      handleTabChange('settings');
+                    }
+                  }}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl transition-all font-bold border flex-1 sm:flex-none ${
+                    settings?.publicSchedule 
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                  }`}
+                  title={settings?.publicSchedule ? 'Copy public schedule link' : 'Enable public sharing in settings'}
+                >
+                  {copySuccess ? <Check size={18} /> : <Share2 size={18} />}
+                  {copySuccess ? 'Copied!' : 'Share'}
+                </button>
+                <button 
                   onClick={() => setShowPastGames(!showPastGames)}
                   className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl transition-all font-bold border flex-1 sm:flex-none ${
                     showPastGames 
@@ -2089,6 +2412,50 @@ function BaseballApp() {
                   >
                     <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.allowOutfieldTwiceInRow ? 'left-7' : 'left-1'}`} />
                   </button>
+                </div>
+
+                <div className="flex flex-col p-4 bg-slate-50 rounded-2xl border border-slate-100 gap-4">
+                  <div className="flex items-start sm:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-slate-900">Public Schedule Sharing</h3>
+                      <p className="text-sm text-slate-500">Allow others to view your game schedule and lineups without logging in.</p>
+                    </div>
+                    <button 
+                      onClick={() => handleUpdateSettings({ publicSchedule: !settings?.publicSchedule })}
+                      className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${settings?.publicSchedule ? 'bg-slate-900' : 'bg-slate-200'}`}
+                    >
+                      <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.publicSchedule ? 'left-7' : 'left-1'}`} />
+                    </button>
+                  </div>
+                  
+                  {settings?.publicSchedule && (
+                    <div className="mt-2 p-3 bg-white rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-3">
+                      <div className="flex-1 min-w-0 w-full">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Your Public Link</p>
+                        <p className="text-xs text-slate-600 truncate font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">
+                          {`${window.location.origin}${window.location.pathname}#/shared/${user?.uid}/games`}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <button 
+                          onClick={() => handleCopyLink(`${window.location.origin}${window.location.pathname}#/shared/${user?.uid}/games`)}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all text-xs font-bold"
+                        >
+                          {copySuccess ? <Check size={14} /> : <Copy size={14} />}
+                          {copySuccess ? 'Copied!' : 'Copy'}
+                        </button>
+                        <a 
+                          href={`${window.location.origin}${window.location.pathname}#/shared/${user?.uid}/games`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all text-xs font-bold shadow-sm"
+                        >
+                          <ExternalLink size={14} />
+                          Open
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

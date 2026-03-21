@@ -49,6 +49,10 @@
           "type": "boolean",
           "description": "Whether to avoid assigning the same player to an outfield position in consecutive innings."
         },
+        "publicSchedule": {
+          "type": "boolean",
+          "description": "Whether to allow public access to the game schedule."
+        },
         "uid": {
           "type": "string",
           "description": "The ID of the user who owns these settings."

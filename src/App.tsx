@@ -35,8 +35,9 @@ async function testConnection() {
 }
 testConnection();
 
-import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Users, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, Menu, Calendar, History, Share2, ExternalLink, Copy } from 'lucide-react';
+import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Users, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Calendar, History, Share2, ExternalLink, Copy, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Toaster, toast } from 'sonner';
 
 // --- Types ---
 interface Player {
@@ -53,7 +54,6 @@ interface TeamSettings {
   allowDesignatedHitter: boolean;
   allowOutfieldTwiceInRow: boolean;
   publicSchedule?: boolean;
-  darkMode?: boolean;
   uid: string;
 }
 
@@ -221,7 +221,7 @@ const getPositionAbbreviation = (pos: string) => {
 
 // --- Shared View Component ---
 
-function SharedView() {
+function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode: (val: boolean) => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -236,6 +236,7 @@ function SharedView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'batting' | 'fielding'>('batting');
+  const [showPastGames, setShowPastGames] = useState(false);
 
   useEffect(() => {
     console.log("SharedView mounted, ownerId:", ownerId);
@@ -282,8 +283,9 @@ function SharedView() {
     const gamesQuery = query(
       collection(db, 'games'),
       where('uid', '==', ownerId),
-      orderBy('date', 'desc')
+      orderBy('date', 'asc')
     );
+
     const unsubGames = onSnapshot(gamesQuery, (snapshot) => {
       console.log("Games snapshot received, count:", snapshot.size);
       const gamesData: Game[] = [];
@@ -315,14 +317,6 @@ function SharedView() {
       unsubPlayers();
     };
   }, [settings, ownerId]);
-
-  useEffect(() => {
-    if (settings?.darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [settings?.darkMode]);
 
   if (loading) {
     return (
@@ -359,14 +353,23 @@ function SharedView() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 font-bold text-xl">
             <Trophy className="text-slate-900 dark:text-white" size={24} />
             <span className="text-slate-900 dark:text-white">Lineup+</span>
           </div>
-          <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-            Shared View
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+            <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              Shared View
+            </div>
           </div>
         </div>
       </header>
@@ -518,10 +521,17 @@ function SharedView() {
                                     .sort(([posA], [posB]) => (POSITION_ORDER[posA] || 99) - (POSITION_ORDER[posB] || 99))
                                     .map(([pos, playerId]) => {
                                       const player = players.find(p => p.id === playerId);
+                                      const isDuplicate = playerId && Object.values(inning).filter(id => id === playerId).length > 1;
                                       return (
-                                        <div key={pos} className="flex items-center gap-2 p-2 bg-white dark:bg-slate-700 rounded-lg border border-slate-100 dark:border-slate-600 shadow-sm transition-colors duration-300">
-                                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-400 w-6 shrink-0">{getPositionAbbreviation(pos)}</span>
-                                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{player?.name || 'Bench'}</span>
+                                        <div key={pos} className={`flex items-center gap-2 p-2 rounded-lg border shadow-sm transition-colors duration-300 ${
+                                          isDuplicate 
+                                            ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-900/30' 
+                                            : 'bg-white dark:bg-slate-700 border-slate-100 dark:border-slate-600'
+                                        }`}>
+                                          <span className={`text-[10px] font-black w-6 shrink-0 ${isDuplicate ? 'text-rose-400 dark:text-rose-500' : 'text-slate-400 dark:text-slate-400'}`}>{getPositionAbbreviation(pos)}</span>
+                                          <span className={`text-xs font-bold truncate ${isDuplicate ? 'text-rose-700 dark:text-rose-300' : 'text-slate-700 dark:text-slate-200'}`}>
+                                            {player?.name || <span className="italic opacity-30">Empty</span>}
+                                          </span>
                                         </div>
                                       );
                                     })}
@@ -548,76 +558,101 @@ function SharedView() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <div className="mb-8">
-                <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Game Schedule</h2>
-                <p className="text-slate-500 dark:text-slate-400 mt-1">View upcoming games and lineups</p>
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Game Schedule</h2>
+                  <p className="text-slate-500 dark:text-slate-400 mt-1">View upcoming games and lineups</p>
+                </div>
+                <button
+                  onClick={() => setShowPastGames(!showPastGames)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                    showPastGames 
+                      ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-md' 
+                      : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <History size={16} />
+                  {showPastGames ? 'Showing All Games' : 'Show Past Games'}
+                </button>
               </div>
 
-              {games.length === 0 ? (
-                <div className="bg-white dark:bg-slate-900 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-12 text-center transition-colors duration-300">
-                  <Calendar size={48} className="text-slate-200 dark:text-slate-700 mx-auto mb-4" />
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">No games scheduled</h3>
-                  <p className="text-slate-500 dark:text-slate-400">Check back later for updates.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {games.map((game) => {
-                    const gameDate = game.date?.toDate ? game.date.toDate() : new Date(game.date);
-                    const isPublished = game.isLocked || false;
-                    
-                    return (
-                      <button
-                        key={game.id}
-                        onClick={() => {
-                          if (isPublished) {
-                            navigate(`/shared/${ownerId}/games/${game.id}`);
-                          }
-                        }}
-                        className={`group bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all text-left relative overflow-hidden ${
-                          isPublished 
-                            ? 'hover:shadow-xl dark:hover:shadow-emerald-900/10 hover:border-slate-900 dark:hover:border-emerald-500 cursor-pointer' 
-                            : 'opacity-70 cursor-default'
-                        }`}
-                      >
-                        {!isPublished && (
-                          <div className="absolute top-3 right-3 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700">
-                            Draft
-                          </div>
-                        )}
-                        {isPublished && (
-                          <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ChevronRight size={20} className="text-slate-400 dark:text-slate-500" />
-                          </div>
-                        )}
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex flex-col items-center justify-center shrink-0 group-hover:bg-slate-900 dark:group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                            <span className="text-[10px] font-black uppercase tracking-tighter opacity-50">
-                              {gameDate.toLocaleDateString('en-US', { month: 'short' })}
-                            </span>
-                            <span className="text-lg font-black leading-none">
-                              {gameDate.getDate()}
-                            </span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-black text-xl text-slate-900 dark:text-white truncate group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{game.name}</h3>
-                            <div className="flex items-center gap-3 mt-1">
-                              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
-                                <Calendar size={12} />
-                                {gameDate.toLocaleDateString('en-US', { weekday: 'short' })}
-                              </span>
-                              <span className="w-1 h-1 bg-slate-200 dark:bg-slate-800 rounded-full" />
-                              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
-                                <ClipboardList size={12} />
-                                {game.battingOrder?.length || 0} Players
-                              </span>
+              {(() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const filteredGames = games.filter(game => {
+                  const gameDate = game.date?.toDate ? game.date.toDate() : new Date(game.date);
+                  gameDate.setHours(0, 0, 0, 0);
+                  return showPastGames ? gameDate < today : gameDate >= today;
+                }).sort((a, b) => {
+                  const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
+                  const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
+                  return showPastGames ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
+                });
+
+                if (filteredGames.length === 0) {
+                  return (
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-12 text-center transition-colors duration-300">
+                      <Calendar size={48} className="text-slate-200 dark:text-slate-700 mx-auto mb-4" />
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                        {showPastGames ? 'No past games' : 'No upcoming games'}
+                      </h3>
+                      <p className="text-slate-500 dark:text-slate-400">
+                        {showPastGames ? 'Check back later for updates.' : 'Check back later for updates.'}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredGames.map((game) => {
+                      const gameDate = game.date?.toDate ? game.date.toDate() : new Date(game.date);
+                      const isPublished = game.isLocked || false;
+                      
+                      return (
+                        <button
+                          key={game.id}
+                          onClick={() => {
+                            if (isPublished) {
+                              navigate(`/shared/${ownerId}/games/${game.id}`);
+                            }
+                          }}
+                          className={`group bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all text-left relative overflow-hidden ${
+                            isPublished 
+                              ? 'hover:shadow-xl dark:hover:shadow-emerald-900/10 hover:border-slate-900 dark:hover:border-emerald-500 cursor-pointer' 
+                              : 'opacity-70 cursor-default'
+                          }`}
+                        >
+                          {!isPublished && (
+                            <div className="absolute top-3 right-3 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700">
+                              Draft
+                            </div>
+                          )}
+                          {isPublished && (
+                            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <ChevronRight size={20} className="text-slate-400 dark:text-slate-500" />
+                            </div>
+                          )}
+                          <div className="flex items-start gap-4">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
+                              isPublished ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600'
+                            }`}>
+                              <Calendar size={24} />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-bold text-lg text-slate-900 dark:text-white truncate pr-8">{game.name}</h3>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                                {gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                              </p>
                             </div>
                           </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </motion.div>
           )}
         </AnimatePresence>
@@ -628,7 +663,7 @@ function SharedView() {
 
 // --- Main App Component ---
 
-function BaseballApp() {
+function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode: (val: boolean) => void }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
@@ -640,6 +675,7 @@ function BaseballApp() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreatingLineup, setIsCreatingLineup] = useState(false);
   const [gameName, setGameName] = useState('');
+  const [gameNameError, setGameNameError] = useState(false);
   const [gameDate, setGameDate] = useState(new Date().toISOString().split('T')[0]);
   const [playerRSVPs, setPlayerRSVPs] = useState<Record<string, RSVPStatus>>({});
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -678,7 +714,52 @@ function BaseballApp() {
   const [editGameName, setEditGameName] = useState('');
   const [editGameDate, setEditGameDate] = useState('');
   const [gameViewTab, setGameViewTab] = useState<'batting' | 'lineup'>('batting');
+  const [localBattingOrder, setLocalBattingOrder] = useState<string[]>([]);
+  const [editingCell, setEditingCell] = useState<{ inning: string; position: string } | null>(null);
   const [games, setGames] = useState<Game[]>([]);
+
+  useEffect(() => {
+    const game = games.find(g => g.id === selectedGameId);
+    if (game?.battingOrder) {
+      // Only update local if it's actually different
+      // We remove localBattingOrder from dependencies to prevent "jump back"
+      // before the Firestore update arrives.
+      if (JSON.stringify(game.battingOrder) !== JSON.stringify(localBattingOrder)) {
+        setLocalBattingOrder(game.battingOrder);
+      }
+    } else if (localBattingOrder.length > 0) {
+      setLocalBattingOrder([]);
+    }
+  }, [selectedGameId, games]); // Removed localBattingOrder from dependencies
+
+  const handleMovePlayer = async (playerId: string, direction: 'up' | 'down') => {
+    if (!selectedGameId || !user) return;
+    
+    // Use localBattingOrder as the base for rapid sequential moves
+    const currentOrder = [...localBattingOrder];
+    const index = currentOrder.indexOf(playerId);
+    if (index === -1) return;
+
+    if (direction === 'up' && index > 0) {
+      [currentOrder[index], currentOrder[index - 1]] = [currentOrder[index - 1], currentOrder[index]];
+    } else if (direction === 'down' && index < currentOrder.length - 1) {
+      [currentOrder[index], currentOrder[index + 1]] = [currentOrder[index + 1], currentOrder[index]];
+    } else {
+      return; // No move possible
+    }
+
+    // Update local state immediately for smooth UI
+    setLocalBattingOrder(currentOrder);
+
+    try {
+      const gameRef = doc(db, 'games', selectedGameId);
+      await updateDoc(gameRef, {
+        battingOrder: currentOrder
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${selectedGameId}`);
+    }
+  };
 
   // Sync state with URL
   useEffect(() => {
@@ -794,7 +875,7 @@ function BaseballApp() {
     const q = query(
       collection(db, 'games'),
       where('uid', '==', user.uid),
-      orderBy('date', 'desc')
+      orderBy('date', 'asc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -882,6 +963,26 @@ function BaseballApp() {
     navigate('/games/new');
   };
 
+  const handleUpdateGameRSVP = async (gameId: string, playerId: string, status: RSVPStatus) => {
+    try {
+      const game = games.find(g => g.id === gameId);
+      if (!game) return;
+
+      const newRSVPs = { ...game.rsvps, [playerId]: status };
+      
+      // If changing to NO, we might want to remove from batting order, but let's keep it for now
+      // and just filter in the view to allow easy "re-entry"
+      
+      await updateDoc(doc(db, 'games', gameId), {
+        rsvps: newRSVPs
+      });
+      
+      toast.success(`RSVP updated for ${players.find(p => p.id === playerId)?.name}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+    }
+  };
+
   const handleRSVPChange = (playerId: string, status: RSVPStatus) => {
     setPlayerRSVPs(prev => ({
       ...prev,
@@ -891,9 +992,14 @@ function BaseballApp() {
 
   const handleCreateGame = async () => {
     if (!user || !gameName.trim()) {
-      alert("Please provide a game name.");
+      setGameNameError(true);
+      toast.error("Game name is required", {
+        description: "Please provide a name for this game before continuing.",
+        position: 'top-center',
+      });
       return;
     }
+    setGameNameError(false);
 
     // Initial batting order: Yes first, then Tentative
     const yesPlayers = players.filter(p => playerRSVPs[p.id] === RSVPStatus.YES).map(p => p.id).sort(() => Math.random() - 0.5);
@@ -988,11 +1094,6 @@ function BaseballApp() {
     const game = games.find(g => g.id === gameId);
     if (!game) return;
 
-    if (game.isLocked) {
-      alert("This game is published. Please unpublish it to reshuffle the batting order.");
-      return;
-    }
-
     const yesPlayers = players.filter(p => game.rsvps[p.id] === RSVPStatus.YES).map(p => p.id).sort(() => Math.random() - 0.5);
     const tentativePlayers = players.filter(p => game.rsvps[p.id] === RSVPStatus.TENTATIVE).map(p => p.id).sort(() => Math.random() - 0.5);
     
@@ -1011,11 +1112,6 @@ function BaseballApp() {
     if (!gameId) return;
     const game = games.find(g => g.id === gameId);
     if (!game) return;
-
-    if (game.isLocked) {
-      alert("This game is published. Please unpublish it to regenerate the lineup.");
-      return;
-    }
 
     const availablePlayers = players.filter(p => game.rsvps[p.id] !== RSVPStatus.NO);
     if (availablePlayers.length < 8) {
@@ -1250,6 +1346,30 @@ function BaseballApp() {
     }
   };
 
+  const handleUpdateLineupCell = async (gameId: string, inning: string, position: string, playerId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    const newLineup = { ...game.lineup };
+    // Deep copy the inning to avoid direct state mutation
+    newLineup[inning] = { ...(newLineup[inning] || {}) };
+    
+    if (playerId) {
+      newLineup[inning][position] = playerId;
+    } else {
+      delete newLineup[inning][position];
+    }
+
+    try {
+      await updateDoc(doc(db, 'games', gameId), {
+        lineup: newLineup
+      });
+      setEditingCell(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+    }
+  };
+
   const handleTogglePositionLock = async (gameId: string, position: string) => {
     const game = games.find(g => g.id === gameId);
     if (!game) return;
@@ -1383,18 +1503,10 @@ function BaseballApp() {
     }
   };
 
-  useEffect(() => {
-    if (settings?.darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [settings?.darkMode]);
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin text-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+        <div className="animate-spin text-slate-900 dark:text-emerald-500">
           <Trophy size={48} />
         </div>
       </div>
@@ -1403,7 +1515,7 @@ function BaseballApp() {
 
   // Handle Shared View
   if (location.pathname.startsWith('/shared/')) {
-    return <SharedView />;
+    return <SharedView darkMode={darkMode} setDarkMode={setDarkMode} />;
   }
 
   if (!user) {
@@ -1435,7 +1547,7 @@ function BaseballApp() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
       {/* Header */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 font-bold text-xl">
@@ -1632,24 +1744,19 @@ function BaseballApp() {
                             </button>
                             <button 
                               onClick={() => {
-                                if (!isLocked) {
-                                  if (isEditingRSVPs) {
-                                    handleUpdateGameDetails();
-                                  } else {
-                                    setEditGameName(game.name);
-                                    const dateStr = game.date?.toDate ? game.date.toDate().toISOString().split('T')[0] : new Date(game.date).toISOString().split('T')[0];
-                                    setEditGameDate(dateStr);
-                                    setIsEditingRSVPs(true);
-                                  }
+                                if (isEditingRSVPs) {
+                                  handleUpdateGameDetails();
+                                } else {
+                                  setEditGameName(game.name);
+                                  const dateStr = game.date?.toDate ? game.date.toDate().toISOString().split('T')[0] : new Date(game.date).toISOString().split('T')[0];
+                                  setEditGameDate(dateStr);
+                                  setIsEditingRSVPs(true);
                                 }
                               }}
-                              disabled={isLocked}
                               className={`flex items-center justify-center gap-2 px-8 py-4 rounded-2xl transition-all text-sm font-black border ${
-                                isLocked
-                                  ? 'bg-white/5 text-white/20 border-white/5 cursor-not-allowed'
-                                  : isEditingRSVPs 
-                                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-xl shadow-emerald-500/30' 
-                                    : 'bg-white text-slate-900 border-white hover:bg-slate-100 shadow-xl shadow-black/10'
+                                isEditingRSVPs 
+                                  ? 'bg-emerald-500 text-white border-emerald-500 shadow-xl shadow-emerald-500/30' 
+                                  : 'bg-white text-slate-900 border-white hover:bg-slate-100 shadow-xl shadow-black/10'
                               }`}
                             >
                               {isEditingRSVPs ? <Save size={20} /> : <Edit2 size={20} />}
@@ -1681,8 +1788,8 @@ function BaseballApp() {
                               Field Lineup
                             </button>
                           </div>
-                          <div className="flex items-center gap-3 justify-end">
-                            {!isEditingRSVPs && !isLocked && (
+                          <div className="flex items-center gap-3 w-full sm:w-auto">
+                            {!isEditingRSVPs && (
                               <button 
                                 onClick={() => {
                                   if (gameViewTab === 'batting') {
@@ -1691,10 +1798,10 @@ function BaseballApp() {
                                     handleGenerateLineup(selectedGameId);
                                   }
                                 }}
-                                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-all text-sm font-black shadow-xl shadow-slate-900/20"
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-all text-sm font-black shadow-xl shadow-slate-900/20 active:scale-[0.98]"
                               >
                                 <RotateCcw size={18} />
-                                {gameViewTab === 'batting' ? 'Reshuffle Order' : 'Regenerate Lineup'}
+                                Generate
                               </button>
                             )}
                           </div>
@@ -1757,87 +1864,151 @@ function BaseballApp() {
                       if (gameViewTab === 'batting') {
                         if (!game.battingOrder) return null;
                         
-                        const order = game.battingOrder.filter(id => 
+                        const inOrder = localBattingOrder.filter(id => 
                           players.some(p => p.id === id) && 
                           game.rsvps[id] !== RSVPStatus.NO
                         );
+
+                        const outPlayers = players.filter(p => 
+                          game.rsvps[p.id] === RSVPStatus.NO
+                        ).sort((a, b) => a.name.localeCompare(b.name));
                         
                         return (
-                          <div className="space-y-3">
-                            {order.map((playerId, index) => {
-                              const player = players.find(p => p.id === playerId);
-                              if (!player) return null;
-                              
-                              return (
-                                <div key={playerId} className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:shadow-md transition-all group">
-                                  <div className="flex items-center gap-6">
-                                    <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-sm font-black shadow-xl shadow-slate-900/20 group-hover:scale-110 transition-transform">
-                                      {index + 1}
-                                    </div>
-                                    <div>
-                                      <p className="font-black text-slate-900 text-xl tracking-tight">{player.name}</p>
-                                      {game.lineup ? (
-                                        <div className="flex flex-wrap gap-x-2 gap-y-1 mt-2">
-                                          {[1, 2, 3, 4, 5, 6].map(inning => {
-                                            const inningKey = inning.toString();
-                                            const inningLineup = game.lineup?.[inningKey] || {};
-                                            let position = "Bench";
-                                            for (const [pos, pId] of Object.entries(inningLineup)) {
-                                              if (pId === playerId) {
-                                                position = getPositionAbbreviation(pos);
-                                                break;
-                                              }
-                                            }
-                                            const isBench = position === "Bench";
-                                            return (
-                                              <span key={inning} className={`text-[9px] font-black px-2 py-0.5 rounded-lg border transition-all ${
-                                                isBench 
-                                                  ? 'text-rose-600 bg-rose-50 border-rose-100' 
-                                                  : 'text-slate-500 bg-white border-slate-100'
-                                              }`}>
-                                                <span className={`${isBench ? 'text-amber-300' : 'text-slate-300'} mr-1`}>{inning}</span>
-                                                {position}
-                                              </span>
-                                            );
-                                          })}
+                          <div className="space-y-8">
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between px-2">
+                                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Batting Order</h3>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{inOrder.length} In</span>
+                              </div>
+                              <div className="space-y-3">
+                                {inOrder.map((playerId, index) => {
+                                  const player = players.find(p => p.id === playerId);
+                                  if (!player) return null;
+                                  
+                                  return (
+                                    <div
+                                      key={playerId}
+                                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group gap-4"
+                                    >
+                                      <div className="flex items-center gap-4 sm:gap-6">
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 text-white rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-black shadow-xl shadow-slate-900/20 group-hover:scale-110 transition-transform flex-shrink-0">
+                                          {index + 1}
                                         </div>
-                                      ) : (
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
-                                      )}
+                                        <div className="min-w-0 flex-1">
+                                          <p className="font-black text-slate-900 text-lg sm:text-xl tracking-tight truncate">{player.name}</p>
+                                          {game.lineup ? (
+                                            <div className="flex flex-wrap gap-x-1.5 gap-y-1 mt-1.5">
+                                              {[1, 2, 3, 4, 5, 6].map(inning => {
+                                                const inningKey = inning.toString();
+                                                const inningLineup = game.lineup?.[inningKey] || {};
+                                                let position = "Bench";
+                                                for (const [pos, pId] of Object.entries(inningLineup)) {
+                                                  if (pId === playerId) {
+                                                    position = getPositionAbbreviation(pos);
+                                                    break;
+                                                  }
+                                                }
+                                                const isBench = position === "Bench";
+                                                return (
+                                                  <span key={inning} className={`text-[8px] sm:text-[9px] font-black px-1.5 sm:px-2 py-0.5 rounded-lg border transition-all ${
+                                                    isBench 
+                                                      ? 'text-rose-600 bg-rose-50 border-rose-100' 
+                                                      : 'text-slate-500 bg-white border-slate-100'
+                                                  }`}>
+                                                    <span className={`${isBench ? 'text-amber-300' : 'text-slate-300'} mr-1`}>{inning}</span>
+                                                    {position}
+                                                  </span>
+                                                );
+                                              })}
+                                            </div>
+                                          ) : (
+                                            <p className="text-[9px] sm:text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1 truncate">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 border-slate-50 pt-3 sm:pt-0">
+                                        <div className="flex gap-1 flex-1 sm:flex-none">
+                                          {[RSVPStatus.YES, RSVPStatus.TENTATIVE, RSVPStatus.NO].map(status => (
+                                            <button
+                                              key={status}
+                                              onClick={() => handleUpdateGameRSVP(game.id, playerId, status)}
+                                              className={`flex-1 sm:flex-none px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-all border ${
+                                                game.rsvps[playerId] === status
+                                                  ? status === RSVPStatus.YES 
+                                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
+                                                    : status === RSVPStatus.TENTATIVE
+                                                      ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                                      : 'bg-rose-100 text-rose-700 border-rose-200'
+                                                  : 'bg-white text-slate-300 border-slate-100 hover:text-slate-500 hover:bg-slate-50'
+                                              }`}
+                                            >
+                                              {status}
+                                            </button>
+                                          ))}
+                                        </div>
+                                        <div className="flex sm:flex-col gap-1">
+                                          <button
+                                            onClick={() => handleMovePlayer(playerId, 'up')}
+                                            disabled={index === 0}
+                                            className={`p-2 sm:p-1 rounded-lg transition-all ${
+                                              index === 0 
+                                                ? 'text-slate-100 dark:text-slate-800 cursor-not-allowed' 
+                                                : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                          >
+                                            <ChevronUp size={20} />
+                                          </button>
+                                          <button
+                                            onClick={() => handleMovePlayer(playerId, 'down')}
+                                            disabled={index === inOrder.length - 1}
+                                            className={`p-2 sm:p-1 rounded-lg transition-all ${
+                                              index === inOrder.length - 1 
+                                                ? 'text-slate-100 dark:text-slate-800 cursor-not-allowed' 
+                                                : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                          >
+                                            <ChevronDown size={20} />
+                                          </button>
+                                        </div>
+                                      </div>
                                     </div>
-                                  </div>
-                                  <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm ${
-                                    game.rsvps[playerId] === RSVPStatus.YES 
-                                      ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' 
-                                      : game.rsvps[playerId] === RSVPStatus.TENTATIVE
-                                        ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                                        : 'bg-rose-100 text-rose-700 border border-rose-200'
-                                  }`}>
-                                    {game.rsvps[playerId] || 'No RSVP'}
-                                  </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {outPlayers.length > 0 && (
+                              <div className="space-y-3 pt-6 border-t border-slate-100">
+                                <div className="flex items-center justify-between px-2">
+                                  <h3 className="text-lg font-black text-slate-400 uppercase tracking-tight">Not Attending</h3>
+                                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{outPlayers.length} Out</span>
                                 </div>
-                              );
-                            })}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {outPlayers.map(player => (
+                                    <div key={player.id} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 opacity-60 hover:opacity-100 transition-all">
+                                      <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 bg-slate-200 text-slate-400 rounded-xl flex items-center justify-center text-xs font-black">
+                                          OUT
+                                        </div>
+                                        <p className="font-bold text-slate-500">{player.name}</p>
+                                      </div>
+                                      <div className="flex gap-1">
+                                        <button
+                                          onClick={() => handleUpdateGameRSVP(game.id, player.id, RSVPStatus.YES)}
+                                          className="px-3 py-1.5 bg-white text-emerald-600 border border-emerald-100 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 transition-all"
+                                        >
+                                          Activate
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       } else {
                         // Lineup View
-                        if (!game.lineup) {
-                          return (
-                            <div className="text-center py-12 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-                              <LayoutGrid className="mx-auto text-slate-300 mb-4" size={48} />
-                              <h4 className="text-lg font-bold text-slate-900">No Lineup Generated</h4>
-                              <p className="text-slate-500 mb-6">Generate a 6-inning field lineup based on player RSVPs.</p>
-                              <button 
-                                onClick={() => handleGenerateLineup(selectedGameId)}
-                                className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-md"
-                              >
-                                Generate Now
-                              </button>
-                            </div>
-                          );
-                        }
-
                         const isLocked = game.isLocked || false;
                         const fieldPositions = [
                           "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
@@ -1868,15 +2039,13 @@ function BaseballApp() {
                                         <th key={inning} className="text-center py-5 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
                                           <div className="flex flex-col items-center gap-2">
                                             <span className="text-slate-900">Inning {inning}</span>
-                                            {!isLocked && (
-                                              <button 
-                                                onClick={() => handleToggleInningLock(selectedGameId, inning)}
-                                                className={`p-1.5 rounded-lg transition-all ${game.lockedInnings?.includes(inning) ? 'text-emerald-600 bg-emerald-100 shadow-sm' : 'text-slate-300 hover:text-slate-900 hover:bg-slate-200'}`}
-                                                title={game.lockedInnings?.includes(inning) ? "Unlock Inning" : "Lock Inning"}
-                                              >
-                                                {game.lockedInnings?.includes(inning) ? <Lock size={14} /> : <Unlock size={14} />}
-                                              </button>
-                                            )}
+                                            <button 
+                                              onClick={() => handleToggleInningLock(selectedGameId, inning)}
+                                              className={`p-1.5 rounded-lg transition-all ${game.lockedInnings?.includes(inning) ? 'text-emerald-600 bg-emerald-100 shadow-sm' : 'text-slate-300 hover:text-slate-900 hover:bg-slate-200'}`}
+                                              title={game.lockedInnings?.includes(inning) ? "Unlock Inning" : "Lock Inning"}
+                                            >
+                                              {game.lockedInnings?.includes(inning) ? <Lock size={14} /> : <Unlock size={14} />}
+                                            </button>
                                           </div>
                                         </th>
                                       ))}
@@ -1887,15 +2056,13 @@ function BaseballApp() {
                                     <tr key={pos} className="group hover:bg-slate-50/50 transition-colors">
                                       <td className="py-5 px-6 font-black text-slate-900 text-sm">
                                         <div className="flex items-center gap-3">
-                                          {!isLocked && (
-                                            <button 
-                                              onClick={() => handleTogglePositionLock(selectedGameId, pos)}
-                                              className={`p-1.5 rounded-lg transition-all ${game.lockedPositions?.includes(pos) ? 'text-emerald-600 bg-emerald-100 shadow-sm' : 'text-slate-300 hover:text-slate-900 hover:bg-slate-200'}`}
-                                              title={game.lockedPositions?.includes(pos) ? "Unlock Position" : "Lock Position"}
-                                            >
-                                              {game.lockedPositions?.includes(pos) ? <Lock size={14} /> : <Unlock size={14} />}
-                                            </button>
-                                          )}
+                                          <button 
+                                            onClick={() => handleTogglePositionLock(selectedGameId, pos)}
+                                            className={`p-1.5 rounded-lg transition-all ${game.lockedPositions?.includes(pos) ? 'text-emerald-600 bg-emerald-100 shadow-sm' : 'text-slate-300 hover:text-slate-900 hover:bg-slate-200'}`}
+                                            title={game.lockedPositions?.includes(pos) ? "Unlock Position" : "Lock Position"}
+                                          >
+                                            {game.lockedPositions?.includes(pos) ? <Lock size={14} /> : <Unlock size={14} />}
+                                          </button>
                                           <span className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-black">
                                             {getPositionAbbreviation(pos)}
                                           </span>
@@ -1903,19 +2070,105 @@ function BaseballApp() {
                                         </div>
                                       </td>
                                       {[1, 2, 3, 4, 5, 6].map(inning => {
-                                        const playerId = game.lineup?.[inning.toString()]?.[pos];
+                                        const inningKey = inning.toString();
+                                        const playerId = game.lineup?.[inningKey]?.[pos];
                                         const player = players.find(p => p.id === playerId);
                                         const isLockedInning = game.lockedInnings?.includes(inning);
+                                        const isOut = playerId && game.rsvps[playerId] === RSVPStatus.NO;
                                         
+                                        // Check for duplicates in this inning
+                                        const inningLineup = game.lineup?.[inningKey] || {};
+                                        const playerIdsInInning = Object.values(inningLineup);
+                                        const isDuplicate = playerId && playerIdsInInning.filter(id => id === playerId).length > 1;
+                                        
+                                        const isEditing = editingCell?.inning === inningKey && editingCell?.position === pos;
+
                                         return (
-                                          <td key={inning} className="py-4 px-4 text-center">
-                                            <div className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] ${
-                                              isLockedInning 
-                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
-                                                : 'bg-white text-slate-700 border border-slate-100 shadow-sm group-hover:border-slate-200'
-                                            }`}>
+                                          <td key={inning} className="py-4 px-4 text-center relative">
+                                          {isEditing && (
+                                              <>
+                                                <div 
+                                                  className="fixed inset-0 z-[55]" 
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditingCell(null);
+                                                  }} 
+                                                />
+                                                <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                                  <div className="px-3 py-2 border-b border-slate-50 mb-1">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Player</p>
+                                                  </div>
+                                                  <button
+                                                    onClick={() => handleUpdateLineupCell(selectedGameId, inningKey, pos, '')}
+                                                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 text-slate-500 italic transition-colors"
+                                                  >
+                                                    — Empty —
+                                                  </button>
+                                                  {(() => {
+                                                    const inningLineup = game.lineup?.[inningKey] || {};
+                                                    const assignedElsewhere = Object.entries(inningLineup)
+                                                      .filter(([pPos]) => pPos !== pos)
+                                                      .map(([_, pId]) => pId);
+
+                                                    return players
+                                                      .sort((a, b) => a.name.localeCompare(b.name))
+                                                      .map(p => {
+                                                        const isCurrent = p.id === playerId;
+                                                        const isAssignedElsewhere = !isCurrent && assignedElsewhere.includes(p.id);
+                                                        const isPlayerOut = game.rsvps[p.id] === RSVPStatus.NO;
+                                                        
+                                                        let statusLabel = 'Bench';
+                                                        let statusColor = '#059669'; // Emerald-600
+                                                        let statusBg = 'bg-emerald-50 text-emerald-600';
+
+                                                        if (isPlayerOut) {
+                                                          statusLabel = 'OUT';
+                                                          statusColor = '#f43f5e'; // Rose-500
+                                                          statusBg = 'bg-rose-50 text-rose-500';
+                                                        } else if (isCurrent) {
+                                                          statusLabel = 'Current';
+                                                          statusColor = '#2563eb'; // Blue-600
+                                                          statusBg = 'bg-blue-50 text-blue-600';
+                                                        } else if (isAssignedElsewhere) {
+                                                          statusLabel = 'Field';
+                                                          statusColor = '#94a3b8'; // Slate-400
+                                                          statusBg = 'bg-slate-100 text-slate-400';
+                                                        }
+
+                                                        return (
+                                                          <button
+                                                            key={p.id}
+                                                            onClick={() => handleUpdateLineupCell(selectedGameId, inningKey, pos, p.id)}
+                                                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 flex items-center justify-between transition-colors group/item"
+                                                            style={{ color: statusColor }}
+                                                          >
+                                                            <span>{p.name}</span>
+                                                            <span className={`text-[8px] uppercase px-1.5 py-0.5 rounded-md ${statusBg}`}>
+                                                              {statusLabel}
+                                                            </span>
+                                                          </button>
+                                                        );
+                                                      });
+                                                  })()}
+                                                </div>
+                                              </>
+                                            )}
+                                            
+                                            <button
+                                              onClick={() => setEditingCell({ inning: inningKey, position: pos })}
+                                              className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] border ${
+                                                isOut
+                                                  ? 'bg-rose-500 text-white border-rose-600 shadow-md shadow-rose-200'
+                                                  : isDuplicate
+                                                    ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm shadow-rose-100'
+                                                    : isLockedInning 
+                                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                                                      : 'bg-white text-slate-700 border border-slate-100 shadow-sm group-hover:border-slate-200 hover:bg-slate-50'
+                                              } ${isEditing ? 'ring-2 ring-slate-900 border-slate-900' : ''}`}
+                                            >
                                               {player?.name || <span className="text-slate-300 italic">Empty</span>}
-                                            </div>
+                                              {isOut && <AlertCircle size={12} className="ml-2" />}
+                                            </button>
                                           </td>
                                         );
                                       })}
@@ -1997,9 +2250,16 @@ function BaseballApp() {
                       <input 
                         type="text" 
                         value={gameName}
-                        onChange={(e) => setGameName(e.target.value)}
+                        onChange={(e) => {
+                          setGameName(e.target.value);
+                          if (e.target.value.trim()) setGameNameError(false);
+                        }}
                         placeholder="e.g. May 20th - Vipers"
-                        className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all text-base sm:text-lg font-medium"
+                        className={`w-full px-4 sm:px-6 py-3 sm:py-4 bg-white border rounded-2xl focus:outline-none focus:ring-4 transition-all text-base sm:text-lg font-medium ${
+                          gameNameError 
+                            ? 'border-red-500 focus:ring-red-500/10 focus:border-red-500' 
+                            : 'border-slate-200 focus:ring-slate-900/5 focus:border-slate-900'
+                        }`}
                       />
                     </div>
                     <div className="space-y-2">
@@ -2540,10 +2800,13 @@ function BaseballApp() {
               <p className="text-sm text-slate-500 dark:text-slate-400">Switch the application to a dark color scheme.</p>
             </div>
             <button 
-              onClick={() => handleUpdateSettings({ darkMode: !settings?.darkMode })}
-              className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${settings?.darkMode ? 'bg-slate-900 dark:bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+              onClick={() => setDarkMode(!darkMode)}
+              className={`w-14 h-8 rounded-full transition-colors relative shrink-0 flex items-center px-1 ${darkMode ? 'bg-emerald-500' : 'bg-slate-200'}`}
+              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
-              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.darkMode ? 'left-7' : 'left-1'}`} />
+              <div className={`w-6 h-6 bg-white rounded-full transition-all flex items-center justify-center shadow-sm ${darkMode ? 'translate-x-6' : 'translate-x-0'}`}>
+                {darkMode ? <Sun size={14} className="text-emerald-500" /> : <Moon size={14} className="text-slate-400" />}
+              </div>
             </button>
           </div>
         </div>
@@ -2649,10 +2912,26 @@ function BaseballApp() {
 }
 
 export default function App() {
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    console.log('Theme changed:', darkMode ? 'dark' : 'light');
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
   return (
     <ErrorBoundary>
+      <Toaster richColors closeButton />
       <HashRouter>
-        <BaseballApp />
+        <BaseballApp darkMode={darkMode} setDarkMode={setDarkMode} />
       </HashRouter>
     </ErrorBoundary>
   );

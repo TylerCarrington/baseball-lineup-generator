@@ -35,7 +35,7 @@ async function testConnection() {
 }
 testConnection();
 
-import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, Menu, Calendar, History, Share2, ExternalLink, Copy } from 'lucide-react';
+import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Users, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, Menu, Calendar, History, Share2, ExternalLink, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Types ---
@@ -53,6 +53,7 @@ interface TeamSettings {
   allowDesignatedHitter: boolean;
   allowOutfieldTwiceInRow: boolean;
   publicSchedule?: boolean;
+  darkMode?: boolean;
   uid: string;
 }
 
@@ -315,12 +316,20 @@ function SharedView() {
     };
   }, [settings, ownerId]);
 
+  useEffect(() => {
+    if (settings?.darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [settings?.darkMode]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-500 font-medium">Loading schedule...</p>
+          <div className="w-12 h-12 border-4 border-slate-900 dark:border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Loading schedule...</p>
         </div>
       </div>
     );
@@ -328,16 +337,16 @@ function SharedView() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-slate-200 p-8 text-center">
-          <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 text-center">
+          <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <Lock size={32} />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Restricted</h2>
-          <p className="text-slate-500 mb-8">{error}</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Access Restricted</h2>
+          <p className="text-slate-500 dark:text-slate-400 mb-8">{error}</p>
           <button 
             onClick={() => navigate('/')}
-            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg"
+            className="w-full py-4 bg-slate-900 dark:bg-emerald-600 text-white rounded-2xl font-bold hover:bg-slate-800 dark:hover:bg-emerald-500 transition-all shadow-lg"
           >
             Go to Home
           </button>
@@ -349,14 +358,14 @@ function SharedView() {
   const selectedGame = gameId ? games.find(g => g.id === gameId) : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 font-bold text-xl">
-            <Trophy className="text-slate-900" size={24} />
-            <span>Lineup+</span>
+            <Trophy className="text-slate-900 dark:text-white" size={24} />
+            <span className="text-slate-900 dark:text-white">Lineup+</span>
           </div>
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+          <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             Shared View
           </div>
         </div>
@@ -373,17 +382,17 @@ function SharedView() {
                 exit={{ opacity: 0, y: -20 }}
                 className="max-w-xl mx-auto"
               >
-                <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm">
-                  <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
-                    <Lock size={32} className="text-slate-300" />
+                <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-12 text-center shadow-sm transition-colors duration-300">
+                  <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100 dark:border-slate-700">
+                    <Lock size={32} className="text-slate-300 dark:text-slate-600" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Lineup Not Published</h3>
-                  <p className="text-slate-500 mb-8 max-w-xs mx-auto">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Lineup Not Published</h3>
+                  <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-xs mx-auto">
                     The lineup for this game is still being finalized. Please check back later.
                   </p>
                   <button 
                     onClick={() => navigate(`/shared/${ownerId}/games`)}
-                    className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all"
+                    className="px-8 py-3 bg-slate-900 dark:bg-emerald-600 text-white rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-emerald-500 transition-all shadow-lg"
                   >
                     Back to Schedule
                   </button>
@@ -398,21 +407,21 @@ function SharedView() {
               >
                 <button 
                   onClick={() => navigate(`/shared/${ownerId}/games`)}
-                  className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm mb-6 transition-colors"
+                  className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold text-sm mb-6 transition-colors"
                 >
                   <ChevronLeft size={18} />
                   Back to Schedule
                 </button>
 
-                <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden mb-8">
-                  <div className="p-6 sm:p-8 bg-slate-900 text-white">
+                <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden mb-8 transition-colors duration-300">
+                  <div className="p-6 sm:p-8 bg-slate-900 dark:bg-slate-800 text-white">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="px-2 py-0.5 bg-emerald-500 text-white rounded text-[10px] font-bold uppercase tracking-wider">
                             Published
                           </span>
-                          <h2 className="text-2xl sm:text-3xl font-black tracking-tight">{selectedGame.name}</h2>
+                          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">{selectedGame.name}</h2>
                         </div>
                         <div className="flex items-center gap-2 text-slate-400 mt-1">
                           <Calendar size={16} />
@@ -431,13 +440,13 @@ function SharedView() {
 
                 <div className="p-6 sm:p-8">
                   {/* Tabs */}
-                  <div className="flex p-1 bg-slate-100 rounded-2xl mb-8">
+                  <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-8 transition-colors duration-300">
                     <button
                       onClick={() => setActiveTab('batting')}
                       className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${
                         activeTab === 'batting'
-                          ? 'bg-white text-slate-900 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-700'
+                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                       }`}
                     >
                       <ClipboardList size={18} />
@@ -447,8 +456,8 @@ function SharedView() {
                       onClick={() => setActiveTab('fielding')}
                       className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${
                         activeTab === 'fielding'
-                          ? 'bg-white text-slate-900 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-700'
+                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                       }`}
                     >
                       <LayoutGrid size={18} />
@@ -463,8 +472,8 @@ function SharedView() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                       >
-                        <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                          <ClipboardList size={20} className="text-slate-400" />
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                          <ClipboardList size={20} className="text-slate-400 dark:text-slate-500" />
                           Batting Order
                         </h3>
                         <div className="space-y-2">
@@ -472,16 +481,16 @@ function SharedView() {
                             selectedGame.battingOrder.map((playerId, index) => {
                               const player = players.find(p => p.id === playerId);
                               return (
-                                <div key={index} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                  <span className="w-6 h-6 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
+                                <div key={index} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 transition-colors duration-300">
+                                  <span className="w-6 h-6 bg-slate-900 dark:bg-emerald-600 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
                                     {index + 1}
                                   </span>
-                                  <span className="font-bold text-slate-700">{player?.name || 'Unknown Player'}</span>
+                                  <span className="font-bold text-slate-700 dark:text-slate-200">{player?.name || 'Unknown Player'}</span>
                                 </div>
                               );
                             })
                           ) : (
-                            <p className="text-sm text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-slate-100 border-dashed text-center">
+                            <p className="text-sm text-slate-400 dark:text-slate-500 italic p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 border-dashed text-center transition-colors duration-300">
                               No batting order set yet.
                             </p>
                           )}
@@ -495,24 +504,24 @@ function SharedView() {
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                       >
-                        <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                          <LayoutGrid size={20} className="text-slate-400" />
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                          <LayoutGrid size={20} className="text-slate-400 dark:text-slate-500" />
                           Fielding Lineup
                         </h3>
                         <div className="space-y-4">
                           {selectedGame.lineup && Object.keys(selectedGame.lineup).length > 0 ? (
                             Object.entries(selectedGame.lineup).sort(([a], [b]) => Number(a) - Number(b)).map(([inningNum, inning]) => (
-                              <div key={inningNum} className="bg-slate-50 rounded-2xl border border-slate-100 p-4">
-                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Inning {inningNum}</h4>
+                              <div key={inningNum} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 transition-colors duration-300">
+                                <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Inning {inningNum}</h4>
                                 <div className="grid grid-cols-2 gap-2">
                                   {Object.entries(inning)
                                     .sort(([posA], [posB]) => (POSITION_ORDER[posA] || 99) - (POSITION_ORDER[posB] || 99))
                                     .map(([pos, playerId]) => {
                                       const player = players.find(p => p.id === playerId);
                                       return (
-                                        <div key={pos} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-100 shadow-sm">
-                                          <span className="text-[10px] font-black text-slate-400 w-6 shrink-0">{getPositionAbbreviation(pos)}</span>
-                                          <span className="text-xs font-bold text-slate-700 truncate">{player?.name || 'Bench'}</span>
+                                        <div key={pos} className="flex items-center gap-2 p-2 bg-white dark:bg-slate-700 rounded-lg border border-slate-100 dark:border-slate-600 shadow-sm transition-colors duration-300">
+                                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-400 w-6 shrink-0">{getPositionAbbreviation(pos)}</span>
+                                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{player?.name || 'Bench'}</span>
                                         </div>
                                       );
                                     })}
@@ -520,7 +529,7 @@ function SharedView() {
                               </div>
                             ))
                           ) : (
-                            <p className="text-sm text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-slate-100 border-dashed text-center">
+                            <p className="text-sm text-slate-400 dark:text-slate-500 italic p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 border-dashed text-center transition-colors duration-300">
                               No fielding lineup set yet.
                             </p>
                           )}
@@ -540,15 +549,15 @@ function SharedView() {
               exit={{ opacity: 0, y: -20 }}
             >
               <div className="mb-8">
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Game Schedule</h2>
-                <p className="text-slate-500 mt-1">View upcoming games and lineups</p>
+                <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Game Schedule</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-1">View upcoming games and lineups</p>
               </div>
 
               {games.length === 0 ? (
-                <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-12 text-center">
-                  <Calendar size={48} className="text-slate-200 mx-auto mb-4" />
-                  <h3 className="text-lg font-bold text-slate-900">No games scheduled</h3>
-                  <p className="text-slate-500">Check back later for updates.</p>
+                <div className="bg-white dark:bg-slate-900 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-12 text-center transition-colors duration-300">
+                  <Calendar size={48} className="text-slate-200 dark:text-slate-700 mx-auto mb-4" />
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">No games scheduled</h3>
+                  <p className="text-slate-500 dark:text-slate-400">Check back later for updates.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -564,24 +573,24 @@ function SharedView() {
                             navigate(`/shared/${ownerId}/games/${game.id}`);
                           }
                         }}
-                        className={`group bg-white p-6 rounded-3xl border border-slate-200 shadow-sm transition-all text-left relative overflow-hidden ${
+                        className={`group bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all text-left relative overflow-hidden ${
                           isPublished 
-                            ? 'hover:shadow-xl hover:border-slate-900 cursor-pointer' 
+                            ? 'hover:shadow-xl dark:hover:shadow-emerald-900/10 hover:border-slate-900 dark:hover:border-emerald-500 cursor-pointer' 
                             : 'opacity-70 cursor-default'
                         }`}
                       >
                         {!isPublished && (
-                          <div className="absolute top-3 right-3 px-2 py-0.5 bg-slate-100 text-slate-400 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200">
+                          <div className="absolute top-3 right-3 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700">
                             Draft
                           </div>
                         )}
                         {isPublished && (
                           <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ChevronRight size={20} className="text-slate-400" />
+                            <ChevronRight size={20} className="text-slate-400 dark:text-slate-500" />
                           </div>
                         )}
                         <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 bg-slate-100 rounded-2xl flex flex-col items-center justify-center shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                          <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex flex-col items-center justify-center shrink-0 group-hover:bg-slate-900 dark:group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                             <span className="text-[10px] font-black uppercase tracking-tighter opacity-50">
                               {gameDate.toLocaleDateString('en-US', { month: 'short' })}
                             </span>
@@ -590,14 +599,14 @@ function SharedView() {
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-black text-xl text-slate-900 truncate group-hover:text-slate-900 transition-colors">{game.name}</h3>
+                            <h3 className="font-black text-xl text-slate-900 dark:text-white truncate group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{game.name}</h3>
                             <div className="flex items-center gap-3 mt-1">
-                              <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
                                 <Calendar size={12} />
                                 {gameDate.toLocaleDateString('en-US', { weekday: 'short' })}
                               </span>
-                              <span className="w-1 h-1 bg-slate-200 rounded-full" />
-                              <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                              <span className="w-1 h-1 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
                                 <ClipboardList size={12} />
                                 {game.battingOrder?.length || 0} Players
                               </span>
@@ -1145,7 +1154,7 @@ function BaseballApp() {
           // Find players who can play this position
           let candidates = pool.filter(p => canPlay(p, pos) && !assignedThisInning.has(p.id));
           
-          // Apply Catcher constraints
+          // Apply Catcher constraints (League Rules)
           if (pos === "Catcher") {
             candidates = candidates.filter(p => {
               // 1. Max 4 innings in a game
@@ -1169,7 +1178,7 @@ function BaseballApp() {
               }
               if (totalPitched >= 2) return false;
 
-              // 4. Cannot catch then pitch then catch again
+              // 4. Cannot catch then pitch then catch again (even 1 inning of pitching)
               let hasCaughtBefore = false;
               let hasPitchedAfterCatching = false;
               for (let i = 1; i < inning; i++) {
@@ -1374,6 +1383,14 @@ function BaseballApp() {
     }
   };
 
+  useEffect(() => {
+    if (settings?.darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [settings?.darkMode]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -1391,20 +1408,20 @@ function BaseballApp() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors duration-300">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-slate-100 text-center"
+          className="max-w-md w-full bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 text-center"
         >
-          <div className="w-20 h-20 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg rotate-3">
+          <div className="w-20 h-20 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg rotate-3">
             <Trophy size={40} />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Lineup+</h1>
-          <p className="text-slate-600 mb-8">Organize your team, manage your roster, and win the game.</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Lineup+</h1>
+          <p className="text-slate-600 dark:text-slate-400 mb-8">Organize your team, manage your roster, and win the game.</p>
           <button 
             onClick={handleLogin}
-            className="w-full flex items-center justify-center gap-3 py-4 bg-slate-900 text-white rounded-2xl font-semibold hover:bg-slate-800 transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-3 py-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl font-semibold hover:bg-slate-800 dark:hover:bg-white transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
           >
             <LogIn size={20} />
             Sign in with Google
@@ -1416,9 +1433,9 @@ function BaseballApp() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 font-bold text-xl">
@@ -1428,39 +1445,39 @@ function BaseballApp() {
             <nav className="hidden md:flex items-center gap-1">
               <button 
                 onClick={() => handleTabChange('roster')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'roster' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'roster' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
               >
                 Roster
               </button>
               <button 
                 onClick={() => handleTabChange('games')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'games' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'games' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
               >
                 Games
               </button>
               <button 
                 onClick={() => handleTabChange('settings')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
               >
                 Settings
               </button>
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 text-sm text-slate-600">
+            <div className="hidden sm:flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
               <UserIcon size={16} />
               <span>{user.displayName}</span>
             </div>
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-slate-500 hover:text-slate-900 transition-colors"
+              className="md:hidden p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               title="Menu"
             >
               <Menu size={20} />
             </button>
             <button 
               onClick={handleLogout}
-              className="hidden md:flex p-2 text-slate-500 hover:text-slate-900 transition-colors"
+              className="hidden md:flex p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               title="Logout"
             >
               <LogOut size={20} />
@@ -1475,35 +1492,35 @@ function BaseballApp() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="md:hidden border-t border-slate-100 overflow-hidden bg-white"
+              className="md:hidden border-t border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900"
             >
               <div className="p-4 flex flex-col gap-2">
                 <button 
                   onClick={() => handleTabChange('roster')}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'roster' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'roster' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
                 >
                   Roster
                 </button>
                 <button 
                   onClick={() => handleTabChange('games')}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'games' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'games' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
                 >
                   Games
                 </button>
                 <button 
                   onClick={() => handleTabChange('settings')}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
                 >
                   Settings
                 </button>
-                <div className="sm:hidden border-t border-slate-100 mt-2 pt-2 px-4 flex items-center gap-2 text-sm text-slate-600">
+                <div className="sm:hidden border-t border-slate-100 dark:border-slate-800 mt-2 pt-2 px-4 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <UserIcon size={16} />
                   <span>{user.displayName}</span>
                 </div>
-                <div className="border-t border-slate-100 mt-2 pt-2">
+                <div className="border-t border-slate-100 dark:border-slate-800 mt-2 pt-2">
                   <button 
                     onClick={handleLogout}
-                    className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-rose-500 hover:bg-rose-50 transition-colors flex items-center gap-2"
+                    className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors flex items-center gap-2"
                   >
                     <LogOut size={18} />
                     Log Out
@@ -1520,199 +1537,219 @@ function BaseballApp() {
           {selectedGameId ? (
             <motion.div 
               key="game-view"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="max-w-3xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
             >
-              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-                <div className="p-8 border-b border-slate-100 bg-slate-50/50">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
-                    <div className="flex-1 min-w-0">
-                      {isEditingRSVPs ? (
-                        <div className="space-y-4 max-w-md">
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Game Name</label>
-                            <input 
-                              type="text" 
-                              value={editGameName}
-                              onChange={(e) => setEditGameName(e.target.value)}
-                              className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-slate-900 shadow-sm"
-                              placeholder="Game Name"
-                            />
+              <button 
+                onClick={() => navigate('/games')}
+                className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm mb-6 transition-colors group"
+              >
+                <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                Back to Schedule
+              </button>
+
+              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden mb-12">
+                {(() => {
+                  const game = games.find(g => g.id === selectedGameId);
+                  if (!game) return null;
+                  const isLocked = game.isLocked || false;
+                  
+                  return (
+                    <>
+                      <div className="p-8 sm:p-12 bg-slate-900 text-white relative overflow-hidden">
+                        {/* Decorative background element */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+                        
+                        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                          <div className="flex-1 min-w-0">
+                            {isEditingRSVPs ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
+                                <div className="space-y-1.5">
+                                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Game Name</label>
+                                  <input 
+                                    type="text" 
+                                    value={editGameName}
+                                    onChange={(e) => setEditGameName(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                                    placeholder="Game Name"
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Game Date</label>
+                                  <input 
+                                    type="date" 
+                                    value={editGameDate}
+                                    onChange={(e) => setEditGameDate(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex items-center gap-3 mb-3">
+                                  {isLocked && (
+                                    <span className="px-2 py-0.5 bg-emerald-500 text-white rounded text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20">
+                                      Published
+                                    </span>
+                                  )}
+                                  <h2 className="text-3xl sm:text-5xl font-black tracking-tighter truncate leading-tight">
+                                    {game.name}
+                                  </h2>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-6 text-slate-400">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar size={18} className="text-emerald-500" />
+                                    <span className="text-base font-bold">
+                                      {(() => {
+                                        const gameDateObj = game.date?.toDate ? game.date.toDate() : new Date(game.date);
+                                        return gameDateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+                                      })()}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Users size={18} className="text-emerald-500" />
+                                    <span className="text-base font-bold">
+                                      {Object.values(game.rsvps || {}).filter(v => v === RSVPStatus.YES).length} Players In
+                                    </span>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Game Date</label>
-                            <input 
-                              type="date" 
-                              value={editGameDate}
-                              onChange={(e) => setEditGameDate(e.target.value)}
-                              className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-slate-900 shadow-sm"
-                            />
+
+                          <div className="flex flex-wrap items-center gap-3 shrink-0">
+                            <button 
+                              onClick={() => handleTogglePublish(game.id, isLocked)}
+                              className={`flex items-center justify-center gap-2 px-8 py-4 rounded-2xl transition-all text-sm font-black border shadow-lg ${
+                                isLocked 
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 shadow-emerald-500/5' 
+                                  : 'bg-white/10 text-white border-white/10 hover:bg-white/20 shadow-black/5'
+                              }`}
+                            >
+                              {isLocked ? <RotateCcw size={20} /> : <Check size={20} />}
+                              {isLocked ? 'Unpublish' : 'Publish Lineup'}
+                            </button>
+                            <button 
+                              onClick={() => {
+                                if (!isLocked) {
+                                  if (isEditingRSVPs) {
+                                    handleUpdateGameDetails();
+                                  } else {
+                                    setEditGameName(game.name);
+                                    const dateStr = game.date?.toDate ? game.date.toDate().toISOString().split('T')[0] : new Date(game.date).toISOString().split('T')[0];
+                                    setEditGameDate(dateStr);
+                                    setIsEditingRSVPs(true);
+                                  }
+                                }
+                              }}
+                              disabled={isLocked}
+                              className={`flex items-center justify-center gap-2 px-8 py-4 rounded-2xl transition-all text-sm font-black border ${
+                                isLocked
+                                  ? 'bg-white/5 text-white/20 border-white/5 cursor-not-allowed'
+                                  : isEditingRSVPs 
+                                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-xl shadow-emerald-500/30' 
+                                    : 'bg-white text-slate-900 border-white hover:bg-slate-100 shadow-xl shadow-black/10'
+                              }`}
+                            >
+                              {isEditingRSVPs ? <Save size={20} /> : <Edit2 size={20} />}
+                              {isEditingRSVPs ? 'Save Changes' : 'Edit Details'}
+                            </button>
                           </div>
                         </div>
-                      ) : (
-                        <>
-                          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight truncate">
-                            {games.find(g => g.id === selectedGameId)?.name || 'Game Details'}
-                          </h2>
-                          <p className="text-slate-500 mt-1 flex items-center gap-2">
-                            <Calendar size={16} className="text-slate-400" />
-                            {(() => {
-                              const game = games.find(g => g.id === selectedGameId);
-                              if (!game) return '';
-                              const gameDateObj = game.date?.toDate ? game.date.toDate() : new Date(game.date);
-                              return gameDateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-                            })()}
-                          </p>
-                        </>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2 mt-4">
-                        {(() => {
-                          const game = games.find(g => g.id === selectedGameId);
-                          if (!game) return null;
-                          const isLocked = game.isLocked || false;
-                          return (
-                            <>
-                              <button 
-                                onClick={() => handleTogglePublish(game.id, isLocked)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-sm font-semibold border ${
-                                  isLocked 
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
-                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                                }`}
-                              >
-                                {isLocked ? <RotateCcw size={16} /> : <Check size={16} />}
-                                {isLocked ? 'Unpublish' : 'Publish'}
-                              </button>
+                      </div>
+
+                      <div className="p-6 sm:p-10">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
+                          <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1 w-full sm:w-auto">
+                            <button 
+                              onClick={() => setGameViewTab('batting')}
+                              className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 ${
+                                gameViewTab === 'batting' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                              }`}
+                            >
+                              <ClipboardList size={20} />
+                              Batting Order
+                            </button>
+                            <button 
+                              onClick={() => setGameViewTab('lineup')}
+                              className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 ${
+                                gameViewTab === 'lineup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                              }`}
+                            >
+                              <LayoutGrid size={20} />
+                              Field Lineup
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-3 justify-end">
+                            {!isEditingRSVPs && !isLocked && (
                               <button 
                                 onClick={() => {
-                                  if (!isLocked) {
-                                    if (isEditingRSVPs) {
-                                      handleUpdateGameDetails();
-                                    } else {
-                                      const game = games.find(g => g.id === selectedGameId);
-                                      if (game) {
-                                        setEditGameName(game.name);
-                                        const dateStr = game.date?.toDate ? game.date.toDate().toISOString().split('T')[0] : new Date(game.date).toISOString().split('T')[0];
-                                        setEditGameDate(dateStr);
-                                      }
-                                      setIsEditingRSVPs(true);
-                                    }
+                                  if (gameViewTab === 'batting') {
+                                    handleReshuffleLineup(selectedGameId);
+                                  } else {
+                                    handleGenerateLineup(selectedGameId);
                                   }
                                 }}
-                                disabled={isLocked}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-sm font-semibold border ${
-                                  isLocked
-                                    ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'
-                                    : isEditingRSVPs 
-                                      ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20' 
-                                      : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                                }`}
+                                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-all text-sm font-black shadow-xl shadow-slate-900/20"
                               >
-                                {isEditingRSVPs ? <Save size={16} /> : <Edit2 size={16} />}
-                                {isEditingRSVPs ? 'Save' : 'Edit'}
+                                <RotateCcw size={18} />
+                                {gameViewTab === 'batting' ? 'Reshuffle Order' : 'Regenerate Lineup'}
                               </button>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => navigate('/games')}
-                      className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl transition-all border border-transparent hover:border-slate-200"
-                    >
-                      <X size={24} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-8">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                    <div className="flex bg-slate-100 p-1 rounded-2xl gap-1 w-full sm:w-auto">
-                      <button 
-                        onClick={() => setGameViewTab('batting')}
-                        className={`flex-1 sm:flex-none px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                          gameViewTab === 'batting' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                        }`}
-                      >
-                        <ClipboardList size={18} />
-                        Batting Order
-                      </button>
-                      <button 
-                        onClick={() => setGameViewTab('lineup')}
-                        className={`flex-1 sm:flex-none px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                          gameViewTab === 'lineup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                        }`}
-                      >
-                        <LayoutGrid size={18} />
-                        Field Lineup
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2 justify-end">
-                      {(() => {
-                        const game = games.find(g => g.id === selectedGameId);
-                        if (!game) return null;
-                        const isLocked = game.isLocked || false;
-                        return !isEditingRSVPs && !isLocked && (
-                          <button 
-                            onClick={() => {
-                              if (gameViewTab === 'batting') {
-                                handleReshuffleLineup(selectedGameId);
-                              } else {
-                                handleGenerateLineup(selectedGameId);
-                              }
-                            }}
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all text-sm font-semibold border border-slate-200"
-                          >
-                            <RotateCcw size={16} />
-                            {gameViewTab === 'batting' ? 'Reshuffle' : 'Regenerate'}
-                          </button>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-6">
                     {(() => {
                       const game = games.find(g => g.id === selectedGameId);
                       if (!game) return null;
 
                       if (isEditingRSVPs) {
                         return (
-                          <div className="space-y-3">
-                            {[...players].sort((a, b) => a.name.localeCompare(b.name)).map(player => (
-                              <div key={player.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                                <div className="flex items-center gap-4">
-                                  <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 font-bold">
-                                    <UserIcon size={20} />
-                                  </div>
-                                  <div>
-                                    <p className="font-bold text-slate-900">{player.name}</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
-                                  </div>
-                                </div>
-                                <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
-                                  {Object.values(RSVPStatus).map(status => (
-                                    <button
-                                      key={status}
-                                      onClick={() => handleUpdateRSVP(game.id, player.id, status)}
-                                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                                        game.rsvps[player.id] === status
-                                          ? status === RSVPStatus.YES 
-                                            ? 'bg-emerald-500 text-white shadow-sm' 
-                                            : status === RSVPStatus.TENTATIVE
-                                              ? 'bg-amber-500 text-white shadow-sm'
-                                              : 'bg-rose-500 text-white shadow-sm'
-                                          : 'text-slate-500 hover:bg-slate-200'
-                                      }`}
-                                    >
-                                      {status}
-                                    </button>
-                                  ))}
-                                </div>
+                          <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Manage RSVPs</h3>
+                              <div className="px-4 py-2 bg-slate-100 rounded-2xl text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                {players.filter(p => game.rsvps[p.id] === RSVPStatus.YES).length} Confirmed
                               </div>
-                            ))}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {[...players].sort((a, b) => a.name.localeCompare(b.name)).map(player => (
+                                <div key={player.id} className="flex items-center justify-between p-5 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+                                  <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${
+                                      game.rsvps[player.id] === RSVPStatus.YES ? 'bg-emerald-100 text-emerald-600' : 
+                                      game.rsvps[player.id] === RSVPStatus.NO ? 'bg-rose-100 text-rose-600' : 
+                                      'bg-slate-100 text-slate-400'
+                                    }`}>
+                                      <UserIcon size={20} />
+                                    </div>
+                                    <div>
+                                      <p className="font-black text-slate-900">{player.name}</p>
+                                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-1 bg-slate-50 p-1.5 rounded-2xl">
+                                    {[RSVPStatus.YES, RSVPStatus.TENTATIVE, RSVPStatus.NO].map(status => (
+                                      <button
+                                        key={status}
+                                        onClick={() => handleUpdateRSVP(selectedGameId, player.id, status)}
+                                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                          game.rsvps[player.id] === status
+                                            ? status === RSVPStatus.YES ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' :
+                                              status === RSVPStatus.NO ? 'bg-rose-600 text-white shadow-lg shadow-rose-200' :
+                                              'bg-amber-500 text-white shadow-lg shadow-amber-200'
+                                            : 'text-slate-400 hover:bg-white hover:text-slate-600'
+                                        }`}
+                                      >
+                                        {status}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         );
                       }
@@ -1725,60 +1762,64 @@ function BaseballApp() {
                           game.rsvps[id] !== RSVPStatus.NO
                         );
                         
-                        return order.map((playerId, index) => {
-                          const player = players.find(p => p.id === playerId);
-                          if (!player) return null;
-                          
-                          return (
-                            <div key={playerId} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                              <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-900 font-bold border border-slate-200">
-                                  {index + 1}
-                                </div>
-                                <div>
-                                  <p className="font-bold text-slate-900">{player.name}</p>
-                                  {game.lineup ? (
-                                    <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1">
-                                      {[1, 2, 3, 4, 5, 6].map(inning => {
-                                        const inningKey = inning.toString();
-                                        const inningLineup = game.lineup?.[inningKey] || {};
-                                        let position = "Bench";
-                                        for (const [pos, pId] of Object.entries(inningLineup)) {
-                                          if (pId === playerId) {
-                                            position = getPositionAbbreviation(pos);
-                                            break;
-                                          }
-                                        }
-                                        const isBench = position === "Bench";
-                                        return (
-                                          <span key={inning} className={`text-[9px] font-bold px-1.5 py-0.5 rounded border transition-colors ${
-                                            isBench 
-                                              ? 'text-amber-600 bg-amber-50 border-amber-100' 
-                                              : 'text-slate-500 bg-white border-slate-100'
-                                          }`}>
-                                            <span className={`${isBench ? 'text-amber-300' : 'text-slate-300'} mr-1`}>{inning}</span>
-                                            {position}
-                                          </span>
-                                        );
-                                      })}
+                        return (
+                          <div className="space-y-3">
+                            {order.map((playerId, index) => {
+                              const player = players.find(p => p.id === playerId);
+                              if (!player) return null;
+                              
+                              return (
+                                <div key={playerId} className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:shadow-md transition-all group">
+                                  <div className="flex items-center gap-6">
+                                    <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-sm font-black shadow-xl shadow-slate-900/20 group-hover:scale-110 transition-transform">
+                                      {index + 1}
                                     </div>
-                                  ) : (
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
-                                  )}
+                                    <div>
+                                      <p className="font-black text-slate-900 text-xl tracking-tight">{player.name}</p>
+                                      {game.lineup ? (
+                                        <div className="flex flex-wrap gap-x-2 gap-y-1 mt-2">
+                                          {[1, 2, 3, 4, 5, 6].map(inning => {
+                                            const inningKey = inning.toString();
+                                            const inningLineup = game.lineup?.[inningKey] || {};
+                                            let position = "Bench";
+                                            for (const [pos, pId] of Object.entries(inningLineup)) {
+                                              if (pId === playerId) {
+                                                position = getPositionAbbreviation(pos);
+                                                break;
+                                              }
+                                            }
+                                            const isBench = position === "Bench";
+                                            return (
+                                              <span key={inning} className={`text-[9px] font-black px-2 py-0.5 rounded-lg border transition-all ${
+                                                isBench 
+                                                  ? 'text-rose-600 bg-rose-50 border-rose-100' 
+                                                  : 'text-slate-500 bg-white border-slate-100'
+                                              }`}>
+                                                <span className={`${isBench ? 'text-amber-300' : 'text-slate-300'} mr-1`}>{inning}</span>
+                                                {position}
+                                              </span>
+                                            );
+                                          })}
+                                        </div>
+                                      ) : (
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm ${
+                                    game.rsvps[playerId] === RSVPStatus.YES 
+                                      ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' 
+                                      : game.rsvps[playerId] === RSVPStatus.TENTATIVE
+                                        ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                        : 'bg-rose-100 text-rose-700 border border-rose-200'
+                                  }`}>
+                                    {game.rsvps[playerId] || 'No RSVP'}
+                                  </div>
                                 </div>
-                              </div>
-                              <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                game.rsvps[playerId] === RSVPStatus.YES 
-                                  ? 'bg-emerald-100 text-emerald-700' 
-                                  : game.rsvps[playerId] === RSVPStatus.TENTATIVE
-                                    ? 'bg-amber-100 text-amber-700'
-                                    : 'bg-rose-100 text-rose-700'
-                              }`}>
-                                {game.rsvps[playerId] || 'No RSVP'}
-                              </div>
-                            </div>
-                          );
-                        });
+                              );
+                            })}
+                          </div>
+                        );
                       } else {
                         // Lineup View
                         if (!game.lineup) {
@@ -1817,110 +1858,117 @@ function BaseballApp() {
                               </div>
                             </div>
 
-                            <div className="overflow-x-auto -mx-8 px-8">
-                              <table className="w-full border-collapse">
-                                <thead>
-                                  <tr>
-                                    <th className="text-left py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">Position</th>
-                                    {[1, 2, 3, 4, 5, 6].map(inning => (
-                                      <th key={inning} className="text-center py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                                        <div className="flex flex-col items-center gap-1">
-                                          <div className="flex items-center gap-1">
-                                            <span>Inn {inning}</span>
+                            <div className="overflow-hidden bg-white rounded-3xl border border-slate-200 shadow-sm">
+                              <div className="overflow-x-auto">
+                                <table className="w-full border-collapse">
+                                  <thead>
+                                    <tr className="bg-slate-50/50">
+                                      <th className="text-left py-5 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Position</th>
+                                      {[1, 2, 3, 4, 5, 6].map(inning => (
+                                        <th key={inning} className="text-center py-5 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
+                                          <div className="flex flex-col items-center gap-2">
+                                            <span className="text-slate-900">Inning {inning}</span>
+                                            {!isLocked && (
+                                              <button 
+                                                onClick={() => handleToggleInningLock(selectedGameId, inning)}
+                                                className={`p-1.5 rounded-lg transition-all ${game.lockedInnings?.includes(inning) ? 'text-emerald-600 bg-emerald-100 shadow-sm' : 'text-slate-300 hover:text-slate-900 hover:bg-slate-200'}`}
+                                                title={game.lockedInnings?.includes(inning) ? "Unlock Inning" : "Lock Inning"}
+                                              >
+                                                {game.lockedInnings?.includes(inning) ? <Lock size={14} /> : <Unlock size={14} />}
+                                              </button>
+                                            )}
                                           </div>
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {fieldPositions.map(pos => (
+                                    <tr key={pos} className="group hover:bg-slate-50/50 transition-colors">
+                                      <td className="py-5 px-6 font-black text-slate-900 text-sm">
+                                        <div className="flex items-center gap-3">
                                           {!isLocked && (
                                             <button 
-                                              onClick={() => handleToggleInningLock(selectedGameId, inning)}
-                                              className={`p-1 rounded transition-colors ${game.lockedInnings?.includes(inning) ? 'text-emerald-600 bg-emerald-50' : 'text-slate-300 hover:text-slate-900'}`}
-                                              title={game.lockedInnings?.includes(inning) ? "Unlock Inning" : "Lock Inning"}
+                                              onClick={() => handleTogglePositionLock(selectedGameId, pos)}
+                                              className={`p-1.5 rounded-lg transition-all ${game.lockedPositions?.includes(pos) ? 'text-emerald-600 bg-emerald-100 shadow-sm' : 'text-slate-300 hover:text-slate-900 hover:bg-slate-200'}`}
+                                              title={game.lockedPositions?.includes(pos) ? "Unlock Position" : "Lock Position"}
                                             >
-                                              {game.lockedInnings?.includes(inning) ? <Lock size={12} /> : <Unlock size={12} />}
+                                              {game.lockedPositions?.includes(pos) ? <Lock size={14} /> : <Unlock size={14} />}
                                             </button>
                                           )}
+                                          <span className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-black">
+                                            {getPositionAbbreviation(pos)}
+                                          </span>
+                                          {pos}
                                         </div>
-                                      </th>
-                                    ))}
-                                  </tr>
-                                </thead>
-                              <tbody>
-                                {fieldPositions.map(pos => (
-                                  <tr key={pos} className="group hover:bg-slate-50/50">
-                                    <td className="py-4 px-4 border-b border-slate-50 font-bold text-slate-900 text-sm">
-                                      <div className="flex items-center gap-2">
-                                        {!isLocked && (
-                                          <button 
-                                            onClick={() => handleTogglePositionLock(selectedGameId, pos)}
-                                            className={`p-1 rounded transition-colors ${game.lockedPositions?.includes(pos) ? 'text-emerald-600 bg-emerald-50' : 'text-slate-300 hover:text-slate-900'}`}
-                                            title={game.lockedPositions?.includes(pos) ? "Unlock Position" : "Lock Position"}
-                                          >
-                                            {game.lockedPositions?.includes(pos) ? <Lock size={12} /> : <Unlock size={12} />}
-                                          </button>
-                                        )}
-                                        <span className="sm:hidden">{getPositionAbbreviation(pos)}</span>
-                                        <span className="hidden sm:inline">{pos}</span>
-                                      </div>
-                                    </td>
-                                    {[1, 2, 3, 4, 5, 6].map(inning => {
-                                      const playerId = game.lineup?.[inning.toString()]?.[pos];
-                                      const player = players.find(p => p.id === playerId);
-                                      return (
-                                        <td key={inning} className="py-4 px-4 border-b border-slate-50 text-center">
-                                          {player ? (
-                                            <div className="text-xs font-semibold text-slate-700 truncate max-w-[100px] mx-auto" title={player.name}>
-                                              {player.name.split(' ')[0]}
+                                      </td>
+                                      {[1, 2, 3, 4, 5, 6].map(inning => {
+                                        const playerId = game.lineup?.[inning.toString()]?.[pos];
+                                        const player = players.find(p => p.id === playerId);
+                                        const isLockedInning = game.lockedInnings?.includes(inning);
+                                        
+                                        return (
+                                          <td key={inning} className="py-4 px-4 text-center">
+                                            <div className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] ${
+                                              isLockedInning 
+                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                                                : 'bg-white text-slate-700 border border-slate-100 shadow-sm group-hover:border-slate-200'
+                                            }`}>
+                                              {player?.name || <span className="text-slate-300 italic">Empty</span>}
                                             </div>
-                                          ) : (
-                                            <span className="text-slate-300">—</span>
-                                          )}
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
+                                  <tr className="bg-slate-50/30">
+                                    <td className="py-5 px-6 font-black text-slate-400 text-sm uppercase tracking-widest">Bench</td>
+                                    {[1, 2, 3, 4, 5, 6].map(inning => {
+                                      const assignedIds = Object.values(game.lineup?.[inning.toString()] || {});
+                                      const benchedPlayers = players.filter(p => 
+                                        game.rsvps[p.id] !== RSVPStatus.NO && 
+                                        !assignedIds.includes(p.id)
+                                      );
+                                      return (
+                                        <td key={inning} className="py-4 px-4 text-center">
+                                          <div className="flex flex-col gap-1">
+                                            {benchedPlayers.length > 0 ? benchedPlayers.map(p => (
+                                              <div key={p.id} className="text-[10px] font-black text-slate-400 truncate max-w-[80px] mx-auto uppercase tracking-tighter">
+                                                {p.name.split(' ')[0]}
+                                              </div>
+                                            )) : (
+                                              <span className="text-slate-300">—</span>
+                                            )}
+                                          </div>
                                         </td>
                                       );
                                     })}
                                   </tr>
-                                ))}
-                                <tr className="bg-slate-50/30">
-                                  <td className="py-4 px-4 border-b border-slate-50 font-bold text-slate-500 text-sm">Bench</td>
-                                  {[1, 2, 3, 4, 5, 6].map(inning => {
-                                    const assignedIds = Object.values(game.lineup?.[inning.toString()] || {});
-                                    const benchedPlayers = players.filter(p => 
-                                      game.rsvps[p.id] !== RSVPStatus.NO && 
-                                      !assignedIds.includes(p.id)
-                                    );
-                                    return (
-                                      <td key={inning} className="py-4 px-4 border-b border-slate-50 text-center">
-                                        <div className="flex flex-col gap-1">
-                                          {benchedPlayers.length > 0 ? benchedPlayers.map(p => (
-                                            <div key={p.id} className="text-[10px] font-bold text-slate-400 truncate max-w-[80px] mx-auto">
-                                              {p.name.split(' ')[0]}
-                                            </div>
-                                          )) : (
-                                            <span className="text-slate-300">—</span>
-                                          )}
-                                        </div>
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              </tbody>
+                                </tbody>
                             </table>
                           </div>
                         </div>
-                      );
-                    }
-                  })()}
-                  </div>
-                </div>
-
-                <div className="p-8 bg-slate-50 border-t border-slate-100">
-                  <button 
-                    onClick={() => navigate('/games')}
-                    className="w-full py-4 bg-white text-slate-600 border border-slate-200 rounded-2xl font-bold hover:bg-slate-100 transition-all active:scale-[0.98]"
-                  >
-                    Back to Schedule
-                  </button>
-                </div>
+                      </div>
+                    );
+                  }
+                })()}
               </div>
-            </motion.div>
-          ) : isCreatingLineup ? (
+            </div>
+          </>
+        );
+      })()}
+              <div className="p-10 bg-slate-50 border-t border-slate-100 flex justify-center">
+                <button 
+                  onClick={() => navigate('/games')}
+                  className="px-10 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black hover:bg-slate-100 transition-all active:scale-[0.98] shadow-sm flex items-center gap-2 text-sm uppercase tracking-widest"
+                >
+                  <ChevronLeft size={18} />
+                  Back to Schedule
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ) : isCreatingLineup ? (
             <motion.div 
               key="lineup-creator"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -2038,9 +2086,9 @@ function BaseballApp() {
             {/* Left Column: Add Player Form */}
             {isAddingPlayer && (
               <div className="lg:col-span-1">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 sticky top-24">
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 sticky top-24 transition-colors duration-300">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-bold flex items-center gap-2">
+                    <h2 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
                       <Plus size={20} />
                       Add Player
                     </h2>
@@ -2053,13 +2101,13 @@ function BaseballApp() {
                   </div>
                   <form onSubmit={handleAddPlayer} className="space-y-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Player Name</label>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Player Name</label>
                       <input 
                         type="text" 
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
                         placeholder="e.g. Shohei Ohtani"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-emerald-500/10 focus:border-slate-900 dark:focus:border-emerald-500 text-slate-900 dark:text-white transition-all"
                         required
                       />
                     </div>
@@ -2083,16 +2131,16 @@ function BaseballApp() {
                           </button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors duration-300">
                         {ALL_POSITIONS.map(pos => (
-                          <label key={pos} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded transition-colors">
+                          <label key={pos} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 p-1 rounded transition-colors">
                             <input 
                               type="checkbox"
                               checked={newPositions.includes(pos)}
                               onChange={() => togglePosition(pos, false)}
-                              className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                              className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-slate-900 dark:text-emerald-500 focus:ring-slate-900 dark:focus:ring-emerald-500 bg-white dark:bg-slate-900"
                             />
-                            <span className="text-sm text-slate-700">{pos} <span className="text-[10px] font-bold text-slate-400">({getPositionAbbreviation(pos)})</span></span>
+                            <span className="text-sm text-slate-700 dark:text-slate-200">{pos} <span className="text-[10px] font-bold text-slate-400">({getPositionAbbreviation(pos)})</span></span>
                           </label>
                         ))}
                       </div>
@@ -2102,8 +2150,8 @@ function BaseballApp() {
                       disabled={players.length >= 15}
                       className={`w-full py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
                         players.length >= 15 
-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                          : 'bg-slate-900 text-white hover:bg-slate-800 shadow-md hover:shadow-lg active:scale-[0.98]'
+                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed' 
+                          : 'bg-slate-900 dark:bg-emerald-600 text-white hover:bg-slate-800 dark:hover:bg-emerald-500 shadow-md hover:shadow-lg active:scale-[0.98]'
                       }`}
                     >
                       <Plus size={18} />
@@ -2121,8 +2169,8 @@ function BaseballApp() {
             <div className={isAddingPlayer ? "lg:col-span-2" : "lg:col-span-1"}>
               <div className="mb-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-slate-900">Team Roster</h2>
-                  <span className="px-3 py-1 bg-slate-200 text-slate-700 rounded-full text-xs font-bold">
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Team Roster</h2>
+                  <span className="px-3 py-1 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-xs font-bold transition-colors duration-300">
                     {players.length} / 15 Players
                   </span>
                 </div>
@@ -2131,8 +2179,8 @@ function BaseballApp() {
                     onClick={() => setIsAddingPlayer(!isAddingPlayer)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-sm font-semibold border ${
                       isAddingPlayer 
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-md' 
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        ? 'bg-slate-900 dark:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600 shadow-md' 
+                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     <Plus size={18} />
@@ -2140,7 +2188,7 @@ function BaseballApp() {
                   </button>
                   <button 
                     onClick={startCreateLineup}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all text-sm font-semibold border border-slate-200"
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-sm font-semibold border border-slate-200 dark:border-slate-700"
                   >
                     <ClipboardList size={18} />
                     Add Game
@@ -2154,12 +2202,12 @@ function BaseballApp() {
                     <motion.div 
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center"
+                      className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center transition-colors duration-300"
                     >
-                      <div className="w-12 h-12 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full flex items-center justify-center mx-auto mb-4">
                         <UserIcon size={24} />
                       </div>
-                      <p className="text-slate-500">No players added yet. Start by adding your first player.</p>
+                      <p className="text-slate-500 dark:text-slate-400">No players added yet. Start by adding your first player.</p>
                     </motion.div>
                   ) : (
                     [...players].sort((a, b) => a.name.localeCompare(b.name)).map((player, index) => (
@@ -2169,7 +2217,7 @@ function BaseballApp() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between group hover:border-slate-300 transition-all"
+                        className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-all"
                       >
                         {editingId === player.id ? (
                           <div className="flex-1 flex flex-col gap-3 mr-4">
@@ -2214,14 +2262,14 @@ function BaseballApp() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 font-bold text-sm">
+                            <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 font-bold text-sm transition-colors duration-300">
                               {index + 1}
                             </div>
                             <div>
-                              <h3 className="font-bold text-slate-900">{player.name}</h3>
+                              <h3 className="font-bold text-slate-900 dark:text-white">{player.name}</h3>
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {(player.positions || []).map(pos => (
-                                  <span key={pos} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider">
+                                  <span key={pos} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-[10px] font-bold uppercase tracking-wider transition-colors duration-300">
                                     {getPositionAbbreviation(pos)}
                                   </span>
                                 ))}
@@ -2250,13 +2298,13 @@ function BaseballApp() {
                             <>
                               <button 
                                 onClick={() => startEdit(player)}
-                                className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                               >
                                 <Edit2 size={18} />
                               </button>
                               <button 
                                 onClick={() => handleDeletePlayer(player)}
-                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-rose-500 hover:bg-red-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                               >
                                 <Trash2 size={18} />
                               </button>
@@ -2274,8 +2322,8 @@ function BaseballApp() {
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Game Schedule</h2>
-                <p className="text-sm sm:text-base text-slate-500 mt-1">Manage your {showPastGames ? 'past' : 'upcoming'} games and lineups</p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Game Schedule</h2>
+                <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">Manage your {showPastGames ? 'past' : 'upcoming'} games and lineups</p>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <button 
@@ -2288,8 +2336,8 @@ function BaseballApp() {
                   }}
                   className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl transition-all font-bold border flex-1 sm:flex-none ${
                     settings?.publicSchedule 
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40' 
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                   title={settings?.publicSchedule ? 'Copy public schedule link' : 'Enable public sharing in settings'}
                 >
@@ -2300,8 +2348,8 @@ function BaseballApp() {
                   onClick={() => setShowPastGames(!showPastGames)}
                   className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl transition-all font-bold border flex-1 sm:flex-none ${
                     showPastGames 
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/20' 
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                      ? 'bg-slate-900 dark:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600 shadow-lg shadow-slate-900/20 dark:shadow-none' 
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
                   <History size={18} />
@@ -2309,7 +2357,7 @@ function BaseballApp() {
                 </button>
                 <button 
                   onClick={startCreateLineup}
-                  className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-all font-bold shadow-lg shadow-slate-900/20 active:scale-[0.95] flex-1 sm:flex-none"
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 dark:bg-emerald-600 text-white rounded-2xl hover:bg-slate-800 dark:hover:bg-emerald-500 transition-all font-bold shadow-lg shadow-slate-900/20 dark:shadow-none active:scale-[0.95] flex-1 sm:flex-none"
                 >
                   <Plus size={20} />
                   New Game
@@ -2334,15 +2382,15 @@ function BaseballApp() {
 
                 if (filteredGames.length === 0) {
                   return (
-                    <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-8 sm:p-16 text-center">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
+                    <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-16 text-center transition-colors duration-300">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
                         <ClipboardList size={28} className="sm:hidden" />
                         <ClipboardList size={32} className="hidden sm:block" />
                       </div>
-                      <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">
+                      <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
                         {showPastGames ? 'No past games' : 'No upcoming games'}
                       </h3>
-                      <p className="text-sm sm:text-base text-slate-500 mb-8 max-w-xs mx-auto">
+                      <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-8 max-w-xs mx-auto">
                         {showPastGames 
                           ? "You haven't completed any games yet." 
                           : "Create your first game to start managing your team's lineup and availability."}
@@ -2350,7 +2398,7 @@ function BaseballApp() {
                       {!showPastGames && (
                         <button 
                           onClick={startCreateLineup}
-                          className="px-6 sm:px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all w-full sm:w-auto"
+                          className="px-6 sm:px-8 py-3 bg-slate-900 dark:bg-emerald-600 text-white rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-emerald-500 transition-all w-full sm:w-auto shadow-lg shadow-slate-200 dark:shadow-none"
                         >
                           Schedule First Game
                         </button>
@@ -2374,12 +2422,14 @@ function BaseballApp() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       onClick={() => handleViewGame(game.id)}
-                      className="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-200 hover:border-slate-900 hover:shadow-md transition-all group cursor-pointer"
+                      className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 hover:border-slate-900 dark:hover:border-emerald-500 hover:shadow-md transition-all group cursor-pointer"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
                         <div className="flex items-center sm:items-start gap-4 sm:gap-5">
                           <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center shadow-md shrink-0 transition-colors ${
-                            showPastGames ? 'bg-slate-100 text-slate-400' : 'bg-slate-900 text-white'
+                            showPastGames 
+                              ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500' 
+                              : 'bg-slate-900 dark:bg-emerald-600 text-white'
                           }`}>
                             <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-tighter opacity-70">
                               {gameDateObj.toLocaleDateString('en-US', { month: 'short' })}
@@ -2389,22 +2439,22 @@ function BaseballApp() {
                             </span>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h3 className="text-lg sm:text-xl font-bold text-slate-900 truncate group-hover:text-slate-900">{game.name}</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate group-hover:text-slate-900 dark:group-hover:text-emerald-400 transition-colors">{game.name}</h3>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                              <span className="text-xs sm:text-sm text-slate-500 font-medium whitespace-nowrap">
+                              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
                                 {gameDateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric' })}
                               </span>
-                              <span className="hidden sm:block w-1 h-1 bg-slate-300 rounded-full"></span>
+                              <span className="hidden sm:block w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
                               <div className="flex items-center gap-2">
                                 <div className="flex -space-x-1.5">
                                   {[...Array(Math.min(3, rsvpCounts[RSVPStatus.YES] || 0))].map((_, i) => (
-                                    <div key={i} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-100 border-2 border-white flex items-center justify-center">
-                                      <Check size={8} className="text-emerald-600 sm:hidden" />
-                                      <Check size={10} className="text-emerald-600 hidden sm:block" />
+                                    <div key={i} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 border-2 border-white dark:border-slate-900 flex items-center justify-center">
+                                      <Check size={8} className="text-emerald-600 dark:text-emerald-400 sm:hidden" />
+                                      <Check size={10} className="text-emerald-600 dark:text-emerald-400 hidden sm:block" />
                                     </div>
                                   ))}
                                 </div>
-                                <span className="text-[10px] sm:text-xs font-bold text-emerald-600 uppercase tracking-widest">
+                                <span className="text-[10px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
                                   {rsvpCounts[RSVPStatus.YES] || 0} In
                                 </span>
                               </div>
@@ -2412,15 +2462,15 @@ function BaseballApp() {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between sm:justify-end gap-3 pt-3 sm:pt-0 border-t border-slate-100 sm:border-0">
+                        <div className="flex items-center justify-between sm:justify-end gap-3 pt-3 sm:pt-0 border-t border-slate-100 dark:border-slate-800 sm:border-0">
                           <div className="flex gap-1.5 sm:mr-2">
-                            <div className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold border border-emerald-100">
+                            <div className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-[10px] font-bold border border-emerald-100 dark:border-emerald-900/30">
                               {rsvpCounts[RSVPStatus.YES] || 0} Yes
                             </div>
-                            <div className="px-2 py-1 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-bold border border-amber-100">
+                            <div className="px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-lg text-[10px] font-bold border border-amber-100 dark:border-amber-900/30">
                               {rsvpCounts[RSVPStatus.TENTATIVE] || 0} ?
                             </div>
-                            <div className="px-2 py-1 bg-rose-50 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-100">
+                            <div className="px-2 py-1 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 rounded-lg text-[10px] font-bold border border-rose-100 dark:border-rose-900/30">
                               {rsvpCounts[RSVPStatus.NO] || 0} No
                             </div>
                           </div>
@@ -2436,7 +2486,7 @@ function BaseballApp() {
                                   message: `Are you sure you want to delete "${game.name}"? This action cannot be undone.`
                                 });
                               }}
-                              className="p-2.5 sm:p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl sm:rounded-2xl transition-all border border-transparent hover:border-rose-100"
+                              className="p-2.5 sm:p-3 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl sm:rounded-2xl transition-all border border-transparent hover:border-rose-100 dark:hover:border-rose-900/30"
                               title="Delete Game"
                             >
                               <Trash2 size={18} className="sm:hidden" />
@@ -2453,62 +2503,77 @@ function BaseballApp() {
           </div>
         ) : (
           <div className="max-w-2xl mx-auto">
-            <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200">
-              <h2 className="text-2xl font-bold mb-6">Team Settings</h2>
+            <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300">
+              <h2 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Team Settings</h2>
               
               <div className="space-y-6">
-                <div className="flex items-start sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 gap-4">
+                <div className="flex items-start sm:items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 gap-4 transition-colors duration-300">
                   <div className="flex-1">
-                    <h3 className="font-bold text-slate-900">Allow Designated Hitter</h3>
-                    <p className="text-sm text-slate-500">Enable "Designated Hitter" as a position option for your lineup.</p>
+                    <h3 className="font-bold text-slate-900 dark:text-slate-100">Allow Designated Hitter</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Enable "Designated Hitter" as a position option for your lineup.</p>
                   </div>
                   <button 
                     onClick={() => handleUpdateSettings({ allowDesignatedHitter: !settings?.allowDesignatedHitter })}
-                    className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${settings?.allowDesignatedHitter ? 'bg-slate-900' : 'bg-slate-200'}`}
+                    className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${settings?.allowDesignatedHitter ? 'bg-slate-900 dark:bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
                   >
                     <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.allowDesignatedHitter ? 'left-7' : 'left-1'}`} />
                   </button>
                 </div>
 
-                <div className="flex items-start sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 gap-4">
+                <div className="flex items-start sm:items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 gap-4 transition-colors duration-300">
                   <div className="flex-1">
-                    <h3 className="font-bold text-slate-900">Allow Outfield Twice in Row</h3>
-                    <p className="text-sm text-slate-500">Allow assigning the same player to an outfield position in consecutive innings. By default, the app tries to avoid this.</p>
+                    <h3 className="font-bold text-slate-900 dark:text-slate-100">Allow Outfield Twice in Row</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Allow assigning the same player to an outfield position in consecutive innings. By default, the app tries to avoid this.</p>
                   </div>
                   <button 
                     onClick={() => handleUpdateSettings({ allowOutfieldTwiceInRow: !settings?.allowOutfieldTwiceInRow })}
-                    className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${settings?.allowOutfieldTwiceInRow ? 'bg-slate-900' : 'bg-slate-200'}`}
+                    className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${settings?.allowOutfieldTwiceInRow ? 'bg-slate-900 dark:bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
                   >
                     <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.allowOutfieldTwiceInRow ? 'left-7' : 'left-1'}`} />
                   </button>
                 </div>
 
-                <div className="flex flex-col p-4 bg-slate-50 rounded-2xl border border-slate-100 gap-4">
+                <div className="flex flex-col p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 gap-4 transition-colors duration-300">
+          <div className="flex items-start sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              <h3 className="font-bold text-slate-900 dark:text-slate-100">Dark Mode</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Switch the application to a dark color scheme.</p>
+            </div>
+            <button 
+              onClick={() => handleUpdateSettings({ darkMode: !settings?.darkMode })}
+              className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${settings?.darkMode ? 'bg-slate-900 dark:bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+            >
+              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.darkMode ? 'left-7' : 'left-1'}`} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 gap-4 transition-colors duration-300">
                   <div className="flex items-start sm:items-center justify-between gap-4">
                     <div className="flex-1">
-                      <h3 className="font-bold text-slate-900">Public Schedule Sharing</h3>
-                      <p className="text-sm text-slate-500">Allow others to view your game schedule and lineups without logging in.</p>
+                      <h3 className="font-bold text-slate-900 dark:text-slate-100">Public Schedule Sharing</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Allow others to view your game schedule and lineups without logging in.</p>
                     </div>
                     <button 
                       onClick={() => handleUpdateSettings({ publicSchedule: !settings?.publicSchedule })}
-                      className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${settings?.publicSchedule ? 'bg-slate-900' : 'bg-slate-200'}`}
+                      className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${settings?.publicSchedule ? 'bg-slate-900 dark:bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
                     >
                       <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${settings?.publicSchedule ? 'left-7' : 'left-1'}`} />
                     </button>
                   </div>
                   
                   {settings?.publicSchedule && (
-                    <div className="mt-2 p-3 bg-white rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-3">
+                    <div className="mt-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center gap-3 transition-colors duration-300">
                       <div className="flex-1 min-w-0 w-full">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Your Public Link</p>
-                        <p className="text-xs text-slate-600 truncate font-mono bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <p className="text-xs text-slate-600 dark:text-slate-300 truncate font-mono bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
                           {`${window.location.origin}${window.location.pathname}#/shared/${user?.uid}/games`}
                         </p>
                       </div>
                       <div className="flex gap-2 w-full sm:w-auto">
                         <button 
                           onClick={() => handleCopyLink(`${window.location.origin}${window.location.pathname}#/shared/${user?.uid}/games`)}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all text-xs font-bold"
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs font-bold"
                         >
                           {copySuccess ? <Check size={14} /> : <Copy size={14} />}
                           {copySuccess ? 'Copied!' : 'Copy'}
@@ -2517,7 +2582,7 @@ function BaseballApp() {
                           href={`${window.location.origin}${window.location.pathname}#/shared/${user?.uid}/games`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all text-xs font-bold shadow-sm"
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-white transition-all text-xs font-bold shadow-sm"
                         >
                           <ExternalLink size={14} />
                           Open

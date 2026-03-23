@@ -575,12 +575,22 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                                           </span>
                                         ) : null;
                                       })}
+                                      {Object.entries(inning)
+                                        .filter(([pos]) => pos.startsWith('Extra Hitter'))
+                                        .map(([pos, playerId]) => {
+                                          const p = players.find(p => p.id === playerId);
+                                          return p ? (
+                                            <span key={playerId} className="px-2 py-1 bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-200 rounded-md text-xs font-bold shadow-sm border border-indigo-200 dark:border-indigo-700">
+                                              EH: {p.name.split(' ')[0]}
+                                            </span>
+                                          ) : null;
+                                        })}
                                     </div>
                                   </div>
                                 )}
                                 <div className="grid grid-cols-2 gap-2">
                                   {Object.entries(inning)
-                                    .filter(([pos]) => pos !== 'HittingGroup')
+                                    .filter(([pos]) => pos !== 'HittingGroup' && !pos.startsWith('Extra Hitter'))
                                     .sort(([posA], [posB]) => (POSITION_ORDER[posA] || 99) - (POSITION_ORDER[posB] || 99))
                                     .map(([pos, playerId]) => {
                                       const player = players.find(p => p.id === playerId);
@@ -2122,7 +2132,13 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                               {game.mode === 'scrimmage' ? 'Groups' : 'Batting Order'}
                             </button>
                             <button 
-                              onClick={() => setGameViewTab('lineup')}
+                              onClick={() => {
+                                  if (game.mode === 'scrimmage' && game.lineup && Object.keys(game.lineup).length > 0 && game.scrimmageStep !== 3) {
+                                    updateDoc(doc(db, 'games', game.id), { scrimmageStep: 3 });
+                                    setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 3} : g));
+                                  }
+                                  setGameViewTab('lineup');
+                                }}
                               className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 ${
                                 gameViewTab === 'lineup' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                               }`}

@@ -2771,27 +2771,29 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                       <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 3: Final Scrimmage Lineup</h3>
                                       <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">One group hits each inning. Extra hitters are listed below.</p>
                                     </div>
-                                    <div className="flex flex-col sm:flex-row gap-3">
-                                      <button
-                                        onClick={async () => {
-                                          setBackupLineup(JSON.parse(JSON.stringify(game.lineup || {})));
-                                          setBackupScrimmageGroups(JSON.parse(JSON.stringify(game.scrimmageGroups || [])));
-                                          await updateDoc(doc(db, 'games', game.id), { scrimmageStep: 1 });
-                                          setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 1} : g));
-                                        }}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
-                                      >
-                                        <RotateCcw size={14} />
-                                        Start Over
-                                      </button>
-                                      <button
-                                        onClick={() => handleGenerateScrimmageLineup(selectedGameId)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
-                                      >
-                                        <RefreshCw size={14} />
-                                        Regenerate
-                                      </button>
-                                    </div>
+                                    {!game.isLocked && (
+                                      <div className="flex flex-col sm:flex-row gap-3">
+                                        <button
+                                          onClick={async () => {
+                                            setBackupLineup(JSON.parse(JSON.stringify(game.lineup || {})));
+                                            setBackupScrimmageGroups(JSON.parse(JSON.stringify(game.scrimmageGroups || [])));
+                                            await updateDoc(doc(db, 'games', game.id), { scrimmageStep: 1 });
+                                            setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 1} : g));
+                                          }}
+                                          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                        >
+                                          <RotateCcw size={14} />
+                                          Start Over
+                                        </button>
+                                        <button
+                                          onClick={() => handleGenerateScrimmageLineup(selectedGameId)}
+                                          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                        >
+                                          <RefreshCw size={14} />
+                                          Regenerate
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
 
                                   <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">

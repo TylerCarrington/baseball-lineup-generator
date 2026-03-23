@@ -693,6 +693,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   const [showPastGames, setShowPastGames] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
+  const [showClearLineupConfirm, setShowClearLineupConfirm] = useState(false);
+
   const handleCopyLink = (link: string) => {
     navigator.clipboard.writeText(link);
     setCopySuccess(true);
@@ -1103,6 +1105,21 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       await updateDoc(doc(db, 'games', gameId), {
         battingOrder: newOrder
       });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+    }
+  };
+
+  const handleClearLineup = async (gameId: string | null) => {
+    if (!gameId) return;
+    try {
+      await updateDoc(doc(db, 'games', gameId), {
+        lineup: {},
+        lockedInnings: [],
+        lockedPositions: []
+      });
+      setShowClearLineupConfirm(false);
+      toast.success('Lineup cleared successfully');
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
     }
@@ -1661,7 +1678,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                 Back to Schedule
               </button>
 
-              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden mb-12">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden mb-12">
                 {(() => {
                   const game = games.find(g => g.id === selectedGameId);
                   if (!game) return null;
@@ -1768,11 +1785,11 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
                       <div className="p-6 sm:p-10">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
-                          <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1 w-full sm:w-auto">
+                          <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl gap-1 w-full sm:w-auto">
                             <button 
                               onClick={() => setGameViewTab('batting')}
                               className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 ${
-                                gameViewTab === 'batting' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                gameViewTab === 'batting' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                               }`}
                             >
                               <ClipboardList size={20} />
@@ -1781,7 +1798,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                             <button 
                               onClick={() => setGameViewTab('lineup')}
                               className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 ${
-                                gameViewTab === 'lineup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                gameViewTab === 'lineup' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                               }`}
                             >
                               <LayoutGrid size={20} />
@@ -1790,19 +1807,30 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                           </div>
                           <div className="flex items-center gap-3 w-full sm:w-auto">
                             {!isEditingRSVPs && (
-                              <button 
-                                onClick={() => {
-                                  if (gameViewTab === 'batting') {
-                                    handleReshuffleLineup(selectedGameId);
-                                  } else {
-                                    handleGenerateLineup(selectedGameId);
-                                  }
-                                }}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-all text-sm font-black shadow-xl shadow-slate-900/20 active:scale-[0.98]"
-                              >
-                                <RotateCcw size={18} />
-                                Generate
-                              </button>
+                              <>
+                                {gameViewTab === 'lineup' && !isLocked && (
+                                  <button 
+                                    onClick={() => setShowClearLineupConfirm(true)}
+                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-2xl hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-all text-sm font-black active:scale-[0.98]"
+                                  >
+                                    <Trash2 size={18} />
+                                    Clear
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={() => {
+                                    if (gameViewTab === 'batting') {
+                                      handleReshuffleLineup(selectedGameId);
+                                    } else {
+                                      handleGenerateLineup(selectedGameId);
+                                    }
+                                  }}
+                                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl hover:bg-slate-800 dark:hover:bg-indigo-500 transition-all text-sm font-black shadow-xl shadow-slate-900/20 dark:shadow-indigo-900/20 active:scale-[0.98]"
+                                >
+                                  <RotateCcw size={18} />
+                                  Generate
+                                </button>
+                              </>
                             )}
                           </div>
                         </div>
@@ -1877,8 +1905,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                           <div className="space-y-8">
                             <div className="space-y-3">
                               <div className="flex items-center justify-between px-2">
-                                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Batting Order</h3>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{inOrder.length} In</span>
+                                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Batting Order</h3>
+                                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{inOrder.length} In</span>
                               </div>
                               <div className="space-y-3">
                                 {inOrder.map((playerId, index) => {
@@ -1891,11 +1919,11 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                       className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group gap-4"
                                     >
                                       <div className="flex items-center gap-4 sm:gap-6">
-                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 text-white rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-black shadow-xl shadow-slate-900/20 group-hover:scale-110 transition-transform flex-shrink-0">
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-black shadow-xl shadow-slate-900/20 dark:shadow-indigo-900/20 group-hover:scale-110 transition-transform flex-shrink-0">
                                           {index + 1}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                          <p className="font-black text-slate-900 text-lg sm:text-xl tracking-tight truncate">{player.name}</p>
+                                          <p className="font-black text-slate-900 dark:text-white text-lg sm:text-xl tracking-tight truncate">{player.name}</p>
                                           {game.lineup ? (
                                             <div className="flex flex-wrap gap-x-1.5 gap-y-1 mt-1.5">
                                               {[1, 2, 3, 4, 5, 6].map(inning => {
@@ -1912,21 +1940,21 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                 return (
                                                   <span key={inning} className={`text-[8px] sm:text-[9px] font-black px-1.5 sm:px-2 py-0.5 rounded-lg border transition-all ${
                                                     isBench 
-                                                      ? 'text-rose-600 bg-rose-50 border-rose-100' 
-                                                      : 'text-slate-500 bg-white border-slate-100'
+                                                      ? 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-900/30' 
+                                                      : 'text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'
                                                   }`}>
-                                                    <span className={`${isBench ? 'text-amber-300' : 'text-slate-300'} mr-1`}>{inning}</span>
+                                                    <span className={`${isBench ? 'text-amber-300' : 'text-slate-500 dark:text-slate-600'} mr-1`}>{inning}</span>
                                                     {position}
                                                   </span>
                                                 );
                                               })}
                                             </div>
                                           ) : (
-                                            <p className="text-[9px] sm:text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1 truncate">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
+                                            <p className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mt-1 truncate">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
                                           )}
                                         </div>
                                       </div>
-                                      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 border-slate-50 pt-3 sm:pt-0">
+                                      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 border-slate-50 dark:border-slate-800 pt-3 sm:pt-0">
                                         <div className="flex gap-1 flex-1 sm:flex-none">
                                           {[RSVPStatus.YES, RSVPStatus.TENTATIVE, RSVPStatus.NO].map(status => (
                                             <button
@@ -1935,11 +1963,11 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                               className={`flex-1 sm:flex-none px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-all border ${
                                                 game.rsvps[playerId] === status
                                                   ? status === RSVPStatus.YES 
-                                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
+                                                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' 
                                                     : status === RSVPStatus.TENTATIVE
-                                                      ? 'bg-amber-100 text-amber-700 border-amber-200'
-                                                      : 'bg-rose-100 text-rose-700 border-rose-200'
-                                                  : 'bg-white text-slate-300 border-slate-100 hover:text-slate-500 hover:bg-slate-50'
+                                                      ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                                                      : 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800'
+                                                  : 'bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-700 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
                                               }`}
                                             >
                                               {status}
@@ -1978,24 +2006,24 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                             </div>
 
                             {outPlayers.length > 0 && (
-                              <div className="space-y-3 pt-6 border-t border-slate-100">
+                              <div className="space-y-3 pt-6 border-t border-slate-100 dark:border-slate-800">
                                 <div className="flex items-center justify-between px-2">
-                                  <h3 className="text-lg font-black text-slate-400 uppercase tracking-tight">Not Attending</h3>
-                                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{outPlayers.length} Out</span>
+                                  <h3 className="text-lg font-black text-slate-400 dark:text-slate-500 uppercase tracking-tight">Not Attending</h3>
+                                  <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest">{outPlayers.length} Out</span>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                   {outPlayers.map(player => (
-                                    <div key={player.id} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 opacity-60 hover:opacity-100 transition-all">
+                                    <div key={player.id} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 opacity-60 hover:opacity-100 transition-all">
                                       <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-slate-200 text-slate-400 rounded-xl flex items-center justify-center text-xs font-black">
+                                        <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-xl flex items-center justify-center text-xs font-black">
                                           OUT
                                         </div>
-                                        <p className="font-bold text-slate-500">{player.name}</p>
+                                        <p className="font-bold text-slate-500 dark:text-slate-400">{player.name}</p>
                                       </div>
                                       <div className="flex gap-1">
                                         <button
                                           onClick={() => handleUpdateGameRSVP(game.id, player.id, RSVPStatus.YES)}
-                                          className="px-3 py-1.5 bg-white text-emerald-600 border border-emerald-100 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 transition-all"
+                                          className="px-3 py-1.5 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
                                         >
                                           Activate
                                         </button>
@@ -2019,9 +2047,9 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                           <div className="space-y-6">
                             <div className="flex items-center justify-between mb-4">
                               <div className="flex items-center gap-3">
-                                <h3 className="text-xl font-bold text-slate-900">Field Lineup</h3>
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Field Lineup</h3>
                                 {isLocked && (
-                                  <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold uppercase tracking-wider">
+                                  <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-[10px] font-bold uppercase tracking-wider">
                                     <Check size={10} />
                                     Published
                                   </span>
@@ -2029,19 +2057,19 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                               </div>
                             </div>
 
-                            <div className="overflow-hidden bg-white rounded-3xl border border-slate-200 shadow-sm">
+                            <div className="overflow-hidden bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
                               <div className="overflow-x-auto">
                                 <table className="w-full border-collapse">
                                   <thead>
-                                    <tr className="bg-slate-50/50">
-                                      <th className="text-left py-5 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Position</th>
+                                    <tr className="bg-slate-50/50 dark:bg-slate-800/50">
+                                      <th className="text-left py-5 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">Position</th>
                                       {[1, 2, 3, 4, 5, 6].map(inning => (
-                                        <th key={inning} className="text-center py-5 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
+                                        <th key={inning} className="text-center py-5 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">
                                           <div className="flex flex-col items-center gap-2">
-                                            <span className="text-slate-900">Inning {inning}</span>
+                                            <span className="text-slate-900 dark:text-slate-200">Inning {inning}</span>
                                             <button 
                                               onClick={() => handleToggleInningLock(selectedGameId, inning)}
-                                              className={`p-1.5 rounded-lg transition-all ${game.lockedInnings?.includes(inning) ? 'text-emerald-600 bg-emerald-100 shadow-sm' : 'text-slate-300 hover:text-slate-900 hover:bg-slate-200'}`}
+                                              className={`p-1.5 rounded-lg transition-all ${game.lockedInnings?.includes(inning) ? 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : 'text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'}`}
                                               title={game.lockedInnings?.includes(inning) ? "Unlock Inning" : "Lock Inning"}
                                             >
                                               {game.lockedInnings?.includes(inning) ? <Lock size={14} /> : <Unlock size={14} />}
@@ -2051,19 +2079,19 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                       ))}
                                     </tr>
                                   </thead>
-                                <tbody className="divide-y divide-slate-50">
+                                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                                   {fieldPositions.map(pos => (
-                                    <tr key={pos} className="group hover:bg-slate-50/50 transition-colors">
-                                      <td className="py-5 px-6 font-black text-slate-900 text-sm">
+                                    <tr key={pos} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                                      <td className="py-5 px-6 font-black text-slate-900 dark:text-slate-200 text-sm">
                                         <div className="flex items-center gap-3">
                                           <button 
                                             onClick={() => handleTogglePositionLock(selectedGameId, pos)}
-                                            className={`p-1.5 rounded-lg transition-all ${game.lockedPositions?.includes(pos) ? 'text-emerald-600 bg-emerald-100 shadow-sm' : 'text-slate-300 hover:text-slate-900 hover:bg-slate-200'}`}
+                                            className={`p-1.5 rounded-lg transition-all ${game.lockedPositions?.includes(pos) ? 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : 'text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'}`}
                                             title={game.lockedPositions?.includes(pos) ? "Unlock Position" : "Lock Position"}
                                           >
                                             {game.lockedPositions?.includes(pos) ? <Lock size={14} /> : <Unlock size={14} />}
                                           </button>
-                                          <span className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-black">
+                                          <span className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-[10px] text-slate-500 dark:text-slate-400 font-black">
                                             {getPositionAbbreviation(pos)}
                                           </span>
                                           {pos}
@@ -2094,13 +2122,13 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                     setEditingCell(null);
                                                   }} 
                                                 />
-                                                <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
-                                                  <div className="px-3 py-2 border-b border-slate-50 mb-1">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Player</p>
+                                                <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                                  <div className="px-3 py-2 border-b border-slate-50 dark:border-slate-700 mb-1">
+                                                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Select Player</p>
                                                   </div>
                                                   <button
                                                     onClick={() => handleUpdateLineupCell(selectedGameId, inningKey, pos, '')}
-                                                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 text-slate-500 italic transition-colors"
+                                                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 italic transition-colors"
                                                   >
                                                     — Empty —
                                                   </button>
@@ -2109,6 +2137,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                     const assignedElsewhere = Object.entries(inningLineup)
                                                       .filter(([pPos]) => pPos !== pos)
                                                       .map(([_, pId]) => pId);
+                                                    
+                                                    const isDark = darkMode;
 
                                                     return players
                                                       .sort((a, b) => a.name.localeCompare(b.name))
@@ -2118,28 +2148,28 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                         const isPlayerOut = game.rsvps[p.id] === RSVPStatus.NO;
                                                         
                                                         let statusLabel = 'Bench';
-                                                        let statusColor = '#059669'; // Emerald-600
-                                                        let statusBg = 'bg-emerald-50 text-emerald-600';
+                                                        let statusColor = isDark ? '#34d399' : '#059669'; // Emerald-400 : Emerald-600
+                                                        let statusBg = isDark ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-50 text-emerald-600';
 
                                                         if (isPlayerOut) {
                                                           statusLabel = 'OUT';
-                                                          statusColor = '#f43f5e'; // Rose-500
-                                                          statusBg = 'bg-rose-50 text-rose-500';
+                                                          statusColor = isDark ? '#fb7185' : '#f43f5e'; // Rose-400 : Rose-500
+                                                          statusBg = isDark ? 'bg-rose-900/30 text-rose-400' : 'bg-rose-50 text-rose-500';
                                                         } else if (isCurrent) {
                                                           statusLabel = 'Current';
-                                                          statusColor = '#2563eb'; // Blue-600
-                                                          statusBg = 'bg-blue-50 text-blue-600';
+                                                          statusColor = isDark ? '#60a5fa' : '#2563eb'; // Blue-400 : Blue-600
+                                                          statusBg = isDark ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600';
                                                         } else if (isAssignedElsewhere) {
                                                           statusLabel = 'Field';
-                                                          statusColor = '#94a3b8'; // Slate-400
-                                                          statusBg = 'bg-slate-100 text-slate-400';
+                                                          statusColor = isDark ? '#64748b' : '#94a3b8'; // Slate-500 : Slate-400
+                                                          statusBg = isDark ? 'bg-slate-800 text-slate-500' : 'bg-slate-100 text-slate-400';
                                                         }
 
                                                         return (
                                                           <button
                                                             key={p.id}
                                                             onClick={() => handleUpdateLineupCell(selectedGameId, inningKey, pos, p.id)}
-                                                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 flex items-center justify-between transition-colors group/item"
+                                                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-between transition-colors group/item"
                                                             style={{ color: statusColor }}
                                                           >
                                                             <span>{p.name}</span>
@@ -2706,24 +2736,22 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                               </span>
                               <span className="hidden sm:block w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
                               <div className="flex items-center gap-2">
-                                <div className="flex -space-x-1.5">
-                                  {[...Array(Math.min(3, rsvpCounts[RSVPStatus.YES] || 0))].map((_, i) => (
-                                    <div key={i} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 border-2 border-white dark:border-slate-900 flex items-center justify-center">
-                                      <Check size={8} className="text-emerald-600 dark:text-emerald-400 sm:hidden" />
-                                      <Check size={10} className="text-emerald-600 dark:text-emerald-400 hidden sm:block" />
-                                    </div>
-                                  ))}
-                                </div>
-                                <span className="text-[10px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
-                                  {rsvpCounts[RSVPStatus.YES] || 0} In
-                                </span>
+                                {game.isLocked ? (
+                                  <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-[10px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-800">
+                                    Published
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded text-[10px] font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700">
+                                    Draft
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
                         </div>
 
                         <div className="flex items-center justify-between sm:justify-end gap-3 pt-3 sm:pt-0 border-t border-slate-100 dark:border-slate-800 sm:border-0">
-                          <div className="flex gap-1.5 sm:mr-2">
+                          <div className="flex gap-1.5">
                             <div className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-[10px] font-bold border border-emerald-100 dark:border-emerald-900/30">
                               {rsvpCounts[RSVPStatus.YES] || 0} Yes
                             </div>
@@ -2738,6 +2766,10 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                             <button 
                               onClick={async (e) => {
                                 e.stopPropagation();
+                                if (game.isLocked) {
+                                  toast.error("Published games can't be deleted. Unpublish the game to delete.");
+                                  return;
+                                }
                                 setDeleteConfirmation({
                                   isOpen: true,
                                   type: 'game',
@@ -2877,22 +2909,22 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-white rounded-3xl shadow-2xl border border-slate-200 p-8 max-w-md w-full overflow-hidden"
+              className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 max-w-md w-full overflow-hidden"
             >
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center shrink-0">
                   <AlertCircle size={24} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-slate-900">{deleteConfirmation.title}</h3>
-                  <p className="text-slate-500 text-sm mt-1">{deleteConfirmation.message}</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">{deleteConfirmation.title}</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{deleteConfirmation.message}</p>
                 </div>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => setDeleteConfirmation(prev => ({ ...prev, isOpen: false }))}
-                  className="flex-1 px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all"
+                  className="flex-1 px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
                 >
                   Cancel
                 </button>
@@ -2901,6 +2933,50 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                   className="flex-1 px-6 py-3 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/20"
                 >
                   Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Clear Lineup Confirmation Modal */}
+        {showClearLineupConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowClearLineupConfirm(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 max-w-md w-full overflow-hidden"
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center shrink-0">
+                  <AlertCircle size={24} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Clear Lineup?</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">This will reset all innings and positions to blank. This action cannot be undone.</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => setShowClearLineupConfirm(false)}
+                  className="flex-1 px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleClearLineup(selectedGameId)}
+                  className="flex-1 px-6 py-3 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/20"
+                >
+                  Clear All
                 </button>
               </div>
             </motion.div>

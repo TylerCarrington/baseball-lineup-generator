@@ -2047,20 +2047,22 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                               </div>
                             ) : (
                               <>
-                                <div className="flex items-center gap-3 mb-3">
-                                  {isLocked && (
-                                    <span className="px-2 py-0.5 bg-emerald-500 text-white rounded text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20">
-                                      Published
-                                    </span>
-                                  )}
-                                  {game.mode === 'scrimmage' && (
-                                    <span className="px-2 py-0.5 bg-indigo-500 text-white rounded text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20">
-                                      Scrimmage
-                                    </span>
-                                  )}
+                                <div className="mb-3">
                                   <h2 className="text-3xl sm:text-5xl font-black tracking-tighter truncate leading-tight">
                                     {game.name}
                                   </h2>
+                                  <div className="flex items-center gap-3 mt-3">
+                                    {isLocked && (
+                                      <span className="px-2 py-0.5 bg-emerald-500 text-white rounded text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20">
+                                        Published
+                                      </span>
+                                    )}
+                                    {game.mode === 'scrimmage' && (
+                                      <span className="px-2 py-0.5 bg-indigo-500 text-white rounded text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20">
+                                        Scrimmage
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-6 text-slate-400">
                                   <div className="flex items-center gap-2">
@@ -2146,34 +2148,6 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                               <LayoutGrid size={20} />
                               Field Lineup
                             </button>
-                          </div>
-                          <div className="flex items-center gap-3 w-full sm:w-auto">
-                            {!isEditingRSVPs && game.mode !== 'scrimmage' && (
-                              <>
-                                {gameViewTab === 'lineup' && !isLocked && (
-                                  <button 
-                                    onClick={() => setShowClearLineupConfirm(true)}
-                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-2xl hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-all text-sm font-black active:scale-[0.98]"
-                                  >
-                                    <Trash2 size={18} />
-                                    Clear
-                                  </button>
-                                )}
-                                <button 
-                                  onClick={() => {
-                                    if (gameViewTab === 'batting') {
-                                      handleReshuffleLineup(selectedGameId);
-                                    } else {
-                                      handleGenerateLineup(selectedGameId);
-                                    }
-                                  }}
-                                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl hover:bg-slate-800 dark:hover:bg-indigo-500 transition-all text-sm font-black shadow-xl shadow-slate-900/20 dark:shadow-indigo-900/20 active:scale-[0.98]"
-                                >
-                                  {gameViewTab === 'batting' ? <RotateCcw size={18} /> : <RotateCcw size={18} />}
-                                  {gameViewTab === 'batting' ? 'Reshuffle' : 'Generate'}
-                                </button>
-                              </>
-                            )}
                           </div>
                         </div>
                         
@@ -2570,7 +2544,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                     }`}>
                                       {step}
                                     </div>
-                                    <span className={`text-[10px] font-black uppercase tracking-widest ${
+                                    <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${
                                       currentStep >= step ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-600'
                                     }`}>
                                       {step === 1 ? 'Pitchers/Catchers' : step === 2 ? 'Groups' : 'Final Lineup'}
@@ -2587,12 +2561,12 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                               {currentStep === 1 && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                   <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                    <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                       <div>
                                         <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 1: Pitcher & Catcher Selection</h3>
                                         <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Assign your batteries for all 6 innings</p>
                                       </div>
-                                      <div className="flex gap-3">
+                                      <div className="flex flex-col sm:flex-row gap-3">
                                         {game.lineup && Object.keys(game.lineup).length > 0 && (
                                           <button
                                             onClick={async () => {
@@ -2702,12 +2676,12 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
                               {currentStep === 2 && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                  <div className="flex items-center justify-between px-2">
+                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-4">
                                     <div>
                                       <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 2: Group Players</h3>
                                       <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Review groups and move players if needed</p>
                                     </div>
-                                    <div className="flex gap-3">
+                                    <div className="flex flex-col sm:flex-row gap-3">
                                       {game.lineup && Object.keys(game.lineup).length > 0 && (
                                         <button
                                           onClick={async () => {
@@ -2792,12 +2766,12 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
                               {currentStep === 3 && (
                                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                  <div className="flex items-center justify-between px-2">
+                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-4">
                                     <div>
                                       <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 3: Final Scrimmage Lineup</h3>
                                       <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">One group hits each inning. Extra hitters are listed below.</p>
                                     </div>
-                                    <div className="flex gap-3">
+                                    <div className="flex flex-col sm:flex-row gap-3">
                                       <button
                                         onClick={async () => {
                                           setBackupLineup(JSON.parse(JSON.stringify(game.lineup || {})));

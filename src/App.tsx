@@ -69,6 +69,9 @@ interface Game {
   lockedPositions?: string[];
   uid: string;
   createdAt: any;
+  mode?: 'standard' | 'scrimmage';
+  scrimmageGroups?: string[][];
+  scrimmageStep?: number;
 }
 
 enum RSVPStatus {
@@ -290,7 +293,15 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
       console.log("Games snapshot received, count:", snapshot.size);
       const gamesData: Game[] = [];
       snapshot.forEach((doc) => {
-        gamesData.push({ id: doc.id, ...doc.data() } as Game);
+        const data = doc.data();
+        if (data.scrimmageGroups && typeof data.scrimmageGroups === 'string') {
+          try {
+            data.scrimmageGroups = JSON.parse(data.scrimmageGroups);
+          } catch (e) {
+            console.error("Error parsing scrimmageGroups:", e);
+          }
+        }
+        gamesData.push({ id: doc.id, ...data } as Game);
       });
       setGames(gamesData);
       setLoading(false);
@@ -420,11 +431,16 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                   <div className="p-6 sm:p-8 bg-slate-900 dark:bg-slate-800 text-white">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="px-2 py-0.5 bg-emerald-500 text-white rounded text-[10px] font-bold uppercase tracking-wider">
                             Published
                           </span>
-                          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">{selectedGame.name}</h2>
+                          {selectedGame.mode === 'scrimmage' && (
+                            <span className="px-2 py-0.5 bg-indigo-500 text-white rounded text-[10px] font-bold uppercase tracking-wider">
+                              Scrimmage
+                            </span>
+                          )}
+                          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white w-full mt-1">{selectedGame.name}</h2>
                         </div>
                         <div className="flex items-center gap-2 text-slate-400 mt-1">
                           <Calendar size={16} />
@@ -453,7 +469,7 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                       }`}
                     >
                       <ClipboardList size={18} />
-                      Batting Order
+                      {selectedGame.mode === 'scrimmage' ? 'Groups' : 'Batting Order'}
                     </button>
                     <button
                       onClick={() => setActiveTab('fielding')}
@@ -469,7 +485,7 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                   </div>
 
                   <div>
-                    {/* Batting Order */}
+                    {/* Batting Order / Groups */}
                     {activeTab === 'batting' && (
                       <motion.div
                         initial={{ opacity: 0, x: -20 }}
@@ -477,25 +493,56 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                       >
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                           <ClipboardList size={20} className="text-slate-400 dark:text-slate-500" />
-                          Batting Order
+                          {selectedGame.mode === 'scrimmage' ? 'Groups' : 'Batting Order'}
                         </h3>
                         <div className="space-y-2">
-                          {selectedGame.battingOrder && selectedGame.battingOrder.length > 0 ? (
-                            selectedGame.battingOrder.map((playerId, index) => {
-                              const player = players.find(p => p.id === playerId);
-                              return (
-                                <div key={index} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 transition-colors duration-300">
-                                  <span className="w-6 h-6 bg-slate-900 dark:bg-emerald-600 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
-                                    {index + 1}
-                                  </span>
-                                  <span className="font-bold text-slate-700 dark:text-slate-200">{player?.name || 'Unknown Player'}</span>
-                                </div>
-                              );
-                            })
+                          {selectedGame.mode === 'scrimmage' ? (
+                            selectedGame.scrimmageGroups && selectedGame.scrimmageGroups.some(g => g.length > 0) ? (
+                              <div className="space-y-4">
+                                {[0, 1, 2, 3].map(groupIndex => {
+                                  const group = selectedGame.scrimmageGroups?.[groupIndex] || [];
+                                  if (group.length === 0) return null;
+                                  return (
+                                    <div key={groupIndex} className="space-y-2">
+                                      <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">Group {groupIndex + 1}</h4>
+                                      {group.map(playerId => {
+                                        const player = players.find(p => p.id === playerId);
+                                        return (
+                                          <div key={playerId} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 transition-colors duration-300">
+                                            <span className="w-6 h-6 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
+                                              {player?.name.charAt(0) || '?'}
+                                            </span>
+                                            <span className="font-bold text-slate-700 dark:text-slate-200">{player?.name || 'Unknown Player'}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-400 dark:text-slate-500 italic p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 border-dashed text-center transition-colors duration-300">
+                                No groups set yet.
+                              </p>
+                            )
                           ) : (
-                            <p className="text-sm text-slate-400 dark:text-slate-500 italic p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 border-dashed text-center transition-colors duration-300">
-                              No batting order set yet.
-                            </p>
+                            selectedGame.battingOrder && selectedGame.battingOrder.length > 0 ? (
+                              selectedGame.battingOrder.map((playerId, index) => {
+                                const player = players.find(p => p.id === playerId);
+                                return (
+                                  <div key={index} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 transition-colors duration-300">
+                                    <span className="w-6 h-6 bg-slate-900 dark:bg-emerald-600 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
+                                      {index + 1}
+                                    </span>
+                                    <span className="font-bold text-slate-700 dark:text-slate-200">{player?.name || 'Unknown Player'}</span>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <p className="text-sm text-slate-400 dark:text-slate-500 italic p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 border-dashed text-center transition-colors duration-300">
+                                No batting order set yet.
+                              </p>
+                            )
                           )}
                         </div>
                       </motion.div>
@@ -516,8 +563,24 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                             Object.entries(selectedGame.lineup).sort(([a], [b]) => Number(a) - Number(b)).map(([inningNum, inning]) => (
                               <div key={inningNum} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 transition-colors duration-300">
                                 <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Inning {inningNum}</h4>
+                                {selectedGame.mode === 'scrimmage' && inning['HittingGroup'] != null && (
+                                  <div className="mb-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800/30">
+                                    <div className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-2">Hitting Group {parseInt(inning['HittingGroup']) + 1}</div>
+                                    <div className="flex flex-wrap gap-2">
+                                      {selectedGame.scrimmageGroups?.[parseInt(inning['HittingGroup'])]?.map(playerId => {
+                                        const p = players.find(p => p.id === playerId);
+                                        return p ? (
+                                          <span key={playerId} className="px-2 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-md text-xs font-bold shadow-sm border border-slate-200 dark:border-slate-700">
+                                            {p.name.split(' ')[0]}
+                                          </span>
+                                        ) : null;
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                                 <div className="grid grid-cols-2 gap-2">
                                   {Object.entries(inning)
+                                    .filter(([pos]) => pos !== 'HittingGroup')
                                     .sort(([posA], [posB]) => (POSITION_ORDER[posA] || 99) - (POSITION_ORDER[posB] || 99))
                                     .map(([pos, playerId]) => {
                                       const player = players.find(p => p.id === playerId);
@@ -641,7 +704,14 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                               <Calendar size={24} />
                             </div>
                             <div className="min-w-0">
-                              <h3 className="font-bold text-lg text-slate-900 dark:text-white truncate pr-8">{game.name}</h3>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-bold text-lg text-slate-900 dark:text-white truncate">{game.name}</h3>
+                                {game.mode === 'scrimmage' && (
+                                  <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded text-[10px] font-bold uppercase tracking-wider shrink-0">
+                                    Scrimmage
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
                                 {gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                               </p>
@@ -677,6 +747,9 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   const [gameName, setGameName] = useState('');
   const [gameNameError, setGameNameError] = useState(false);
   const [gameDate, setGameDate] = useState(new Date().toISOString().split('T')[0]);
+  const [gameMode, setGameMode] = useState<'standard' | 'scrimmage'>('standard');
+  const [backupLineup, setBackupLineup] = useState<Record<string, Record<string, string>> | null>(null);
+  const [backupScrimmageGroups, setBackupScrimmageGroups] = useState<string[][] | null>(null);
   const [playerRSVPs, setPlayerRSVPs] = useState<Record<string, RSVPStatus>>({});
   const [isAuthReady, setIsAuthReady] = useState(false);
   
@@ -883,7 +956,15 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const gamesData: Game[] = [];
       snapshot.forEach((doc) => {
-        gamesData.push({ id: doc.id, ...doc.data() } as Game);
+        const data = doc.data();
+        if (data.scrimmageGroups && typeof data.scrimmageGroups === 'string') {
+          try {
+            data.scrimmageGroups = JSON.parse(data.scrimmageGroups);
+          } catch (e) {
+            console.error("Error parsing scrimmageGroups:", e);
+          }
+        }
+        gamesData.push({ id: doc.id, ...data } as Game);
       });
       setGames(gamesData);
     }, (error) => {
@@ -1014,12 +1095,14 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
         date: new Date(gameDate),
         rsvps: playerRSVPs,
         battingOrder: initialBattingOrder,
+        mode: gameMode,
         uid: user.uid,
         createdAt: serverTimestamp()
       });
       navigate('/games');
       setGameName('');
       setGameDate(new Date().toISOString().split('T')[0]);
+      setGameMode('standard');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'games');
     }
@@ -1120,6 +1203,244 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       });
       setShowClearLineupConfirm(false);
       toast.success('Lineup cleared successfully');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+    }
+  };
+
+  const handleSplitScrimmageGroups = async (gameId: string | null) => {
+    if (!gameId) return;
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    // Get all players who are IN (YES or TENTATIVE)
+    const availablePlayers = players.filter(p => game.rsvps[p.id] !== RSVPStatus.NO);
+    
+    // Get players already assigned as Pitcher or Catcher in any inning
+    const assignedIds = new Set<string>();
+    if (game.lineup) {
+      Object.values(game.lineup).forEach(inningLineup => {
+        if (inningLineup['Pitcher']) assignedIds.add(inningLineup['Pitcher']);
+        if (inningLineup['Catcher']) assignedIds.add(inningLineup['Catcher']);
+      });
+    }
+
+    // Split into 4 groups (include all available players)
+    const shuffled = [...availablePlayers].sort(() => Math.random() - 0.5);
+    
+    const groups: string[][] = [[], [], [], []];
+    shuffled.forEach((p, i) => {
+      groups[i % 4].push(p.id);
+    });
+
+    try {
+      await updateDoc(doc(db, 'games', gameId), {
+        scrimmageGroups: JSON.stringify(groups),
+        scrimmageStep: 2
+      });
+      // Manually update local state
+      setGames(prevGames => prevGames.map(g => g.id === gameId ? {...g, scrimmageGroups: groups, scrimmageStep: 2} : g));
+      toast.success('Players split into 4 groups');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+    }
+  };
+
+  const handleMoveScrimmagePlayer = async (gameId: string, fromGroup: number, toGroup: number, playerId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game || !game.scrimmageGroups) return;
+
+    const newGroups = [...game.scrimmageGroups.map(g => [...g])];
+    newGroups[fromGroup] = newGroups[fromGroup].filter(id => id !== playerId);
+    newGroups[toGroup].push(playerId);
+
+    try {
+      await updateDoc(doc(db, 'games', gameId), {
+        scrimmageGroups: JSON.stringify(newGroups)
+      });
+      setGames(prevGames => prevGames.map(g => g.id === gameId ? {...g, scrimmageGroups: newGroups} : g));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+    }
+  };
+
+  const handleGenerateScrimmageLineup = async (gameId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game || !game.scrimmageGroups) return;
+
+    const newLineup = { ...game.lineup };
+    const groups = game.scrimmageGroups;
+    
+    // Positions to fill (excluding P/C)
+    const otherPositions = ["First Base", "Second Base", "Third Base", "Shortstop", "Left Field", "Center Field", "Right Field"];
+    
+    // We need to assign hitting groups for innings 1-4 (all 4 must hit)
+    // Then 5-6 can be whatever, but no group hits more than twice total.
+    
+    // Generate all valid schedules (24 permutations for first 4 innings * 12 combinations for last 2 = 288 total)
+    const allSchedules: number[][] = [];
+    const permute = (arr: number[]): number[][] => {
+      if (arr.length === 0) return [[]];
+      const result: number[][] = [];
+      for (let i = 0; i < arr.length; i++) {
+        const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
+        for (const p of permute(rest)) {
+          result.push([arr[i], ...p]);
+        }
+      }
+      return result;
+    };
+    
+    const first4Perms = permute([0, 1, 2, 3]);
+    for (const f4 of first4Perms) {
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          if (i !== j) {
+            allSchedules.push([...f4, i, j]);
+          }
+        }
+      }
+    }
+    
+    // Filter by P/C constraints
+    const validSchedules = allSchedules.filter(schedule => {
+      for (let inning = 1; inning <= 6; inning++) {
+        const inningKey = inning.toString();
+        const pId = game.lineup?.[inningKey]?.['Pitcher'];
+        const cId = game.lineup?.[inningKey]?.['Catcher'];
+        const groupIdx = schedule[inning - 1];
+        if ((pId && groups[groupIdx].includes(pId)) || (cId && groups[groupIdx].includes(cId))) {
+          return false;
+        }
+      }
+      return true;
+    });
+    
+    let hittingSchedule: number[];
+    if (validSchedules.length > 0) {
+      hittingSchedule = validSchedules[Math.floor(Math.random() * validSchedules.length)];
+    } else {
+      // Fallback: just satisfy P/C constraints, trying to balance hits
+      hittingSchedule = [];
+      const counts = [0, 0, 0, 0];
+      for (let inning = 1; inning <= 6; inning++) {
+        const inningKey = inning.toString();
+        const pId = game.lineup?.[inningKey]?.['Pitcher'];
+        const cId = game.lineup?.[inningKey]?.['Catcher'];
+        
+        let bestGroup = -1;
+        let minHits = 999;
+        
+        const availableGroups = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+        for (const j of availableGroups) {
+          if ((!pId || !groups[j].includes(pId)) && (!cId || !groups[j].includes(cId))) {
+            if (counts[j] < minHits) {
+              minHits = counts[j];
+              bestGroup = j;
+            }
+          }
+        }
+        
+        if (bestGroup === -1) bestGroup = 0;
+        hittingSchedule.push(bestGroup);
+        counts[bestGroup]++;
+      }
+    }
+
+    const extraHitterCounts: Record<string, number> = {};
+    const outfieldCounts: Record<string, number> = {};
+
+    const twoHitGroups = [hittingSchedule[4], hittingSchedule[5]];
+    const oneHitGroups = [0, 1, 2, 3].filter(g => !twoHitGroups.includes(g));
+
+    const isOneHitGroup = (pid: string) => {
+      return oneHitGroups.some(gIdx => groups[gIdx].includes(pid));
+    };
+
+    for (let inning = 1; inning <= 6; inning++) {
+      const inningKey = inning.toString();
+      const hittingGroupIndex = hittingSchedule[inning - 1];
+      
+      const pId = game.lineup?.[inningKey]?.['Pitcher'];
+      const cId = game.lineup?.[inningKey]?.['Catcher'];
+      
+      const actualHittingGroup = groups[hittingGroupIndex];
+      const fieldingGroups = groups.filter((_, idx) => idx !== hittingGroupIndex);
+      
+      // All players in fielding groups who are NOT P or C
+      let fieldingPool: string[] = [];
+      fieldingGroups.forEach(g => {
+        g.forEach(pid => {
+          if (pid !== pId && pid !== cId) {
+            fieldingPool.push(pid);
+          }
+        });
+      });
+      
+      // Shuffle fielding pool, but prioritize those with MORE extra hitter assignments
+      // to play in the field (so they don't get EH again)
+      fieldingPool.sort((a, b) => {
+        const countA = extraHitterCounts[a] || 0;
+        const countB = extraHitterCounts[b] || 0;
+        if (countA !== countB) return countB - countA; // Descending
+        
+        // Lower priority: prioritize players from one-hit groups to be Extra Hitters
+        const aOneHit = isOneHitGroup(a);
+        const bOneHit = isOneHitGroup(b);
+        if (aOneHit && !bOneHit) return 1; // a is one-hit, push to end (EH)
+        if (!aOneHit && bOneHit) return -1; // b is one-hit, push to end (EH)
+        
+        return Math.random() - 0.5;
+      });
+      
+      const inningLineup: Record<string, string> = { 
+        Pitcher: pId || '', 
+        Catcher: cId || '' 
+      };
+      
+      const selectedFielders = fieldingPool.slice(0, otherPositions.length);
+      const extraHitters = fieldingPool.slice(otherPositions.length);
+      
+      // Sort selected fielders to minimize outfield time
+      // otherPositions: ["First Base", "Second Base", "Third Base", "Shortstop", "Left Field", "Center Field", "Right Field"]
+      // Indices 0-3 are Infield, 4-6 are Outfield
+      // Prioritize players with MORE outfield assignments to get Infield (put them at the start)
+      selectedFielders.sort((a, b) => {
+        const countA = outfieldCounts[a] || 0;
+        const countB = outfieldCounts[b] || 0;
+        if (countA !== countB) return countB - countA; // Descending
+        return Math.random() - 0.5;
+      });
+      
+      // Assign to field positions
+      otherPositions.forEach((pos, idx) => {
+        if (selectedFielders[idx]) {
+          inningLineup[pos] = selectedFielders[idx];
+          if (["Left Field", "Center Field", "Right Field"].includes(pos)) {
+            outfieldCounts[selectedFielders[idx]] = (outfieldCounts[selectedFielders[idx]] || 0) + 1;
+          }
+        }
+      });
+      
+      // Extra Hitters
+      extraHitters.forEach((pid, idx) => {
+        inningLineup[`Extra Hitter ${idx + 1}`] = pid;
+        extraHitterCounts[pid] = (extraHitterCounts[pid] || 0) + 1;
+      });
+      
+      // Store hitting group index
+      inningLineup['HittingGroup'] = hittingGroupIndex.toString();
+      
+      newLineup[inningKey] = inningLineup;
+    }
+
+    try {
+      await updateDoc(doc(db, 'games', gameId), {
+        lineup: newLineup,
+        scrimmageStep: 3
+      });
+      setGames(prevGames => prevGames.map(g => g.id === gameId ? {...g, lineup: newLineup, scrimmageStep: 3} : g));
+      toast.success('Scrimmage lineup generated!');
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
     }
@@ -1722,6 +2043,11 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                       Published
                                     </span>
                                   )}
+                                  {game.mode === 'scrimmage' && (
+                                    <span className="px-2 py-0.5 bg-indigo-500 text-white rounded text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20">
+                                      Scrimmage
+                                    </span>
+                                  )}
                                   <h2 className="text-3xl sm:text-5xl font-black tracking-tighter truncate leading-tight">
                                     {game.name}
                                   </h2>
@@ -1793,7 +2119,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                               }`}
                             >
                               <ClipboardList size={20} />
-                              Batting Order
+                              {game.mode === 'scrimmage' ? 'Groups' : 'Batting Order'}
                             </button>
                             <button 
                               onClick={() => setGameViewTab('lineup')}
@@ -1806,7 +2132,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                             </button>
                           </div>
                           <div className="flex items-center gap-3 w-full sm:w-auto">
-                            {!isEditingRSVPs && (
+                            {!isEditingRSVPs && game.mode !== 'scrimmage' && (
                               <>
                                 {gameViewTab === 'lineup' && !isLocked && (
                                   <button 
@@ -1827,8 +2153,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                   }}
                                   className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl hover:bg-slate-800 dark:hover:bg-indigo-500 transition-all text-sm font-black shadow-xl shadow-slate-900/20 dark:shadow-indigo-900/20 active:scale-[0.98]"
                                 >
-                                  <RotateCcw size={18} />
-                                  Generate
+                                  {gameViewTab === 'batting' ? <RotateCcw size={18} /> : <RotateCcw size={18} />}
+                                  {gameViewTab === 'batting' ? 'Reshuffle' : 'Generate'}
                                 </button>
                               </>
                             )}
@@ -1890,6 +2216,165 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                       }
                       
                       if (gameViewTab === 'batting') {
+                        if (game.mode === 'scrimmage') {
+                          const groups = game.scrimmageGroups || [];
+                          const inPlayers = players.filter(p => game.rsvps[p.id] !== RSVPStatus.NO);
+                          const outPlayers = players.filter(p => game.rsvps[p.id] === RSVPStatus.NO).sort((a, b) => a.name.localeCompare(b.name));
+                          
+                          const groupedPlayers: Record<string, typeof players> = {
+                            'Group 1': [],
+                            'Group 2': [],
+                            'Group 3': [],
+                            'Group 4': [],
+                            'Unassigned': []
+                          };
+                          
+                          inPlayers.forEach(p => {
+                            let assigned = false;
+                            for (let i = 0; i < 4; i++) {
+                              if (groups[i] && groups[i].includes(p.id)) {
+                                groupedPlayers[`Group ${i + 1}`].push(p);
+                                assigned = true;
+                                break;
+                              }
+                            }
+                            if (!assigned) {
+                              groupedPlayers['Unassigned'].push(p);
+                            }
+                          });
+                          
+                          Object.keys(groupedPlayers).forEach(key => {
+                            groupedPlayers[key].sort((a, b) => a.name.localeCompare(b.name));
+                          });
+
+                          return (
+                            <div className="space-y-8">
+                              {['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Unassigned'].map(groupName => {
+                                const groupPlayers = groupedPlayers[groupName];
+                                if (groupPlayers.length === 0) return null;
+                                
+                                return (
+                                  <div key={groupName} className="space-y-3">
+                                    <div className="flex items-center justify-between px-2">
+                                      <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{groupName}</h3>
+                                      <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{groupPlayers.length} Players</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                      {groupPlayers.map(player => {
+                                        const playerPositions = game.lineup ? [1, 2, 3, 4, 5, 6].map(inning => {
+                                          const inningLineup = game.lineup?.[inning.toString()] || {};
+                                          let position = Object.entries(inningLineup).find(([key, id]) => id === player.id && key !== 'HittingGroup')?.[0];
+                                          
+                                          if (!position) {
+                                            const hittingGroupIdxStr = inningLineup['HittingGroup'];
+                                            if (hittingGroupIdxStr != null) {
+                                              const hittingGroupIdx = parseInt(hittingGroupIdxStr);
+                                              if (game.scrimmageGroups?.[hittingGroupIdx]?.includes(player.id)) {
+                                                position = 'Hitting';
+                                              }
+                                            }
+                                          }
+                                          
+                                          if (!position) position = 'Hitting';
+                                          
+                                          if (position.startsWith('Extra Hitter')) position = 'EH';
+                                          
+                                          return { inning, position };
+                                        }).filter(p => p.position) : [];
+
+                                        return (
+                                          <div
+                                            key={player.id}
+                                            className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group gap-4"
+                                          >
+                                            <div className="flex items-center gap-4 sm:gap-6">
+                                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-black shadow-xl shadow-slate-900/20 dark:shadow-indigo-900/20 group-hover:scale-110 transition-transform flex-shrink-0">
+                                                {player.name.charAt(0)}
+                                              </div>
+                                              <div className="min-w-0 flex-1">
+                                                <p className="font-black text-slate-900 dark:text-white text-lg sm:text-xl tracking-tight truncate">{player.name}</p>
+                                                {playerPositions.length > 0 ? (
+                                                  <div className="flex flex-wrap gap-x-1.5 gap-y-1 mt-1.5">
+                                                    {playerPositions.map(({ inning, position }) => {
+                                                      const isHitting = position === 'Hitting';
+                                                      return (
+                                                        <span key={inning} className={`text-[8px] sm:text-[9px] font-black px-1.5 sm:px-2 py-0.5 rounded-lg border transition-all ${
+                                                          isHitting
+                                                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800/50'
+                                                            : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                                                        }`}>
+                                                          <span className={`${isHitting ? 'text-indigo-400 dark:text-indigo-500' : 'text-slate-400 dark:text-slate-500'} mr-1`}>{inning}</span>
+                                                          {getPositionAbbreviation(position)}
+                                                        </span>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                ) : (
+                                                  <p className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mt-1 truncate">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
+                                                )}
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 border-slate-50 dark:border-slate-800 pt-3 sm:pt-0">
+                                              <div className="flex gap-1 flex-1 sm:flex-none">
+                                                {[RSVPStatus.YES, RSVPStatus.TENTATIVE, RSVPStatus.NO].map(status => (
+                                                  <button
+                                                    key={status}
+                                                    onClick={() => handleUpdateGameRSVP(game.id, player.id, status)}
+                                                    className={`flex-1 sm:flex-none px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-all border ${
+                                                      game.rsvps[player.id] === status
+                                                        ? status === RSVPStatus.YES 
+                                                          ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' 
+                                                          : status === RSVPStatus.TENTATIVE
+                                                            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                                                            : 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800'
+                                                        : 'bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-700 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+                                                    }`}
+                                                  >
+                                                    {status}
+                                                  </button>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {outPlayers.length > 0 && (
+                                <div className="space-y-3 pt-6 border-t border-slate-100 dark:border-slate-800">
+                                  <div className="flex items-center justify-between px-2">
+                                    <h3 className="text-lg font-black text-slate-400 dark:text-slate-500 uppercase tracking-tight">Not Attending</h3>
+                                    <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest">{outPlayers.length} Out</span>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {outPlayers.map(player => (
+                                      <div key={player.id} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 opacity-60 hover:opacity-100 transition-all">
+                                        <div className="flex items-center gap-4">
+                                          <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-xl flex items-center justify-center text-xs font-black">
+                                            OUT
+                                          </div>
+                                          <p className="font-bold text-slate-500 dark:text-slate-400">{player.name}</p>
+                                        </div>
+                                        <div className="flex gap-1">
+                                          <button
+                                            onClick={() => handleUpdateGameRSVP(game.id, player.id, RSVPStatus.YES)}
+                                            className="px-3 py-1.5 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
+                                          >
+                                            Activate
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+
                         if (!game.battingOrder) return null;
                         
                         const inOrder = localBattingOrder.filter(id => 
@@ -2038,6 +2523,653 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                       } else {
                         // Lineup View
                         const isLocked = game.isLocked || false;
+
+                        if (game.mode === 'scrimmage') {
+                          const currentStep = game.scrimmageStep || 1;
+                          const fieldPositions = ["Pitcher", "Catcher"];
+                          
+                          return (
+                            <div className="space-y-8">
+                              {/* Step Indicator */}
+                              <div className="flex items-center justify-between px-4 py-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                                {[1, 2, 3].map((step) => (
+                                  <div 
+                                    key={step} 
+                                    className={`flex flex-col items-center gap-2 flex-1 relative ${step < currentStep ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                                    onClick={async () => {
+                                      if (step < currentStep) {
+                                        if (currentStep === 3) {
+                                          setBackupLineup(JSON.parse(JSON.stringify(game.lineup || {})));
+                                          setBackupScrimmageGroups(JSON.parse(JSON.stringify(game.scrimmageGroups || [])));
+                                        }
+                                        await updateDoc(doc(db, 'games', game.id), { scrimmageStep: step });
+                                        setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: step} : g));
+                                      }
+                                    }}
+                                  >
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black z-10 transition-all ${
+                                      currentStep >= step 
+                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600'
+                                    }`}>
+                                      {step}
+                                    </div>
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${
+                                      currentStep >= step ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-600'
+                                    }`}>
+                                      {step === 1 ? 'Pitchers/Catchers' : step === 2 ? 'Groups' : 'Final Lineup'}
+                                    </span>
+                                    {step < 3 && (
+                                      <div className={`absolute top-5 left-1/2 w-full h-[2px] -z-0 ${
+                                        currentStep > step ? 'bg-indigo-600' : 'bg-slate-100 dark:bg-slate-800'
+                                      }`} />
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+
+                              {currentStep === 1 && (
+                                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                                    <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                      <div>
+                                        <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 1: Pitcher & Catcher Selection</h3>
+                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Assign your batteries for all 6 innings</p>
+                                      </div>
+                                      <div className="flex gap-3">
+                                        {game.lineup && Object.keys(game.lineup).length > 0 && (
+                                          <button
+                                            onClick={async () => {
+                                              if (backupLineup || backupScrimmageGroups) {
+                                                const updates: any = { scrimmageStep: 3 };
+                                                if (backupLineup) updates.lineup = backupLineup;
+                                                if (backupScrimmageGroups) updates.scrimmageGroups = JSON.stringify(backupScrimmageGroups);
+                                                await updateDoc(doc(db, 'games', game.id), updates);
+                                                setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 3, lineup: backupLineup || g.lineup, scrimmageGroups: backupScrimmageGroups || g.scrimmageGroups} : g));
+                                                setBackupLineup(null);
+                                                setBackupScrimmageGroups(null);
+                                              } else {
+                                                await updateDoc(doc(db, 'games', game.id), { scrimmageStep: 3 });
+                                                setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 3} : g));
+                                              }
+                                            }}
+                                            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                          >
+                                            Cancel
+                                          </button>
+                                        )}
+                                        <button
+                                          onClick={async () => {
+                                            if (game.scrimmageGroups && game.scrimmageGroups.length > 0) {
+                                              await updateDoc(doc(db, 'games', game.id), { scrimmageStep: 2 });
+                                              setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 2} : g));
+                                            } else {
+                                              handleSplitScrimmageGroups(selectedGameId);
+                                            }
+                                          }}
+                                          className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20"
+                                        >
+                                          Next: Group Players
+                                          <ChevronRight size={16} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                    <div className="overflow-x-auto pb-48 min-h-[400px]">
+                                      <table className="w-full border-collapse">
+                                        <thead>
+                                          <tr className="bg-slate-50/50 dark:bg-slate-800/50">
+                                            <th className="text-left py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">Position</th>
+                                            {[1, 2, 3, 4, 5, 6].map(inning => (
+                                              <th key={inning} className="text-center py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">Inning {inning}</th>
+                                            ))}
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                                          {fieldPositions.map(pos => (
+                                            <tr key={pos} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                                              <td className="py-4 px-6 font-black text-slate-900 dark:text-slate-200 text-sm">{pos}</td>
+                                              {[1, 2, 3, 4, 5, 6].map(inning => {
+                                                const inningKey = inning.toString();
+                                                const playerId = game.lineup?.[inningKey]?.[pos];
+                                                const player = players.find(p => p.id === playerId);
+                                                const isEditing = editingCell?.inning === inningKey && editingCell?.position === pos;
+
+                                                return (
+                                                  <td key={inning} className="py-3 px-4 text-center relative">
+                                                    {isEditing && (
+                                                      <>
+                                                        <div 
+                                                          className="fixed inset-0 z-[55]" 
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setEditingCell(null);
+                                                          }} 
+                                                        />
+                                                        <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                                          <button
+                                                            onClick={() => handleUpdateLineupCell(selectedGameId, inningKey, pos, '')}
+                                                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 italic transition-colors"
+                                                          >
+                                                            — Empty —
+                                                          </button>
+                                                          {players.filter(p => game.rsvps[p.id] !== RSVPStatus.NO).sort((a, b) => a.name.localeCompare(b.name)).map(p => (
+                                                            <button
+                                                              key={p.id}
+                                                              onClick={() => handleUpdateLineupCell(selectedGameId, inningKey, pos, p.id)}
+                                                              className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-between transition-colors"
+                                                            >
+                                                              <span>{p.name}</span>
+                                                            </button>
+                                                          ))}
+                                                        </div>
+                                                      </>
+                                                    )}
+                                                    <button
+                                                      onClick={() => setEditingCell({ inning: inningKey, position: pos })}
+                                                      className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] border ${
+                                                        isEditing ? 'ring-2 ring-slate-900 border-slate-900' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-100 dark:border-slate-700 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700'
+                                                      }`}
+                                                    >
+                                                      {player?.name || <span className="text-slate-300 italic">Empty</span>}
+                                                    </button>
+                                                  </td>
+                                                );
+                                              })}
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {currentStep === 2 && (
+                                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                  <div className="flex items-center justify-between px-2">
+                                    <div>
+                                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 2: Group Players</h3>
+                                      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Review groups and move players if needed</p>
+                                    </div>
+                                    <div className="flex gap-3">
+                                      {game.lineup && Object.keys(game.lineup).length > 0 && (
+                                        <button
+                                          onClick={async () => {
+                                            if (backupLineup || backupScrimmageGroups) {
+                                              const updates: any = { scrimmageStep: 3 };
+                                              if (backupLineup) updates.lineup = backupLineup;
+                                              if (backupScrimmageGroups) updates.scrimmageGroups = JSON.stringify(backupScrimmageGroups);
+                                              await updateDoc(doc(db, 'games', game.id), updates);
+                                              setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 3, lineup: backupLineup || g.lineup, scrimmageGroups: backupScrimmageGroups || g.scrimmageGroups} : g));
+                                              setBackupLineup(null);
+                                              setBackupScrimmageGroups(null);
+                                            } else {
+                                              await updateDoc(doc(db, 'games', game.id), { scrimmageStep: 3 });
+                                              setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 3} : g));
+                                            }
+                                          }}
+                                          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                        >
+                                          Cancel
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => handleSplitScrimmageGroups(selectedGameId)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                      >
+                                        <RefreshCw size={14} />
+                                        Reshuffle
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setBackupLineup(null);
+                                          setBackupScrimmageGroups(null);
+                                          handleGenerateScrimmageLineup(selectedGameId);
+                                        }}
+                                        className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20"
+                                      >
+                                        Generate Final Lineup
+                                        <ChevronRight size={16} />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {[0, 1, 2, 3].map(groupIndex => (
+                                      <div key={groupIndex} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                                        <div className="flex items-center justify-between mb-4">
+                                          <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Group {groupIndex + 1}</h4>
+                                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                                            {game.scrimmageGroups?.[groupIndex]?.length || 0} Players
+                                          </span>
+                                        </div>
+                                        <div className="space-y-2">
+                                          {game.scrimmageGroups?.[groupIndex]?.map(playerId => {
+                                            const player = players.find(p => p.id === playerId);
+                                            return (
+                                              <div key={playerId} className="group/player p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                                                <span>{player?.name}</span>
+                                                <div className="flex gap-1 opacity-0 group-hover/player:opacity-100 transition-opacity">
+                                                  {[0, 1, 2, 3].filter(idx => idx !== groupIndex).map(targetIdx => (
+                                                    <button
+                                                      key={targetIdx}
+                                                      onClick={() => handleMoveScrimmagePlayer(game.id, groupIndex, targetIdx, playerId)}
+                                                      className="w-6 h-6 flex items-center justify-center bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-md text-[10px] font-black text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                                                      title={`Move to Group ${targetIdx + 1}`}
+                                                    >
+                                                      {targetIdx + 1}
+                                                    </button>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                          {(!game.scrimmageGroups?.[groupIndex] || game.scrimmageGroups[groupIndex].length === 0) && (
+                                            <p className="text-xs text-slate-400 italic text-center py-4">No players assigned</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {currentStep === 3 && (
+                                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                  <div className="flex items-center justify-between px-2">
+                                    <div>
+                                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 3: Final Scrimmage Lineup</h3>
+                                      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">One group hits each inning. Extra hitters are listed below.</p>
+                                    </div>
+                                    <div className="flex gap-3">
+                                      <button
+                                        onClick={async () => {
+                                          setBackupLineup(JSON.parse(JSON.stringify(game.lineup || {})));
+                                          setBackupScrimmageGroups(JSON.parse(JSON.stringify(game.scrimmageGroups || [])));
+                                          await updateDoc(doc(db, 'games', game.id), { scrimmageStep: 1 });
+                                          setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 1} : g));
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                      >
+                                        <RotateCcw size={14} />
+                                        Start Over
+                                      </button>
+                                      <button
+                                        onClick={() => handleGenerateScrimmageLineup(selectedGameId)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                      >
+                                        <RefreshCw size={14} />
+                                        Regenerate
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full border-collapse">
+                                        <thead>
+                                          <tr className="bg-slate-50/50 dark:bg-slate-800/50">
+                                            <th className="text-left py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">Position</th>
+                                            {[1, 2, 3, 4, 5, 6].map(inning => (
+                                              <th key={inning} className="text-center py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">Inning {inning}</th>
+                                            ))}
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                                          {/* Field Positions */}
+                                          {[
+                                            "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
+                                            "Shortstop", "Left Field", "Center Field", "Right Field"
+                                          ].map(pos => (
+                                            <tr key={pos} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                                              <td className="py-4 px-6 font-black text-slate-900 dark:text-slate-200 text-sm">
+                                                <div className="flex items-center gap-3">
+                                                  <span className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-[10px] text-slate-500 dark:text-slate-400 font-black">
+                                                    {getPositionAbbreviation(pos)}
+                                                  </span>
+                                                  {pos}
+                                                </div>
+                                              </td>
+                                              {[1, 2, 3, 4, 5, 6].map(inning => {
+                                                const inningKey = inning.toString();
+                                                const playerId = game.lineup?.[inningKey]?.[pos];
+                                                const player = players.find(p => p.id === playerId);
+                                                const isOut = playerId && game.rsvps[playerId] === RSVPStatus.NO;
+                                                
+                                                // Check for duplicates in this inning
+                                                const inningLineup = game.lineup?.[inningKey] || {};
+                                                const playerIdsInInning = Object.entries(inningLineup)
+                                                  .filter(([k]) => k !== 'HittingGroup')
+                                                  .map(([_, id]) => id);
+                                                const isDuplicate = playerId && playerIdsInInning.filter(id => id === playerId).length > 1;
+                                                
+                                                const isEditing = editingCell?.inning === inningKey && editingCell?.position === pos;
+
+                                                // Hitting group for this inning
+                                                const hittingGroupIdx = game.lineup?.[inningKey]?.['HittingGroup'];
+                                                const hittingGroupIds = hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)]
+                                                  ? game.scrimmageGroups[parseInt(hittingGroupIdx)]
+                                                  : [];
+
+                                                return (
+                                                  <td key={inning} className="py-4 px-4 text-center relative">
+                                                    {isEditing && (
+                                                      <>
+                                                        <div 
+                                                          className="fixed inset-0 z-[55]" 
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setEditingCell(null);
+                                                          }} 
+                                                        />
+                                                        <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                                          <div className="px-3 py-2 border-b border-slate-50 dark:border-slate-700 mb-1">
+                                                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Select Player</p>
+                                                          </div>
+                                                          <button
+                                                            onClick={() => handleUpdateLineupCell(selectedGameId, inningKey, pos, '')}
+                                                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 italic transition-colors"
+                                                          >
+                                                            — Empty —
+                                                          </button>
+                                                          {(() => {
+                                                            const assignedElsewhere = Object.entries(inningLineup)
+                                                              .filter(([pPos, _]) => pPos !== pos && pPos !== 'HittingGroup')
+                                                              .map(([_, pId]) => pId);
+                                                            
+                                                            const isDark = darkMode;
+
+                                                            return players
+                                                              .sort((a, b) => a.name.localeCompare(b.name))
+                                                              .map(p => {
+                                                                const isCurrent = p.id === playerId;
+                                                                const isAssignedElsewhere = !isCurrent && assignedElsewhere.includes(p.id);
+                                                                const isPlayerOut = game.rsvps[p.id] === RSVPStatus.NO;
+                                                                const isHitting = hittingGroupIds.includes(p.id);
+                                                                
+                                                                let statusLabel = 'Bench';
+                                                                let statusColor = isDark ? '#34d399' : '#059669'; // Emerald-400 : Emerald-600
+                                                                let statusBg = isDark ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-50 text-emerald-600';
+
+                                                                if (isPlayerOut) {
+                                                                  statusLabel = 'OUT';
+                                                                  statusColor = isDark ? '#fb7185' : '#f43f5e'; // Rose-400 : Rose-500
+                                                                  statusBg = isDark ? 'bg-rose-900/30 text-rose-400' : 'bg-rose-50 text-rose-500';
+                                                                } else if (isHitting) {
+                                                                  statusLabel = 'Hitting';
+                                                                  statusColor = isDark ? '#818cf8' : '#4f46e5'; // Indigo-400 : Indigo-600
+                                                                  statusBg = isDark ? 'bg-indigo-900/30 text-indigo-400' : 'bg-indigo-50 text-indigo-600';
+                                                                } else if (isCurrent) {
+                                                                  statusLabel = 'Current';
+                                                                  statusColor = isDark ? '#60a5fa' : '#2563eb'; // Blue-400 : Blue-600
+                                                                  statusBg = isDark ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600';
+                                                                } else if (isAssignedElsewhere) {
+                                                                  statusLabel = 'Field';
+                                                                  statusColor = isDark ? '#64748b' : '#94a3b8'; // Slate-500 : Slate-400
+                                                                  statusBg = isDark ? 'bg-slate-800 text-slate-500' : 'bg-slate-100 text-slate-400';
+                                                                }
+
+                                                                return (
+                                                                  <button
+                                                                    key={p.id}
+                                                                    onClick={() => {
+                                                                      if (!isHitting) {
+                                                                        handleUpdateLineupCell(selectedGameId, inningKey, pos, p.id);
+                                                                      }
+                                                                    }}
+                                                                    disabled={isHitting}
+                                                                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors group/item ${
+                                                                      isHitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                                                                    }`}
+                                                                    style={{ color: statusColor }}
+                                                                  >
+                                                                    <span>{p.name}</span>
+                                                                    <span className={`text-[8px] uppercase px-1.5 py-0.5 rounded-md ${statusBg}`}>
+                                                                      {statusLabel}
+                                                                    </span>
+                                                                  </button>
+                                                                );
+                                                              });
+                                                          })()}
+                                                        </div>
+                                                      </>
+                                                    )}
+                                                    
+                                                    <button
+                                                      onClick={() => setEditingCell({ inning: inningKey, position: pos })}
+                                                      className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] border ${
+                                                        isOut
+                                                          ? 'bg-rose-500 text-white border-rose-600 shadow-md shadow-rose-200'
+                                                          : isDuplicate
+                                                            ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm shadow-rose-100'
+                                                            : 'bg-white text-slate-700 border border-slate-100 shadow-sm hover:border-slate-200 hover:bg-slate-50'
+                                                      } ${isEditing ? 'ring-2 ring-slate-900 border-slate-900' : ''}`}
+                                                    >
+                                                      {player?.name || <span className="text-slate-300 italic">Empty</span>}
+                                                      {isOut && <AlertCircle size={12} className="ml-2" />}
+                                                    </button>
+                                                  </td>
+                                                );
+                                              })}
+                                            </tr>
+                                          ))}
+                                          {/* Hitting Group Row */}
+                                          <tr className="bg-indigo-50/30 dark:bg-indigo-900/10">
+                                            <td className="py-4 px-6 font-black text-indigo-600 dark:text-indigo-400 text-xs uppercase tracking-widest">Hitting Group</td>
+                                            {[1, 2, 3, 4, 5, 6].map(inning => {
+                                              const hittingGroupIdx = game.lineup?.[inning.toString()]?.['HittingGroup'];
+                                              const groupPlayers = hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)]
+                                                ? game.scrimmageGroups[parseInt(hittingGroupIdx)].map(id => players.find(p => p.id === id)?.name).filter(Boolean)
+                                                : [];
+                                              return (
+                                                <td key={inning} className="py-4 px-6 text-center">
+                                                  <div className="flex flex-col gap-1 items-center">
+                                                    <span className="px-3 py-1 bg-indigo-600 text-white rounded-full text-[10px] font-black mb-1">
+                                                      Group {hittingGroupIdx != null ? parseInt(hittingGroupIdx) + 1 : '?'}
+                                                    </span>
+                                                    {groupPlayers.map((name, i) => (
+                                                      <span key={i} className="text-[9px] font-bold text-indigo-700 dark:text-indigo-300">
+                                                        {name}
+                                                      </span>
+                                                    ))}
+                                                  </div>
+                                                </td>
+                                              );
+                                            })}
+                                          </tr>
+                                          {/* Extra Hitters */}
+                                          {(() => {
+                                            const maxExtraHitters = Math.max(
+                                              0,
+                                              ...[1, 2, 3, 4, 5, 6].map(inning => {
+                                                const lineup = game.lineup?.[inning.toString()] || {};
+                                                return Object.keys(lineup).filter(k => k.startsWith('Extra Hitter')).length;
+                                              })
+                                            );
+                                            
+                                            if (maxExtraHitters === 0) return null;
+                                            
+                                            return Array.from({ length: maxExtraHitters }, (_, i) => `Extra Hitter ${i + 1}`).map(pos => (
+                                              <tr key={pos} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                                                <td className="py-4 px-6 font-black text-slate-900 dark:text-slate-200 text-sm">
+                                                  <div className="flex items-center gap-3">
+                                                    <span className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-[10px] text-slate-500 dark:text-slate-400 font-black">
+                                                      EH
+                                                    </span>
+                                                    {pos}
+                                                  </div>
+                                                </td>
+                                                {[1, 2, 3, 4, 5, 6].map(inning => {
+                                                  const inningKey = inning.toString();
+                                                  const playerId = game.lineup?.[inningKey]?.[pos];
+                                                  const player = players.find(p => p.id === playerId);
+                                                  const isOut = playerId && game.rsvps[playerId] === RSVPStatus.NO;
+                                                  
+                                                  // Check for duplicates in this inning
+                                                  const inningLineup = game.lineup?.[inningKey] || {};
+                                                  const playerIdsInInning = Object.entries(inningLineup)
+                                                    .filter(([k]) => k !== 'HittingGroup')
+                                                    .map(([_, id]) => id);
+                                                  const isDuplicate = playerId && playerIdsInInning.filter(id => id === playerId).length > 1;
+                                                  
+                                                  const isEditing = editingCell?.inning === inningKey && editingCell?.position === pos;
+
+                                                  // Hitting group for this inning
+                                                  const hittingGroupIdx = game.lineup?.[inningKey]?.['HittingGroup'];
+                                                  const hittingGroupIds = hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)]
+                                                    ? game.scrimmageGroups[parseInt(hittingGroupIdx)]
+                                                    : [];
+
+                                                  return (
+                                                    <td key={inning} className="py-4 px-4 text-center relative">
+                                                      {isEditing && (
+                                                        <>
+                                                          <div 
+                                                            className="fixed inset-0 z-[55]" 
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              setEditingCell(null);
+                                                            }} 
+                                                          />
+                                                          <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                                            <div className="px-3 py-2 border-b border-slate-50 dark:border-slate-700 mb-1">
+                                                              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Select Player</p>
+                                                            </div>
+                                                            <button
+                                                              onClick={() => handleUpdateLineupCell(selectedGameId, inningKey, pos, '')}
+                                                              className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 italic transition-colors"
+                                                            >
+                                                              — Empty —
+                                                            </button>
+                                                            {(() => {
+                                                              const assignedElsewhere = Object.entries(inningLineup)
+                                                                .filter(([pPos, _]) => pPos !== pos && pPos !== 'HittingGroup')
+                                                                .map(([_, pId]) => pId);
+                                                              
+                                                              const isDark = darkMode;
+
+                                                              return players
+                                                                .sort((a, b) => a.name.localeCompare(b.name))
+                                                                .map(p => {
+                                                                  const isCurrent = p.id === playerId;
+                                                                  const isAssignedElsewhere = !isCurrent && assignedElsewhere.includes(p.id);
+                                                                  const isPlayerOut = game.rsvps[p.id] === RSVPStatus.NO;
+                                                                  const isHitting = hittingGroupIds.includes(p.id);
+                                                                  
+                                                                  let statusLabel = 'Bench';
+                                                                  let statusColor = isDark ? '#34d399' : '#059669'; // Emerald-400 : Emerald-600
+                                                                  let statusBg = isDark ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-50 text-emerald-600';
+
+                                                                  if (isPlayerOut) {
+                                                                    statusLabel = 'OUT';
+                                                                    statusColor = isDark ? '#fb7185' : '#f43f5e'; // Rose-400 : Rose-500
+                                                                    statusBg = isDark ? 'bg-rose-900/30 text-rose-400' : 'bg-rose-50 text-rose-500';
+                                                                  } else if (isHitting) {
+                                                                    statusLabel = 'Hitting';
+                                                                    statusColor = isDark ? '#818cf8' : '#4f46e5'; // Indigo-400 : Indigo-600
+                                                                    statusBg = isDark ? 'bg-indigo-900/30 text-indigo-400' : 'bg-indigo-50 text-indigo-600';
+                                                                  } else if (isCurrent) {
+                                                                    statusLabel = 'Current';
+                                                                    statusColor = isDark ? '#60a5fa' : '#2563eb'; // Blue-400 : Blue-600
+                                                                    statusBg = isDark ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600';
+                                                                  } else if (isAssignedElsewhere) {
+                                                                    statusLabel = 'Field';
+                                                                    statusColor = isDark ? '#64748b' : '#94a3b8'; // Slate-500 : Slate-400
+                                                                    statusBg = isDark ? 'bg-slate-800 text-slate-500' : 'bg-slate-100 text-slate-400';
+                                                                  }
+
+                                                                  return (
+                                                                    <button
+                                                                      key={p.id}
+                                                                      onClick={() => {
+                                                                        if (!isHitting) {
+                                                                          handleUpdateLineupCell(selectedGameId, inningKey, pos, p.id);
+                                                                        }
+                                                                      }}
+                                                                      disabled={isHitting}
+                                                                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors group/item ${
+                                                                        isHitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                                                                      }`}
+                                                                      style={{ color: statusColor }}
+                                                                    >
+                                                                      <span>{p.name}</span>
+                                                                      <span className={`text-[8px] uppercase px-1.5 py-0.5 rounded-md ${statusBg}`}>
+                                                                        {statusLabel}
+                                                                      </span>
+                                                                    </button>
+                                                                  );
+                                                                });
+                                                            })()}
+                                                          </div>
+                                                        </>
+                                                      )}
+                                                      
+                                                      <button
+                                                        onClick={() => setEditingCell({ inning: inningKey, position: pos })}
+                                                        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] border ${
+                                                          isOut
+                                                            ? 'bg-rose-500 text-white border-rose-600 shadow-md shadow-rose-200'
+                                                            : isDuplicate
+                                                              ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm shadow-rose-100'
+                                                              : 'bg-white text-slate-700 border border-slate-100 shadow-sm hover:border-slate-200 hover:bg-slate-50'
+                                                        } ${isEditing ? 'ring-2 ring-slate-900 border-slate-900' : ''}`}
+                                                      >
+                                                        {player?.name || <span className="text-slate-300 italic">Empty</span>}
+                                                        {isOut && <AlertCircle size={12} className="ml-2" />}
+                                                      </button>
+                                                    </td>
+                                                  );
+                                                })}
+                                              </tr>
+                                            ));
+                                          })()}
+                                          {/* Bench Row */}
+                                          <tr className="bg-slate-50/30 dark:bg-slate-800/30">
+                                            <td className="py-5 px-6 font-black text-slate-400 dark:text-slate-500 text-sm uppercase tracking-widest">Bench</td>
+                                            {[1, 2, 3, 4, 5, 6].map(inning => {
+                                              const inningKey = inning.toString();
+                                              const inningLineup = game.lineup?.[inningKey] || {};
+                                              
+                                              const assignedIds = Object.entries(inningLineup)
+                                                .filter(([k]) => k !== 'HittingGroup')
+                                                .map(([_, id]) => id);
+                                                
+                                              const hittingGroupIdx = inningLineup['HittingGroup'];
+                                              const hittingGroupIds = hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)]
+                                                ? game.scrimmageGroups[parseInt(hittingGroupIdx)]
+                                                : [];
+                                                
+                                              const benchedPlayers = players.filter(p => 
+                                                game.rsvps[p.id] !== RSVPStatus.NO && 
+                                                !assignedIds.includes(p.id) &&
+                                                !hittingGroupIds.includes(p.id)
+                                              );
+                                              
+                                              return (
+                                                <td key={inning} className="py-4 px-4 text-center">
+                                                  <div className="flex flex-col gap-1">
+                                                    {benchedPlayers.length > 0 ? benchedPlayers.map(p => (
+                                                      <div key={p.id} className="text-[10px] font-black text-slate-400 dark:text-slate-500 truncate max-w-[80px] mx-auto uppercase tracking-tighter">
+                                                        {p.name.split(' ')[0]}
+                                                      </div>
+                                                    )) : (
+                                                      <span className="text-slate-300 dark:text-slate-700">—</span>
+                                                    )}
+                                                  </div>
+                                                </td>
+                                              );
+                                            })}
+                                          </tr>
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+
                         const fieldPositions = [
                           "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
                           "Shortstop", "Left Field", "Center Field", "Right Field"
@@ -2259,16 +3391,16 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
               exit={{ opacity: 0, scale: 0.95 }}
               className="max-w-3xl mx-auto px-4 sm:px-0"
             >
-              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-                <div className="p-6 sm:p-8 border-b border-slate-100 bg-slate-50/50">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="p-6 sm:p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Add New Game</h2>
-                      <p className="text-sm sm:text-base text-slate-500 mt-1">Set player availability for this game</p>
+                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Add New Game</h2>
+                      <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">Set player availability for this game</p>
                     </div>
                     <button 
                       onClick={() => navigate('/games')}
-                      className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl transition-all border border-transparent hover:border-slate-200"
+                      className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                     >
                       <X size={24} />
                     </button>
@@ -2285,10 +3417,10 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                           if (e.target.value.trim()) setGameNameError(false);
                         }}
                         placeholder="e.g. May 20th - Vipers"
-                        className={`w-full px-4 sm:px-6 py-3 sm:py-4 bg-white border rounded-2xl focus:outline-none focus:ring-4 transition-all text-base sm:text-lg font-medium ${
+                        className={`w-full px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-slate-800 border rounded-2xl focus:outline-none focus:ring-4 transition-all text-base sm:text-lg font-medium text-slate-900 dark:text-white ${
                           gameNameError 
                             ? 'border-red-500 focus:ring-red-500/10 focus:border-red-500' 
-                            : 'border-slate-200 focus:ring-slate-900/5 focus:border-slate-900'
+                            : 'border-slate-200 dark:border-slate-700 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500'
                         }`}
                       />
                     </div>
@@ -2298,32 +3430,70 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                         type="date" 
                         value={gameDate}
                         onChange={(e) => setGameDate(e.target.value)}
-                        className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all text-base sm:text-lg font-medium"
+                        className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all text-base sm:text-lg font-medium text-slate-900 dark:text-white"
                       />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 space-y-3">
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Game Mode</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={() => setGameMode('standard')}
+                        className={`flex items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all ${
+                          gameMode === 'standard'
+                            ? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600 shadow-lg shadow-slate-900/20 dark:shadow-indigo-600/20'
+                            : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${gameMode === 'standard' ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-700'}`}>
+                          <ClipboardList size={18} />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-black uppercase tracking-tight">Standard</p>
+                          <p className="text-[10px] opacity-70">Full lineup generation</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setGameMode('scrimmage')}
+                        className={`flex items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all ${
+                          gameMode === 'scrimmage'
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/20'
+                            : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${gameMode === 'scrimmage' ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-700'}`}>
+                          <Users size={18} />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-black uppercase tracking-tight">Scrimmage</p>
+                          <p className="text-[10px] opacity-70">Manual P/C & Groups</p>
+                        </div>
+                      </button>
                     </div>
                   </div>
                 </div>
 
                 <div className="p-6 sm:p-8">
                   <div className="flex items-center justify-between mb-4 px-2">
-                    <h3 className="font-bold text-slate-900">Player RSVP</h3>
+                    <h3 className="font-bold text-slate-900 dark:text-white">Player RSVP</h3>
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{players.length} Total</span>
                   </div>
 
                   <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                     {[...players].sort((a, b) => a.name.localeCompare(b.name)).map((player) => (
-                      <div key={player.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-slate-200 transition-all gap-4">
+                      <div key={player.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600 transition-all gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-900 font-bold border border-slate-200 shrink-0">
+                          <div className="w-10 h-10 bg-white dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-900 dark:text-white font-bold border border-slate-200 dark:border-slate-600 shrink-0">
                             {player.name.charAt(0)}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-bold text-slate-900 truncate">{player.name}</p>
+                            <p className="font-bold text-slate-900 dark:text-white truncate">{player.name}</p>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">{(player.positions || []).map(getPositionAbbreviation).join(', ')}</p>
                           </div>
                         </div>
 
-                        <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
+                        <div className="flex bg-white dark:bg-slate-700 p-1 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm w-full sm:w-auto">
                           {[RSVPStatus.YES, RSVPStatus.TENTATIVE, RSVPStatus.NO].map((status) => (
                             <button
                               key={status}
@@ -2335,7 +3505,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                     : status === RSVPStatus.TENTATIVE
                                       ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
                                       : 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
-                                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                  : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
                               }`}
                             >
                               {status}
@@ -2347,16 +3517,16 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                   </div>
                 </div>
 
-                <div className="p-6 sm:p-8 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <div className="p-6 sm:p-8 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <button 
                     onClick={handleCreateGame}
-                    className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-[0.98]"
+                    className="flex-1 py-4 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl font-bold hover:bg-slate-800 dark:hover:bg-indigo-500 transition-all shadow-lg shadow-slate-900/20 dark:shadow-indigo-900/20 active:scale-[0.98]"
                   >
                     Add Game
                   </button>
                   <button 
                     onClick={() => navigate('/games')}
-                    className="flex-1 py-4 bg-white text-slate-600 border border-slate-200 rounded-2xl font-bold hover:bg-slate-100 transition-all active:scale-[0.98]"
+                    className="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-all active:scale-[0.98]"
                   >
                     Cancel
                   </button>
@@ -2729,7 +3899,14 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                             </span>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate group-hover:text-slate-900 dark:group-hover:text-emerald-400 transition-colors">{game.name}</h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate group-hover:text-slate-900 dark:group-hover:text-emerald-400 transition-colors">{game.name}</h3>
+                              {game.mode === 'scrimmage' && (
+                                <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded text-[10px] font-bold uppercase tracking-wider shrink-0">
+                                  Scrimmage
+                                </span>
+                              )}
+                            </div>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                               <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
                                 {gameDateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric' })}

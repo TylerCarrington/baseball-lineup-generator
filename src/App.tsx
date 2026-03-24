@@ -214,25 +214,37 @@ const POSITION_ORDER: Record<string, number> = {
   "Designated Hitter": 10
 };
 
-const getPositionAbbreviation = (pos: string) => {
-  const mapping: Record<string, string> = {
-    "Starting Pitcher": "SP",
-    "Relief Pitcher": "RP",
-    "Pitcher": "P",
-    "Catcher": "C",
-    "First Base": "1B",
-    "Second Base": "2B",
-    "Third Base": "3B",
-    "Shortstop": "SS",
-    "Left Field": "LF",
-    "Center Field": "CF",
-    "Right Field": "RF",
-    "Designated Hitter": "DH"
-  };
-  return mapping[pos] || pos;
+const POSITIONS = [
+  "Starting Pitcher",
+  "Relief Pitcher",
+  "Catcher",
+  "First Base",
+  "Second Base",
+  "Third Base",
+  "Shortstop",
+  "Left Field",
+  "Center Field",
+  "Right Field"
+];
+
+const POSITION_MAPPING: Record<string, string> = {
+  "Starting Pitcher": "SP",
+  "Relief Pitcher": "RP",
+  "Pitcher": "P",
+  "Catcher": "C",
+  "First Base": "1B",
+  "Second Base": "2B",
+  "Third Base": "3B",
+  "Shortstop": "SS",
+  "Left Field": "LF",
+  "Center Field": "CF",
+  "Right Field": "RF",
+  "Designated Hitter": "DH"
 };
 
-// --- Shared View Component ---
+const getPositionAbbreviation = (pos: string) => {
+  return POSITION_MAPPING[pos] || pos;
+};
 
 function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode: (val: boolean) => void }) {
   const location = useLocation();
@@ -575,7 +587,7 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                                       {Object.entries(inning)
                                         .filter(([pos]) => pos.startsWith('Extra Hitter'))
                                         .map(([pos, playerId]) => {
-                                          const p = players.find(p => p.id === playerId);
+                                          const p = playersMap[playerId];
                                           return p ? (
                                             <span key={playerId} className="px-2 py-1 bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-200 rounded-md text-xs font-bold shadow-sm border border-indigo-200 dark:border-indigo-700">
                                               EH: {p.name.split(' ')[0]}
@@ -885,23 +897,48 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     setIsMobileMenuOpen(false);
   };
 
-  const POSITIONS = [
-    "Starting Pitcher",
-    "Relief Pitcher",
-    "Catcher",
-    "First Base",
-    "Second Base",
-    "Third Base",
-    "Shortstop",
-    "Left Field",
-    "Center Field",
-    "Right Field"
-  ];
-
-  const ALL_POSITIONS = [
+  const ALL_POSITIONS = React.useMemo(() => [
     ...POSITIONS,
     ...(settings?.allowDesignatedHitter ? ["Designated Hitter"] : [])
-  ];
+  ], [settings?.allowDesignatedHitter]);
+
+  const playersMap = React.useMemo(() => {
+    const map: Record<string, Player> = {};
+    players.forEach(p => {
+      map[p.id] = p;
+    });
+    return map;
+  }, [players]);
+
+  const gamesMap = React.useMemo(() => {
+    const map: Record<string, Game> = {};
+    games.forEach(g => {
+      map[g.id] = g;
+    });
+    return map;
+  }, [games]);
+
+  const selectedGame = React.useMemo(() => {
+    return games.find(g => g.id === selectedGameId) || null;
+  }, [games, selectedGameId]);
+
+  const benchedPlayersByInning = React.useMemo(() => {
+    if (!selectedGame) return {};
+    const result: Record<string, Player[]> = {};
+    [1, 2, 3, 4, 5, 6].forEach(inning => {
+      const assignedIds = Object.values(selectedGame.lineup?.[inning.toString()] || {});
+      result[inning.toString()] = players.filter(p => 
+        selectedGame.rsvps[p.id] !== RSVPStatus.NO && 
+        !assignedIds.includes(p.id)
+      );
+    });
+    return result;
+  }, [players, selectedGame]);
+
+  const fieldPositions = React.useMemo(() => [
+    "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
+    "Shortstop", "Left Field", "Center Field", "Right Field"
+  ], []);
 
   const togglePosition = (pos: string, isEdit: boolean) => {
     const update = (prev: string[]) => {
@@ -1072,7 +1109,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
         rsvps: newRSVPs
       });
       
-      toast.success(`RSVP updated for ${players.find(p => p.id === playerId)?.name}`);
+      toast.success(`RSVP updated for ${playersMap[playerId]?.name}`);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
     }
@@ -1178,7 +1215,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
   const handleUpdateGameDetails = async () => {
     if (!selectedGameId || !editGameName.trim()) return;
-    const game = games.find(g => g.id === selectedGameId);
+    const game = selectedGame;
     if (!game) return;
     try {
       const gameRef = doc(db, 'games', selectedGameId);
@@ -2537,7 +2574,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
               <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden mb-12">
                 {(() => {
-                  const game = games.find(g => g.id === selectedGameId);
+                  const game = selectedGame;
                   if (!game) return null;
                   const isLocked = game.isLocked || false;
                   
@@ -2725,7 +2762,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                               <LayoutGrid size={20} />
                               Field Lineup
                               {(() => {
-                                const g = games.find(g => g.id === selectedGameId);
+                                const g = selectedGame;
                                 if (!g || g.mode !== 'scrimmage') return null;
                                 
                                 const s1Issues = [1, 2, 3, 4, 5, 6].some(inning => {
@@ -2764,7 +2801,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                         
                         <div className="space-y-6">
                     {(() => {
-                      const game = games.find(g => g.id === selectedGameId);
+                      const game = selectedGame;
                       if (!game) return null;
 
                       if (isEditingRSVPs) {
@@ -4012,11 +4049,6 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                             </div>
                           );
                         }
-
-                        const fieldPositions = [
-                          "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
-                          "Shortstop", "Left Field", "Center Field", "Right Field"
-                        ];
 
                         return (
                           <div className="space-y-6">

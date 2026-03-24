@@ -35,7 +35,7 @@ async function testConnection() {
 }
 testConnection();
 
-import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Users, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Calendar, History, Share2, ExternalLink, Copy, Sun, Moon } from 'lucide-react';
+import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Users, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Calendar, History, Share2, ExternalLink, Copy, Sun, Moon, Wrench } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'sonner';
 
@@ -1895,6 +1895,216 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     }
   };
 
+  const handleFixLineup = async (gameId: string | null) => {
+    if (!gameId) return;
+    const game = games.find(g => g.id === gameId);
+    if (!game || !game.lineup) return;
+
+    const newLineup = JSON.parse(JSON.stringify(game.lineup));
+    let fixedAny = false;
+
+    const availablePlayers = players.filter(p => game.rsvps[p.id] === RSVPStatus.YES || game.rsvps[p.id] === RSVPStatus.TENTATIVE);
+    
+    const fieldPositions = [
+      "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
+      "Shortstop", "Left Field", "Center Field", "Right Field"
+    ];
+
+    const canPlay = (player: Player, pos: string) => {
+      if (pos === "Pitcher") return (player.positions || []).includes("Starting Pitcher") || (player.positions || []).includes("Relief Pitcher");
+      return (player.positions || []).includes(pos);
+    };
+
+    // Helper to get play counts
+    const getPlayCounts = (lineup: any) => {
+      const counts: Record<string, number> = {};
+      availablePlayers.forEach(p => counts[p.id] = 0);
+      Object.values(lineup).forEach((inning: any) => {
+        Object.values(inning).forEach(id => {
+          if (id && counts[id as string] !== undefined) {
+            counts[id as string]++;
+          }
+        });
+      });
+      return counts;
+    };
+
+    // Phase 1: Replace players marked as "Out"
+    for (let inning = 1; inning <= 6; inning++) {
+      const inningKey = inning.toString();
+      const inningLineup = newLineup[inningKey] || {};
+      
+      const assignedThisInning = new Set(
+        Object.values(inningLineup)
+          .filter(id => id && game.rsvps[id as string] !== RSVPStatus.NO) as string[]
+      );
+
+      for (const pos of fieldPositions) {
+        const playerId = inningLineup[pos];
+        if (playerId && game.rsvps[playerId] === RSVPStatus.NO) {
+          const pool = availablePlayers.filter(p => !assignedThisInning.has(p.id));
+          if (pool.length > 0) {
+            const preferred = pool.filter(p => canPlay(p, pos));
+            const replacement = preferred.length > 0 
+              ? preferred[Math.floor(Math.random() * preferred.length)]
+              : pool[Math.floor(Math.random() * pool.length)];
+            
+            inningLineup[pos] = replacement.id;
+            assignedThisInning.add(replacement.id);
+            fixedAny = true;
+          } else {
+            delete inningLineup[pos];
+            fixedAny = true;
+          }
+        }
+      }
+      newLineup[inningKey] = inningLineup;
+    }
+
+    // Phase 2: Work in "Activated" players (those with 0 play time)
+    let playCounts = getPlayCounts(newLineup);
+    const zeroPlayPlayers = availablePlayers.filter(p => playCounts[p.id] === 0);
+
+    if (zeroPlayPlayers.length > 0) {
+      // Aim for at least 1 or 2 innings depending on roster size
+      const targetInnings = availablePlayers.length > 13 ? 1 : 2;
+
+      for (const player of zeroPlayPlayers) {
+        let assignedCount = 0;
+        // Try all innings, prioritizing unlocked ones
+        const innings = [1, 2, 3, 4, 5, 6].sort((a, b) => {
+          const aLocked = game.lockedInnings?.includes(a) ? 1 : 0;
+          const bLocked = game.lockedInnings?.includes(b) ? 1 : 0;
+          return aLocked - bLocked;
+        });
+
+        for (const inning of innings) {
+          if (assignedCount >= targetInnings) break;
+          const inningKey = inning.toString();
+          const inningLineup = newLineup[inningKey] || {};
+          
+          if (Object.values(inningLineup).includes(player.id)) continue;
+
+          let bestPosToSwap = "";
+          let maxPlayCount = -1;
+
+          for (const pos of fieldPositions) {
+            // Skip locked positions unless they are empty
+            if (game.lockedPositions?.includes(pos) && inningLineup[pos]) continue;
+
+            const currentPlayerId = inningLineup[pos] as string;
+            if (!currentPlayerId) {
+              bestPosToSwap = pos;
+              maxPlayCount = 999;
+              break;
+            }
+
+            if (canPlay(player, pos)) {
+              const currentCount = playCounts[currentPlayerId] || 0;
+              if (currentCount > maxPlayCount) {
+                maxPlayCount = currentCount;
+                bestPosToSwap = pos;
+              }
+            }
+          }
+
+          if (bestPosToSwap && (maxPlayCount > 1 || maxPlayCount === 999)) {
+            inningLineup[bestPosToSwap] = player.id;
+            fixedAny = true;
+            assignedCount++;
+            playCounts = getPlayCounts(newLineup);
+          }
+        }
+      }
+    }
+
+    // Phase 3: Fix back-to-back benches
+    // Only attempt if we have enough players to avoid back-to-back benches
+    // (Usually if roster > 10, it's possible to avoid most back-to-back benches)
+    if (availablePlayers.length > 9) {
+      let hasBackToBack = true;
+      let iterations = 0;
+      while (hasBackToBack && iterations < 10) {
+        hasBackToBack = false;
+        iterations++;
+        
+        for (const player of availablePlayers) {
+          const isBenched = (inning: number) => !Object.values(newLineup[inning.toString()] || {}).includes(player.id);
+          
+          for (let i = 1; i <= 5; i++) {
+            if (isBenched(i) && isBenched(i+1)) {
+              // Back-to-back bench found at inning i and i+1
+              // Try to swap them into one of these innings
+              const targetInnings = [i, i + 1];
+              let swapped = false;
+
+              for (const targetInning of targetInnings) {
+                if (swapped) break;
+                const inningKey = targetInning.toString();
+                const inningLineup = newLineup[inningKey] || {};
+                
+                // Find a position to swap
+                for (const pos of fieldPositions) {
+                  if (game.lockedPositions?.includes(pos) && inningLineup[pos]) continue;
+                  if (game.lockedInnings?.includes(targetInning)) continue;
+
+                  const currentPlayerId = inningLineup[pos] as string;
+                  if (!currentPlayerId) {
+                    inningLineup[pos] = player.id;
+                    swapped = true;
+                    fixedAny = true;
+                    break;
+                  }
+
+                  if (canPlay(player, pos)) {
+                    // Check if swapping this player out creates a back-to-back bench for them
+                    const isBenchedAfterSwap = (inning: number) => {
+                      if (inning < 1 || inning > 6) return false;
+                      if (inning === targetInning) return true; // They are being swapped out
+                      return !Object.values(newLineup[inning.toString()] || {}).includes(currentPlayerId);
+                    };
+                    
+                    const wouldCreateBTB = (isBenchedAfterSwap(targetInning - 1) || isBenchedAfterSwap(targetInning + 1));
+                    
+                    const currentPlayCounts = getPlayCounts(newLineup);
+                    // Swap if they have enough innings AND it doesn't create a new BTB issue for them
+                    if (currentPlayCounts[currentPlayerId] > 2 && !wouldCreateBTB) {
+                      inningLineup[pos] = player.id;
+                      swapped = true;
+                      fixedAny = true;
+                      break;
+                    }
+                  }
+                }
+              }
+              
+              if (swapped) {
+                hasBackToBack = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (fixedAny) {
+      try {
+        await updateDoc(doc(db, 'games', gameId), {
+          lineup: newLineup
+        });
+        toast.success("Lineup fixed!", {
+          description: "Replaced 'Out' players, worked in 'Activated' players, and resolved back-to-back benches.",
+          position: 'top-center'
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+      }
+    } else {
+      toast.info("No changes needed for the lineup.");
+    }
+  };
+
   const handleTogglePositionLock = async (gameId: string, position: string) => {
     const game = games.find(g => g.id === gameId);
     if (!game) return;
@@ -3565,14 +3775,42 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                 !hittingGroupIds.includes(p.id)
                                               );
                                               
+                                              const isBackToBackBench = (playerId: string, currentInning: number) => {
+                                                const isBenched = (inning: number) => {
+                                                  if (inning < 1 || inning > 6) return false;
+                                                  const lineup = game.lineup?.[inning.toString()] || {};
+                                                  const assigned = Object.entries(lineup)
+                                                    .filter(([k]) => k !== 'HittingGroup')
+                                                    .map(([_, id]) => id);
+                                                  const hittingGroupIdx = lineup['HittingGroup'];
+                                                  const hittingGroupIds = hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)]
+                                                    ? game.scrimmageGroups[parseInt(hittingGroupIdx)]
+                                                    : [];
+                                                  return !assigned.includes(playerId) && !hittingGroupIds.includes(playerId);
+                                                };
+                                                
+                                                if (!isBenched(currentInning)) return false;
+                                                return isBenched(currentInning - 1) || isBenched(currentInning + 1);
+                                              };
+
                                               return (
                                                 <td key={inning} className="py-4 px-4 text-center">
                                                   <div className="flex flex-col gap-1">
-                                                    {benchedPlayers.length > 0 ? benchedPlayers.map(p => (
-                                                      <div key={p.id} className="text-[10px] font-black text-slate-400 dark:text-slate-500 truncate max-w-[80px] mx-auto uppercase tracking-tighter">
-                                                        {p.name.split(' ')[0]}
-                                                      </div>
-                                                    )) : (
+                                                    {benchedPlayers.length > 0 ? benchedPlayers.map(p => {
+                                                      const isBTB = isBackToBackBench(p.id, inning);
+                                                      return (
+                                                        <div 
+                                                          key={p.id} 
+                                                          className={`text-[10px] font-black truncate max-w-[80px] mx-auto uppercase tracking-tighter ${
+                                                            isBTB ? 'text-rose-500 animate-pulse flex items-center justify-center gap-0.5' : 'text-slate-400 dark:text-slate-500'
+                                                          }`}
+                                                          title={isBTB ? "Back-to-back benching detected" : ""}
+                                                        >
+                                                          {isBTB && <AlertCircle size={8} />}
+                                                          <span>{p.name.split(' ')[0]}</span>
+                                                        </div>
+                                                      );
+                                                    }) : (
                                                       <span className="text-slate-300 dark:text-slate-700">—</span>
                                                     )}
                                                   </div>
@@ -3607,26 +3845,66 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                   </span>
                                 )}
                               </div>
-                              {!isLocked && (
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleGenerateLineup(selectedGameId)}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-                                  >
-                                    <RefreshCw size={14} />
-                                    <span className="hidden sm:inline">Generate</span>
-                                  </button>
-                                  {game.lineup && Object.keys(game.lineup).length > 0 && (
+                              <div className="flex items-center gap-2">
+                                {(() => {
+                                  if (!game.lineup || Object.keys(game.lineup).length === 0) return null;
+                                  
+                                  const hasOutPlayers = Object.values(game.lineup).some(inning => 
+                                    Object.values(inning).some(playerId => playerId && game.rsvps[playerId as string] === RSVPStatus.NO)
+                                  );
+
+                                  const availablePlayers = players.filter(p => game.rsvps[p.id] === RSVPStatus.YES || game.rsvps[p.id] === RSVPStatus.TENTATIVE);
+                                  const assignedPlayerIds = new Set();
+                                  Object.values(game.lineup).forEach(inning => {
+                                    Object.values(inning).forEach(id => {
+                                      if (id) assignedPlayerIds.add(id);
+                                    });
+                                  });
+                                  const hasBenchedAvailable = availablePlayers.some(p => !assignedPlayerIds.has(p.id));
+
+                                  const hasBackToBackBenches = availablePlayers.some(p => {
+                                    const isBenched = (inning: number) => !Object.values(game.lineup?.[inning.toString()] || {}).includes(p.id);
+                                    for (let i = 1; i <= 5; i++) {
+                                      if (isBenched(i) && isBenched(i+1)) return true;
+                                    }
+                                    return false;
+                                  });
+
+                                  if (hasOutPlayers || hasBenchedAvailable || hasBackToBackBenches) {
+                                    return (
+                                      <button
+                                        onClick={() => handleFixLineup(selectedGameId)}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors border border-amber-200/50 dark:border-amber-800/50"
+                                        title="Replace 'Out' players, work in 'Activated' players, and resolve back-to-back benches"
+                                      >
+                                        <Wrench size={14} />
+                                        <span className="hidden sm:inline">Fix Lineup</span>
+                                      </button>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                                {!isLocked && (
+                                  <>
                                     <button
-                                      onClick={() => setShowClearLineupConfirm(true)}
-                                      className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors"
+                                      onClick={() => handleGenerateLineup(selectedGameId)}
+                                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
                                     >
-                                      <Trash2 size={14} />
-                                      <span className="hidden sm:inline">Clear</span>
+                                      <RefreshCw size={14} />
+                                      <span className="hidden sm:inline">Generate</span>
                                     </button>
-                                  )}
-                                </div>
-                              )}
+                                    {game.lineup && Object.keys(game.lineup).length > 0 && (
+                                      <button
+                                        onClick={() => setShowClearLineupConfirm(true)}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors"
+                                      >
+                                        <Trash2 size={14} />
+                                        <span className="hidden sm:inline">Clear</span>
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
                             </div>
 
                             <div className="overflow-hidden bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -3798,15 +4076,37 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                         game.rsvps[p.id] !== RSVPStatus.NO && 
                                         !assignedIds.includes(p.id)
                                       );
+
+                                      const isBackToBackBench = (playerId: string, currentInning: number) => {
+                                        const isBenched = (inning: number) => {
+                                          if (inning < 1 || inning > 6) return false;
+                                          const assigned = Object.values(game.lineup?.[inning.toString()] || {});
+                                          return !assigned.includes(playerId);
+                                        };
+                                        
+                                        if (!isBenched(currentInning)) return false;
+                                        return isBenched(currentInning - 1) || isBenched(currentInning + 1);
+                                      };
+
                                       return (
                                         <td key={inning} className="py-4 px-4 text-center">
                                           <div className="flex flex-col gap-1">
-                                            {benchedPlayers.length > 0 ? benchedPlayers.map(p => (
-                                              <div key={p.id} className="text-[10px] font-black text-slate-400 truncate max-w-[80px] mx-auto uppercase tracking-tighter">
-                                                {p.name.split(' ')[0]}
-                                                {p.jerseyNumber && ` #${p.jerseyNumber}`}
-                                              </div>
-                                            )) : (
+                                            {benchedPlayers.length > 0 ? benchedPlayers.map(p => {
+                                              const isBTB = isBackToBackBench(p.id, inning);
+                                              return (
+                                                <div 
+                                                  key={p.id} 
+                                                  className={`text-[10px] font-black truncate max-w-[80px] mx-auto uppercase tracking-tighter ${
+                                                    isBTB ? 'text-rose-500 animate-pulse flex items-center justify-center gap-0.5' : 'text-slate-400'
+                                                  }`}
+                                                  title={isBTB ? "Back-to-back benching detected" : ""}
+                                                >
+                                                  {isBTB && <AlertCircle size={8} />}
+                                                  <span>{p.name.split(' ')[0]}</span>
+                                                  {p.jerseyNumber && <span>#{p.jerseyNumber}</span>}
+                                                </div>
+                                              );
+                                            }) : (
                                               <span className="text-slate-300">—</span>
                                             )}
                                           </div>

@@ -36,7 +36,6 @@ async function testConnection() {
 testConnection();
 
 import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Users, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Calendar, History, Share2, ExternalLink, Copy, Sun, Moon, Wrench } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'sonner';
 
 // --- Types ---
@@ -344,7 +343,7 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-slate-900 dark:border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-slate-900 dark:border-emerald-500 border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-slate-500 dark:text-slate-400 font-medium">Loading schedule...</p>
         </div>
       </div>
@@ -397,14 +396,10 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        <AnimatePresence mode="wait">
           {gameId && selectedGame ? (
             !selectedGame.isLocked ? (
-              <motion.div
+              <div
                 key="game-not-published"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
                 className="max-w-xl mx-auto"
               >
                 <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-12 text-center shadow-sm transition-colors duration-300">
@@ -422,13 +417,10 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                     Back to Schedule
                   </button>
                 </div>
-              </motion.div>
+              </div>
             ) : (
-              <motion.div
+              <div
                 key="game-detail"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
               >
                 <button 
                   onClick={() => navigate(`/shared/${ownerId}/games`)}
@@ -498,10 +490,7 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                   <div>
                     {/* Batting Order / Groups */}
                     {activeTab === 'batting' && (
-                      <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                      >
+                      <div>
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                           <ClipboardList size={20} className="text-slate-400 dark:text-slate-500" />
                           {selectedGame.mode === 'scrimmage' ? 'Groups' : 'Batting Order'}
@@ -556,15 +545,12 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                             )
                           )}
                         </div>
-                      </motion.div>
+                      </div>
                     )}
 
                     {/* Fielding Lineup */}
                     {activeTab === 'fielding' && (
-                      <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                      >
+                      <div>
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                           <LayoutGrid size={20} className="text-slate-400 dark:text-slate-500" />
                           Fielding Lineup
@@ -628,20 +614,15 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                             </p>
                           )}
                         </div>
-                      </motion.div>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )
         ) : (
-            <motion.div
-              key="schedule-list"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
+            <div>
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
                 <div>
                   <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Game Schedule</h2>
@@ -744,9 +725,8 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                   </div>
                 );
               })()}
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
       </main>
     </div>
   );
@@ -2411,7 +2391,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-        <div className="animate-spin text-slate-900 dark:text-emerald-500">
+        <div className="text-slate-900 dark:text-emerald-500">
           <Trophy size={48} />
         </div>
       </div>
@@ -2426,9 +2406,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors duration-300">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div 
           className="max-w-md w-full bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 text-center"
         >
           <div className="w-20 h-20 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg rotate-3">
@@ -2444,7 +2422,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
             Sign in with Google
           </button>
           <p className="mt-8 text-xs text-slate-400 font-medium uppercase tracking-widest">Secure Baseball Management</p>
-        </motion.div>
+        </div>
       </div>
     );
   }
@@ -2503,12 +2481,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
         </div>
 
         {/* Mobile Menu */}
-        <AnimatePresence>
           {isMobileMenuOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
+            <div
               className="md:hidden border-t border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900"
             >
               <div className="p-4 flex flex-col gap-2">
@@ -2544,25 +2518,20 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        <AnimatePresence mode="wait">
           {selectedGameId ? (
-            <motion.div 
+            <div 
               key="game-view"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
             >
               <button 
                 onClick={() => navigate('/games')}
                 className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm mb-6 transition-colors group"
               >
-                <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                <ChevronLeft size={18} />
                 Back to Schedule
               </button>
 
@@ -2800,7 +2769,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
                       if (isEditingRSVPs) {
                         return (
-                          <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                          <div className="space-y-6">
                             <div className="flex items-center justify-between">
                               <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Manage RSVPs</h3>
                               <div className="px-4 py-2 bg-slate-100 rounded-2xl text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -3280,7 +3249,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                               </div>
 
                               {currentStep === 1 && (
-                                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="space-y-6">
                                   <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
                                     <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                       <div>
@@ -3385,7 +3354,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                             setEditingCell(null);
                                                           }} 
                                                         />
-                                                        <div className="absolute z-[60] top-full right-0 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                                        <div className="absolute z-[60] top-full right-0 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto">
                                                           <button
                                                             onClick={() => handleUpdateLineupCell(selectedGameId, inningKey, pos, '')}
                                                             className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 italic transition-colors"
@@ -3444,7 +3413,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                               )}
 
                               {currentStep === 2 && (
-                                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="space-y-6">
                                   <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-4">
                                     <div>
                                       <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 2: Group Players</h3>
@@ -3548,7 +3517,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                               )}
 
                               {currentStep === 3 && (
-                                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="space-y-8">
                                   <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-4">
                                     <div>
                                       <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 3: Final Scrimmage Lineup</h3>
@@ -3688,7 +3657,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                             setEditingCell(null);
                                                           }} 
                                                         />
-                                                        <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                                        <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto">
                                                           <div className="px-3 py-2 border-b border-slate-50 dark:border-slate-700 mb-1">
                                                             <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Select Player</p>
                                                           </div>
@@ -3868,7 +3837,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                               setEditingCell(null);
                                                             }} 
                                                           />
-                                                          <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                                          <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto">
                                                             <div className="px-3 py-2 border-b border-slate-50 dark:border-slate-700 mb-1">
                                                               <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Select Player</p>
                                                             </div>
@@ -4196,7 +4165,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                     setEditingCell(null);
                                                   }} 
                                                 />
-                                                <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto">
                                                   <div className="px-3 py-2 border-b border-slate-50 dark:border-slate-700 mb-1">
                                                     <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Select Player</p>
                                                   </div>
@@ -4361,13 +4330,9 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                 </button>
               </div>
             </div>
-          </motion.div>
+          </div>
         ) : isCreatingLineup ? (
-            <motion.div 
-              key="lineup-creator"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+            <div 
               className="max-w-3xl mx-auto px-4 sm:px-0"
             >
               <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -4539,13 +4504,10 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           ) : (
-            <motion.div 
+            <div 
               key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
             >
               {activeTab === 'roster' ? (
           <div className={`grid grid-cols-1 ${isAddingPlayer ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} gap-8`}>
@@ -4676,26 +4638,19 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
               </div>
 
               <div className="space-y-3">
-                <AnimatePresence mode="popLayout">
                   {players.length === 0 ? (
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
+                    <div 
                       className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center transition-colors duration-300"
                     >
                       <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full flex items-center justify-center mx-auto mb-4">
                         <UserIcon size={24} />
                       </div>
                       <p className="text-slate-500 dark:text-slate-400">No players added yet. Start by adding your first player.</p>
-                    </motion.div>
+                    </div>
                   ) : (
                     [...players].sort((a, b) => a.name.localeCompare(b.name)).map((player, index) => (
-                      <motion.div 
+                      <div 
                         key={player.id}
-                        layout
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
                         className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition-all"
                       >
                         {editingId === player.id ? (
@@ -4805,10 +4760,9 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                             </>
                           )}
                         </div>
-                      </motion.div>
+                      </div>
                     ))
                   )}
-                </AnimatePresence>
               </div>
             </div>
           </div>
@@ -4910,11 +4864,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                   const gameDateObj = game.date?.toDate ? game.date.toDate() : new Date(game.date);
 
                   return (
-                    <motion.div 
+                    <div 
                       key={game.id}
-                      layout
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
                       onClick={() => handleViewGame(game.id)}
                       className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 hover:border-slate-900 dark:hover:border-emerald-500 hover:shadow-md transition-all group cursor-pointer"
                     >
@@ -4998,7 +4949,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                           </div>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 });
               })()}
@@ -5101,25 +5052,18 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
             </div>
           </div>
         )}
-      </motion.div>
+      </div>
     )}
-  </AnimatePresence>
       </main>
 
-      <AnimatePresence>
+      <div>
         {deleteConfirmation.isOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               onClick={() => setDeleteConfirmation(prev => ({ ...prev, isOpen: false }))}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
             />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            <div
               className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 max-w-md w-full overflow-hidden"
             >
               <div className="flex items-center gap-4 mb-6">
@@ -5146,24 +5090,18 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                   Delete
                 </button>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
 
         {/* Clear Lineup Confirmation Modal */}
         {showClearLineupConfirm && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               onClick={() => setShowClearLineupConfirm(false)}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
             />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            <div
               className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 max-w-md w-full overflow-hidden"
             >
               <div className="flex items-center gap-4 mb-6">
@@ -5190,10 +5128,10 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                   Clear All
                 </button>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
+      </div>
     </div>
 );
 }

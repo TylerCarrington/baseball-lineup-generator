@@ -45,6 +45,7 @@ interface Player {
   name: string;
   positions: string[];
   battingOrder?: number;
+  jerseyNumber?: string;
   uid: string;
   createdAt: any;
 }
@@ -131,6 +132,14 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
+
+const getLocalDateString = (date?: Date) => {
+  const now = date || new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 // --- Error Boundary ---
 interface ErrorBoundaryProps {
@@ -756,7 +765,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   const [isCreatingLineup, setIsCreatingLineup] = useState(false);
   const [gameName, setGameName] = useState('');
   const [gameNameError, setGameNameError] = useState(false);
-  const [gameDate, setGameDate] = useState(new Date().toISOString().split('T')[0]);
+  const [gameDate, setGameDate] = useState(getLocalDateString());
   const [gameMode, setGameMode] = useState<'standard' | 'scrimmage'>('standard');
   const [backupLineup, setBackupLineup] = useState<Record<string, Record<string, string>> | null>(null);
   const [backupScrimmageGroups, setBackupScrimmageGroups] = useState<string[][] | null>(null);
@@ -765,9 +774,11 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   
   // Form state
   const [newName, setNewName] = useState('');
+  const [newJerseyNumber, setNewJerseyNumber] = useState('');
   const [newPositions, setNewPositions] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [editJerseyNumber, setEditJerseyNumber] = useState('');
   const [editPositions, setEditPositions] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'roster' | 'games' | 'settings'>('roster');
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
@@ -1052,7 +1063,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     });
     setPlayerRSVPs(initialRSVPs);
     setGameName('');
-    setGameDate(new Date().toISOString().split('T')[0]);
+    setGameDate(getLocalDateString());
     navigate('/games/new');
   };
 
@@ -1102,7 +1113,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     try {
       await addDoc(collection(db, 'games'), {
         name: gameName.trim(),
-        date: new Date(gameDate),
+        date: new Date(gameDate + 'T12:00:00'),
         rsvps: playerRSVPs,
         battingOrder: initialBattingOrder,
         mode: gameMode,
@@ -1111,7 +1122,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       });
       navigate('/games');
       setGameName('');
-      setGameDate(new Date().toISOString().split('T')[0]);
+      setGameDate(getLocalDateString());
       setGameMode('standard');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'games');
@@ -1272,6 +1283,125 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
     }
+  };
+
+  const handleGenerateBatteries = async (gameId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    const eligiblePitchers = players.filter(p => 
+      p.positions.includes('Starting Pitcher') || 
+      p.positions.includes('Relief Pitcher') || 
+      p.positions.includes('First Base')
+    );
+    const eligibleCatchers = players.filter(p => 
+      p.positions.includes('Catcher') || 
+      p.positions.includes('First Base') || 
+      p.positions.includes('Third Base')
+    );
+
+    const newLineup = { ...game.lineup };
+    const pitchCounts: Record<string, number> = {};
+    const catchCounts: Record<string, number> = {};
+
+    for (let inning = 1; inning <= 6; inning++) {
+      const inningKey = inning.toString();
+      if (!newLineup[inningKey]) newLineup[inningKey] = {};
+      
+      const availablePitchers = [...eligiblePitchers].sort((a, b) => (pitchCounts[a.id] || 0) - (pitchCounts[b.id] || 0));
+      const minPitchCount = availablePitchers.length > 0 ? (pitchCounts[availablePitchers[0].id] || 0) : 0;
+      const bestPitchers = availablePitchers.filter(p => (pitchCounts[p.id] || 0) === minPitchCount);
+      
+      const pitcher = bestPitchers.length > 0 
+        ? bestPitchers[Math.floor(Math.random() * bestPitchers.length)] 
+        : null;
+      
+      if (pitcher) {
+        newLineup[inningKey]['Pitcher'] = pitcher.id;
+        pitchCounts[pitcher.id] = (pitchCounts[pitcher.id] || 0) + 1;
+      }
+
+      const availableCatchers = eligibleCatchers.filter(p => p.id !== pitcher?.id).sort((a, b) => (catchCounts[a.id] || 0) - (catchCounts[b.id] || 0));
+      const minCatchCount = availableCatchers.length > 0 ? (catchCounts[availableCatchers[0].id] || 0) : 0;
+      const bestCatchers = availableCatchers.filter(p => (catchCounts[p.id] || 0) === minCatchCount);
+
+      const catcher = bestCatchers.length > 0 
+        ? bestCatchers[Math.floor(Math.random() * bestCatchers.length)] 
+        : null;
+      
+      if (catcher) {
+        newLineup[inningKey]['Catcher'] = catcher.id;
+        catchCounts[catcher.id] = (catchCounts[catcher.id] || 0) + 1;
+      }
+    }
+
+    await updateDoc(doc(db, 'games', gameId), { lineup: newLineup });
+    setGames(prevGames => prevGames.map(g => g.id === gameId ? {...g, lineup: newLineup} : g));
+  };
+
+  const handleFixInningBatteries = async (gameId: string, inningKey: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    const eligiblePitchers = players.filter(p => 
+      (p.positions.includes('Starting Pitcher') || 
+      p.positions.includes('Relief Pitcher') || 
+      p.positions.includes('First Base')) &&
+      game.rsvps[p.id] !== RSVPStatus.NO
+    );
+    const eligibleCatchers = players.filter(p => 
+      (p.positions.includes('Catcher') || 
+      p.positions.includes('First Base') || 
+      p.positions.includes('Third Base')) &&
+      game.rsvps[p.id] !== RSVPStatus.NO
+    );
+
+    const newLineup = { ...game.lineup };
+    if (!newLineup[inningKey]) newLineup[inningKey] = {};
+
+    const pitchCounts: Record<string, number> = {};
+    const catchCounts: Record<string, number> = {};
+
+    for (let i = 1; i <= 6; i++) {
+      const ik = i.toString();
+      if (ik === inningKey) continue;
+      
+      const pId = newLineup[ik]?.['Pitcher'];
+      const cId = newLineup[ik]?.['Catcher'];
+      if (pId) pitchCounts[pId] = (pitchCounts[pId] || 0) + 1;
+      if (cId) catchCounts[cId] = (catchCounts[cId] || 0) + 1;
+    }
+
+    const currentPitcherId = newLineup[inningKey]['Pitcher'];
+    const currentCatcherId = newLineup[inningKey]['Catcher'];
+
+    let newPitcherId = currentPitcherId;
+    let newCatcherId = currentCatcherId;
+
+    if (currentPitcherId && game.rsvps[currentPitcherId] === RSVPStatus.NO) {
+      const availablePitchers = eligiblePitchers.filter(p => p.id !== currentCatcherId).sort((a, b) => (pitchCounts[a.id] || 0) - (pitchCounts[b.id] || 0));
+      const minPitchCount = availablePitchers.length > 0 ? (pitchCounts[availablePitchers[0].id] || 0) : 0;
+      const bestPitchers = availablePitchers.filter(p => (pitchCounts[p.id] || 0) === minPitchCount);
+      const chosenPitcher = bestPitchers.length > 0 ? bestPitchers[Math.floor(Math.random() * bestPitchers.length)] : null;
+      if (chosenPitcher) {
+        newPitcherId = chosenPitcher.id;
+        newLineup[inningKey]['Pitcher'] = newPitcherId;
+      }
+    }
+
+    if (currentCatcherId && game.rsvps[currentCatcherId] === RSVPStatus.NO) {
+      const availableCatchers = eligibleCatchers.filter(p => p.id !== newPitcherId).sort((a, b) => (catchCounts[a.id] || 0) - (catchCounts[b.id] || 0));
+      const minCatchCount = availableCatchers.length > 0 ? (catchCounts[availableCatchers[0].id] || 0) : 0;
+      const bestCatchers = availableCatchers.filter(p => (catchCounts[p.id] || 0) === minCatchCount);
+      const chosenCatcher = bestCatchers.length > 0 ? bestCatchers[Math.floor(Math.random() * bestCatchers.length)] : null;
+      if (chosenCatcher) {
+        newCatcherId = chosenCatcher.id;
+        newLineup[inningKey]['Catcher'] = newCatcherId;
+      }
+    }
+
+    await updateDoc(doc(db, 'games', gameId), { lineup: newLineup });
+    setGames(prevGames => prevGames.map(g => g.id === gameId ? {...g, lineup: newLineup} : g));
   };
 
   const handleGenerateScrimmageLineup = async (gameId: string) => {
@@ -1781,11 +1911,13 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     try {
       await addDoc(collection(db, 'players'), {
         name: newName.trim(),
+        jerseyNumber: newJerseyNumber.trim(),
         positions: newPositions,
         uid: user.uid,
         createdAt: serverTimestamp()
       });
       setNewName('');
+      setNewJerseyNumber('');
       setNewPositions([]);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'players');
@@ -1820,12 +1952,14 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   const startEdit = (player: Player) => {
     setEditingId(player.id);
     setEditName(player.name);
+    setEditJerseyNumber(player.jerseyNumber || '');
     setEditPositions(player.positions || []);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditName('');
+    setEditJerseyNumber('');
     setEditPositions([]);
   };
 
@@ -1834,6 +1968,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     try {
       await updateDoc(doc(db, 'players', id), {
         name: editName.trim(),
+        jerseyNumber: editJerseyNumber.trim(),
         positions: editPositions
       });
       setEditingId(null);
@@ -2103,7 +2238,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                   handleUpdateGameDetails();
                                 } else {
                                   setEditGameName(game.name);
-                                  const dateStr = game.date?.toDate ? game.date.toDate().toISOString().split('T')[0] : new Date(game.date).toISOString().split('T')[0];
+                                  const dateStr = game.date?.toDate ? getLocalDateString(game.date.toDate()) : getLocalDateString(new Date(game.date));
                                   setEditGameDate(dateStr);
                                   setIsEditingRSVPs(true);
                                 }
@@ -2135,18 +2270,57 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                             </button>
                             <button 
                               onClick={() => {
-                                  if (game.mode === 'scrimmage' && game.lineup && Object.keys(game.lineup).length > 0 && game.scrimmageStep !== 3) {
-                                    updateDoc(doc(db, 'games', game.id), { scrimmageStep: 3 });
-                                    setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 3} : g));
+                                  if (game.mode === 'scrimmage' && game.lineup && Object.keys(game.lineup).length > 0 && game.scrimmageStep !== 3 && !backupLineup) {
+                                    const isFullLineup = Object.values(game.lineup).some(inning => 
+                                      Object.keys(inning).some(pos => pos !== 'Pitcher' && pos !== 'Catcher')
+                                    );
+                                    if (isFullLineup) {
+                                      updateDoc(doc(db, 'games', game.id), { scrimmageStep: 3 });
+                                      setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 3} : g));
+                                    }
                                   }
                                   setGameViewTab('lineup');
                                 }}
-                              className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 ${
+                              className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 relative ${
                                 gameViewTab === 'lineup' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                               }`}
                             >
                               <LayoutGrid size={20} />
                               Field Lineup
+                              {(() => {
+                                const g = games.find(g => g.id === selectedGameId);
+                                if (!g || g.mode !== 'scrimmage') return null;
+                                
+                                const s1Issues = [1, 2, 3, 4, 5, 6].some(inning => {
+                                  const ik = inning.toString();
+                                  return ["Pitcher", "Catcher"].some(pos => {
+                                    const pId = g.lineup?.[ik]?.[pos];
+                                    return pId && g.rsvps[pId] === RSVPStatus.NO;
+                                  });
+                                });
+
+                                const s2Issues = (g.scrimmageGroups || []).some(group => 
+                                  group.some(pId => g.rsvps[pId] === RSVPStatus.NO)
+                                );
+
+                                const s3Issues = [1, 2, 3, 4, 5, 6].some(inning => {
+                                  const ik = inning.toString();
+                                  const iLineup = g.lineup?.[ik] || {};
+                                  return Object.entries(iLineup).some(([pos, pId]) => {
+                                    if (pos === 'HittingGroup') return false;
+                                    return pId && g.rsvps[pId] === RSVPStatus.NO;
+                                  });
+                                });
+
+                                if (s1Issues || s2Issues || s3Issues) {
+                                  return (
+                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
+                                      <AlertCircle size={10} className="text-white" />
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </button>
                           </div>
                         </div>
@@ -2381,7 +2555,18 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                             <div className="space-y-3">
                               <div className="flex items-center justify-between px-2">
                                 <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Batting Order</h3>
-                                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{inOrder.length} In</span>
+                                <div className="flex items-center gap-3">
+                                  {!game.isLocked && (
+                                    <button
+                                      onClick={() => handleReshuffleLineup(selectedGameId)}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                    >
+                                      <RefreshCw size={12} />
+                                      Reshuffle
+                                    </button>
+                                  )}
+                                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{inOrder.length} In</span>
+                                </div>
                               </div>
                               <div className="space-y-3">
                                 {inOrder.map((playerId, index) => {
@@ -2398,7 +2583,12 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                           {index + 1}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                          <p className="font-black text-slate-900 dark:text-white text-lg sm:text-xl tracking-tight truncate">{player.name}</p>
+                                          <p className="font-black text-slate-900 dark:text-white text-lg sm:text-xl tracking-tight truncate">
+                                            {player.name}
+                                            {player.jerseyNumber && (
+                                              <span className="text-sm text-slate-400 dark:text-slate-500 ml-2">#{player.jerseyNumber}</span>
+                                            )}
+                                          </p>
                                           {game.lineup ? (
                                             <div className="flex flex-wrap gap-x-1.5 gap-y-1 mt-1.5">
                                               {[1, 2, 3, 4, 5, 6].map(inning => {
@@ -2493,7 +2683,12 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                         <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-xl flex items-center justify-center text-xs font-black">
                                           OUT
                                         </div>
-                                        <p className="font-bold text-slate-500 dark:text-slate-400">{player.name}</p>
+                                        <p className="font-bold text-slate-500 dark:text-slate-400">
+                                          {player.name}
+                                          {player.jerseyNumber && (
+                                            <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">#{player.jerseyNumber}</span>
+                                          )}
+                                        </p>
                                       </div>
                                       <div className="flex gap-1">
                                         <button
@@ -2518,6 +2713,37 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                           const currentStep = game.scrimmageStep || 1;
                           const fieldPositions = ["Pitcher", "Catcher"];
                           
+                          const hasOutPlayersInBatteries = currentStep === 1 && [1, 2, 3, 4, 5, 6].some(inning => {
+                            const inningKey = inning.toString();
+                            return fieldPositions.some(pos => {
+                              const playerId = game.lineup?.[inningKey]?.[pos];
+                              return playerId && game.rsvps[playerId] === RSVPStatus.NO;
+                            });
+                          });
+
+                          const step1HasIssues = [1, 2, 3, 4, 5, 6].some(inning => {
+                            const inningKey = inning.toString();
+                            return ["Pitcher", "Catcher"].some(pos => {
+                              const playerId = game.lineup?.[inningKey]?.[pos];
+                              return playerId && game.rsvps[playerId] === RSVPStatus.NO;
+                            });
+                          });
+
+                          const step2HasIssues = (game.scrimmageGroups || []).some(group => 
+                            group.some(playerId => game.rsvps[playerId] === RSVPStatus.NO)
+                          );
+
+                          const step3HasIssues = [1, 2, 3, 4, 5, 6].some(inning => {
+                            const inningKey = inning.toString();
+                            const inningLineup = game.lineup?.[inningKey] || {};
+                            return Object.entries(inningLineup).some(([pos, playerId]) => {
+                              if (pos === 'HittingGroup') return false;
+                              return playerId && game.rsvps[playerId] === RSVPStatus.NO;
+                            });
+                          });
+
+                          const anyStepHasIssues = step1HasIssues || step2HasIssues || step3HasIssues;
+
                           return (
                             <div className="space-y-8">
                               {/* Step Indicator */}
@@ -2537,12 +2763,17 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                       }
                                     }}
                                   >
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black z-10 transition-all ${
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black z-10 transition-all relative ${
                                       currentStep >= step 
                                         ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
                                         : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600'
                                     }`}>
                                       {step}
+                                      {((step === 1 && step1HasIssues) || (step === 2 && step2HasIssues) || (step === 3 && step3HasIssues)) && (
+                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
+                                          <AlertCircle size={10} className="text-white" />
+                                        </div>
+                                      )}
                                     </div>
                                     <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${
                                       currentStep >= step ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-600'
@@ -2567,7 +2798,14 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                         <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Assign your batteries for all 6 innings</p>
                                       </div>
                                       <div className="flex flex-col sm:flex-row gap-3">
-                                        {game.lineup && Object.keys(game.lineup).length > 0 && (
+                                        <button
+                                          onClick={() => handleGenerateBatteries(selectedGameId)}
+                                          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                        >
+                                          <RefreshCw size={14} />
+                                          Generate Batteries
+                                        </button>
+                                        {(backupLineup || backupScrimmageGroups) && (
                                           <button
                                             onClick={async () => {
                                               if (backupLineup || backupScrimmageGroups) {
@@ -2578,9 +2816,6 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                 setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 3, lineup: backupLineup || g.lineup, scrimmageGroups: backupScrimmageGroups || g.scrimmageGroups} : g));
                                                 setBackupLineup(null);
                                                 setBackupScrimmageGroups(null);
-                                              } else {
-                                                await updateDoc(doc(db, 'games', game.id), { scrimmageStep: 3 });
-                                                setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 3} : g));
                                               }
                                             }}
                                             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
@@ -2597,35 +2832,60 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                               handleSplitScrimmageGroups(selectedGameId);
                                             }
                                           }}
-                                          className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20"
+                                          className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl ${
+                                            hasOutPlayersInBatteries 
+                                              ? 'bg-amber-500 hover:bg-amber-400 text-white shadow-amber-500/20 ring-4 ring-amber-500/20' 
+                                              : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20'
+                                          }`}
                                         >
+                                          {hasOutPlayersInBatteries && <AlertCircle size={16} />}
                                           Next: Group Players
                                           <ChevronRight size={16} />
                                         </button>
                                       </div>
                                     </div>
-                                    <div className="overflow-x-auto pb-48 min-h-[400px]">
-                                      <table className="w-full border-collapse">
-                                        <thead>
-                                          <tr className="bg-slate-50/50 dark:bg-slate-800/50">
-                                            <th className="text-left py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">Position</th>
-                                            {[1, 2, 3, 4, 5, 6].map(inning => (
-                                              <th key={inning} className="text-center py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">Inning {inning}</th>
-                                            ))}
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                                          {fieldPositions.map(pos => (
-                                            <tr key={pos} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                                              <td className="py-4 px-6 font-black text-slate-900 dark:text-slate-200 text-sm">{pos}</td>
-                                              {[1, 2, 3, 4, 5, 6].map(inning => {
-                                                const inningKey = inning.toString();
+                                    <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                      {[1, 2, 3, 4, 5, 6].map(inning => {
+                                        const inningKey = inning.toString();
+                                        const hasInningError = fieldPositions.some(pos => {
+                                          const playerId = game.lineup?.[inningKey]?.[pos];
+                                          return playerId && game.rsvps[playerId] === RSVPStatus.NO;
+                                        });
+
+                                        return (
+                                          <div key={inning} className={`rounded-2xl p-4 border transition-all ${
+                                            hasInningError 
+                                              ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 ring-1 ring-amber-200 dark:ring-amber-800' 
+                                              : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800'
+                                          }`}>
+                                            <div className="flex items-center justify-between mb-4">
+                                              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Inning {inning}</h4>
+                                              {hasInningError && (
+                                                <div className="flex items-center gap-2">
+                                                  <div className="flex items-center gap-1 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">
+                                                    <AlertCircle size={12} />
+                                                    Player Out
+                                                  </div>
+                                                  <button
+                                                    onClick={() => handleFixInningBatteries(selectedGameId, inningKey)}
+                                                    className="flex items-center gap-1 px-2 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                                  >
+                                                    <RotateCcw size={10} />
+                                                    Fix
+                                                  </button>
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div className="space-y-3">
+                                              {fieldPositions.map(pos => {
                                                 const playerId = game.lineup?.[inningKey]?.[pos];
                                                 const player = players.find(p => p.id === playerId);
                                                 const isEditing = editingCell?.inning === inningKey && editingCell?.position === pos;
+                                                const isPlayerOut = playerId && game.rsvps[playerId] === RSVPStatus.NO;
 
                                                 return (
-                                                  <td key={inning} className="py-3 px-4 text-center relative">
+                                                  <div key={pos} className="flex items-center justify-between relative">
+                                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{pos}</span>
                                                     {isEditing && (
                                                       <>
                                                         <div 
@@ -2635,7 +2895,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                             setEditingCell(null);
                                                           }} 
                                                         />
-                                                        <div className="absolute z-[60] top-full left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                                        <div className="absolute z-[60] top-full right-0 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
                                                           <button
                                                             onClick={() => handleUpdateLineupCell(selectedGameId, inningKey, pos, '')}
                                                             className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 italic transition-colors"
@@ -2648,7 +2908,12 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                               onClick={() => handleUpdateLineupCell(selectedGameId, inningKey, pos, p.id)}
                                                               className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-between transition-colors"
                                                             >
-                                                              <span>{p.name}</span>
+                                                              <span>
+                                                                {p.name}
+                                                                {p.jerseyNumber && (
+                                                                  <span className="text-[10px] opacity-50 ml-1">#{p.jerseyNumber}</span>
+                                                                )}
+                                                              </span>
                                                             </button>
                                                           ))}
                                                         </div>
@@ -2656,19 +2921,33 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                     )}
                                                     <button
                                                       onClick={() => setEditingCell({ inning: inningKey, position: pos })}
-                                                      className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] border ${
-                                                        isEditing ? 'ring-2 ring-slate-900 border-slate-900' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-100 dark:border-slate-700 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700'
+                                                      className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[120px] border ${
+                                                        isEditing 
+                                                          ? 'ring-2 ring-slate-900 border-slate-900' 
+                                                          : isPlayerOut
+                                                            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-200 dark:hover:bg-amber-900/50'
+                                                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-100 dark:border-slate-700 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700'
                                                       }`}
                                                     >
-                                                      {player?.name || <span className="text-slate-300 italic">Empty</span>}
+                                                      {player ? (
+                                                        <span className="flex items-center gap-1">
+                                                          {isPlayerOut && <AlertCircle size={12} />}
+                                                          {player.name}
+                                                          {player.jerseyNumber && (
+                                                            <span className="opacity-50 ml-1">#{player.jerseyNumber}</span>
+                                                          )}
+                                                        </span>
+                                                      ) : (
+                                                        <span className="text-slate-300 italic">Empty</span>
+                                                      )}
                                                     </button>
-                                                  </td>
+                                                  </div>
                                                 );
                                               })}
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   </div>
                                 </div>
@@ -2679,10 +2958,16 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                   <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-4">
                                     <div>
                                       <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 2: Group Players</h3>
+                                      {step2HasIssues && (
+                                        <div className="flex items-center gap-1 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mt-1">
+                                          <AlertCircle size={12} />
+                                          Some players in groups are marked as 'Out'
+                                        </div>
+                                      )}
                                       <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Review groups and move players if needed</p>
                                     </div>
                                     <div className="flex flex-col sm:flex-row gap-3">
-                                      {game.lineup && Object.keys(game.lineup).length > 0 && (
+                                      {(backupLineup || backupScrimmageGroups) && (
                                         <button
                                           onClick={async () => {
                                             if (backupLineup || backupScrimmageGroups) {
@@ -2693,9 +2978,6 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                               setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 3, lineup: backupLineup || g.lineup, scrimmageGroups: backupScrimmageGroups || g.scrimmageGroups} : g));
                                               setBackupLineup(null);
                                               setBackupScrimmageGroups(null);
-                                            } else {
-                                              await updateDoc(doc(db, 'games', game.id), { scrimmageStep: 3 });
-                                              setGames(prevGames => prevGames.map(g => g.id === game.id ? {...g, scrimmageStep: 3} : g));
                                             }
                                           }}
                                           className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
@@ -2736,9 +3018,20 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                         <div className="space-y-2">
                                           {game.scrimmageGroups?.[groupIndex]?.map(playerId => {
                                             const player = players.find(p => p.id === playerId);
+                                            const isPlayerOut = game.rsvps[playerId] === RSVPStatus.NO;
                                             return (
-                                              <div key={playerId} className="group/player p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                                                <span>{player?.name}</span>
+                                              <div key={playerId} className={`group/player p-3 rounded-xl border text-sm font-bold flex items-center justify-between transition-all ${
+                                                isPlayerOut 
+                                                  ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300' 
+                                                  : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                                              }`}>
+                                                <span className="flex items-center gap-2">
+                                                  {isPlayerOut && <AlertCircle size={14} />}
+                                                  {player?.name}
+                                                  {player?.jerseyNumber && (
+                                                    <span className="text-[10px] opacity-50 ml-1">#{player.jerseyNumber}</span>
+                                                  )}
+                                                </span>
                                                 <div className="flex gap-1 opacity-0 group-hover/player:opacity-100 transition-opacity">
                                                   {[0, 1, 2, 3].filter(idx => idx !== groupIndex).map(targetIdx => (
                                                     <button
@@ -2915,7 +3208,9 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                                     }`}
                                                                     style={{ color: statusColor }}
                                                                   >
-                                                                    <span>{p.name}</span>
+                                                                    <span>
+                                                                      {p.name}
+                                                                    </span>
                                                                     <span className={`text-[8px] uppercase px-1.5 py-0.5 rounded-md ${statusBg}`}>
                                                                       {statusLabel}
                                                                     </span>
@@ -2931,13 +3226,19 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                       onClick={() => setEditingCell({ inning: inningKey, position: pos })}
                                                       className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] border ${
                                                         isOut
-                                                          ? 'bg-rose-500 text-white border-rose-600 shadow-md shadow-rose-200'
+                                                          ? 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-200'
                                                           : isDuplicate
                                                             ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm shadow-rose-100'
                                                             : 'bg-white text-slate-700 border border-slate-100 shadow-sm hover:border-slate-200 hover:bg-slate-50'
                                                       } ${isEditing ? 'ring-2 ring-slate-900 border-slate-900' : ''}`}
                                                     >
-                                                      {player?.name || <span className="text-slate-300 italic">Empty</span>}
+                                                      {player ? (
+                                                        <span>
+                                                          {player.name}
+                                                        </span>
+                                                      ) : (
+                                                        <span className="text-slate-300 italic">Empty</span>
+                                                      )}
                                                       {isOut && <AlertCircle size={12} className="ml-2" />}
                                                     </button>
                                                   </td>
@@ -2951,7 +3252,10 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                             {[1, 2, 3, 4, 5, 6].map(inning => {
                                               const hittingGroupIdx = game.lineup?.[inning.toString()]?.['HittingGroup'];
                                               const groupPlayers = hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)]
-                                                ? game.scrimmageGroups[parseInt(hittingGroupIdx)].map(id => players.find(p => p.id === id)?.name).filter(Boolean)
+                                                ? game.scrimmageGroups[parseInt(hittingGroupIdx)].map(id => {
+                                                    const p = players.find(p => p.id === id);
+                                                    return p ? `${p.name}` : null;
+                                                  }).filter(Boolean)
                                                 : [];
                                               return (
                                                 <td key={inning} className="py-4 px-6 text-center">
@@ -3084,7 +3388,10 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                                       }`}
                                                                       style={{ color: statusColor }}
                                                                     >
-                                                                      <span>{p.name}</span>
+                                                                      <span>
+                                                                        {p.name}
+
+                                                                      </span>
                                                                       <span className={`text-[8px] uppercase px-1.5 py-0.5 rounded-md ${statusBg}`}>
                                                                         {statusLabel}
                                                                       </span>
@@ -3106,7 +3413,13 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                               : 'bg-white text-slate-700 border border-slate-100 shadow-sm hover:border-slate-200 hover:bg-slate-50'
                                                         } ${isEditing ? 'ring-2 ring-slate-900 border-slate-900' : ''}`}
                                                       >
-                                                        {player?.name || <span className="text-slate-300 italic">Empty</span>}
+                                                        {player ? (
+                                                          <span>
+                                                            {player.name}
+                                                          </span>
+                                                        ) : (
+                                                          <span className="text-slate-300 italic">Empty</span>
+                                                        )}
                                                         {isOut && <AlertCircle size={12} className="ml-2" />}
                                                       </button>
                                                     </td>
@@ -3179,6 +3492,26 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                   </span>
                                 )}
                               </div>
+                              {!isLocked && (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleGenerateLineup(selectedGameId)}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                                  >
+                                    <RefreshCw size={14} />
+                                    <span className="hidden sm:inline">Generate</span>
+                                  </button>
+                                  {game.lineup && Object.keys(game.lineup).length > 0 && (
+                                    <button
+                                      onClick={() => setShowClearLineupConfirm(true)}
+                                      className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors"
+                                    >
+                                      <Trash2 size={14} />
+                                      <span className="hidden sm:inline">Clear</span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
                             <div className="overflow-hidden bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -3296,7 +3629,12 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                             className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-between transition-colors group/item"
                                                             style={{ color: statusColor }}
                                                           >
-                                                            <span>{p.name}</span>
+                                                            <span>
+                                                              {p.name}
+                                                              {p.jerseyNumber && (
+                                                                <span className="text-[10px] opacity-50 ml-1">#{p.jerseyNumber}</span>
+                                                              )}
+                                                            </span>
                                                             <span className={`text-[8px] uppercase px-1.5 py-0.5 rounded-md ${statusBg}`}>
                                                               {statusLabel}
                                                             </span>
@@ -3320,7 +3658,16 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                       : 'bg-white text-slate-700 border border-slate-100 shadow-sm group-hover:border-slate-200 hover:bg-slate-50'
                                               } ${isEditing ? 'ring-2 ring-slate-900 border-slate-900' : ''}`}
                                             >
-                                              {player?.name || <span className="text-slate-300 italic">Empty</span>}
+                                              {player ? (
+                                                <span>
+                                                  {player.name}
+                                                  {player.jerseyNumber && (
+                                                    <span className="opacity-50 ml-1">#{player.jerseyNumber}</span>
+                                                  )}
+                                                </span>
+                                              ) : (
+                                                <span className="text-slate-300 italic">Empty</span>
+                                              )}
                                               {isOut && <AlertCircle size={12} className="ml-2" />}
                                             </button>
                                           </td>
@@ -3342,6 +3689,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                             {benchedPlayers.length > 0 ? benchedPlayers.map(p => (
                                               <div key={p.id} className="text-[10px] font-black text-slate-400 truncate max-w-[80px] mx-auto uppercase tracking-tighter">
                                                 {p.name.split(' ')[0]}
+                                                {p.jerseyNumber && ` #${p.jerseyNumber}`}
                                               </div>
                                             )) : (
                                               <span className="text-slate-300">—</span>
@@ -3552,16 +3900,28 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                     </button>
                   </div>
                   <form onSubmit={handleAddPlayer} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Player Name</label>
-                      <input 
-                        type="text" 
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        placeholder="e.g. Shohei Ohtani"
-                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-emerald-500/10 focus:border-slate-900 dark:focus:border-emerald-500 text-slate-900 dark:text-white transition-all"
-                        required
-                      />
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Player Name</label>
+                        <input 
+                          type="text" 
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          placeholder="e.g. Shohei Ohtani"
+                          className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-emerald-500/10 focus:border-slate-900 dark:focus:border-emerald-500 text-slate-900 dark:text-white transition-all"
+                          required
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">#</label>
+                        <input 
+                          type="text" 
+                          value={newJerseyNumber}
+                          onChange={(e) => setNewJerseyNumber(e.target.value)}
+                          placeholder="00"
+                          className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-emerald-500/10 focus:border-slate-900 dark:focus:border-emerald-500 text-slate-900 dark:text-white transition-all"
+                        />
+                      </div>
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -3673,41 +4033,51 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                       >
                         {editingId === player.id ? (
                           <div className="flex-1 flex flex-col gap-3 mr-4">
-                            <input 
-                              type="text" 
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-900"
-                            />
+                            <div className="grid grid-cols-3 gap-2">
+                              <input 
+                                type="text" 
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                className="col-span-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-slate-900 dark:focus:border-emerald-500 text-slate-900 dark:text-white"
+                                placeholder="Name"
+                              />
+                              <input 
+                                type="text" 
+                                value={editJerseyNumber}
+                                onChange={(e) => setEditJerseyNumber(e.target.value)}
+                                className="col-span-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-slate-900 dark:focus:border-emerald-500 text-slate-900 dark:text-white"
+                                placeholder="#"
+                              />
+                            </div>
                             <div className="flex items-center justify-between mb-1 px-1">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Positions</span>
+                              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Positions</span>
                               <div className="flex gap-2">
                                 <button 
                                   type="button"
                                   onClick={() => setEditPositions(ALL_POSITIONS)}
-                                  className="text-[9px] font-bold text-slate-400 hover:text-slate-900 uppercase transition-colors"
+                                  className="text-[9px] font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white uppercase transition-colors"
                                 >
                                   All
                                 </button>
                                 <button 
                                   type="button"
                                   onClick={() => setEditPositions([])}
-                                  className="text-[9px] font-bold text-slate-400 hover:text-slate-900 uppercase transition-colors"
+                                  className="text-[9px] font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white uppercase transition-colors"
                                 >
                                   Clear
                                 </button>
                               </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg max-h-32 overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-2 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg max-h-32 overflow-y-auto">
                               {ALL_POSITIONS.map(pos => (
-                                <label key={pos} className="flex items-center gap-2 cursor-pointer">
+                                <label key={pos} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 p-1 rounded transition-colors">
                                   <input 
                                     type="checkbox"
                                     checked={editPositions.includes(pos)}
                                     onChange={() => togglePosition(pos, true)}
-                                    className="w-3 h-3 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                                    className="w-3 h-3 rounded border-slate-300 dark:border-slate-600 text-slate-900 dark:text-emerald-500 focus:ring-slate-900 dark:focus:ring-emerald-500 bg-white dark:bg-slate-900"
                                   />
-                                  <span className="text-xs text-slate-600">{pos} <span className="text-[9px] font-bold text-slate-400">({getPositionAbbreviation(pos)})</span></span>
+                                  <span className="text-xs text-slate-600 dark:text-slate-300">{pos} <span className="text-[9px] font-bold text-slate-400">({getPositionAbbreviation(pos)})</span></span>
                                 </label>
                               ))}
                             </div>
@@ -3715,10 +4085,15 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                         ) : (
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 font-bold text-sm transition-colors duration-300">
-                              {index + 1}
+                              {player.jerseyNumber || index + 1}
                             </div>
                             <div>
-                              <h3 className="font-bold text-slate-900 dark:text-white">{player.name}</h3>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-slate-900 dark:text-white">{player.name}</h3>
+                                {player.jerseyNumber && (
+                                  <span className="text-xs font-bold text-slate-400 dark:text-slate-500">#{player.jerseyNumber}</span>
+                                )}
+                              </div>
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {(player.positions || []).map(pos => (
                                   <span key={pos} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-[10px] font-bold uppercase tracking-wider transition-colors duration-300">

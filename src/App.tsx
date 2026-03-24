@@ -1902,6 +1902,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
     const newLineup = JSON.parse(JSON.stringify(game.lineup));
     let fixedAny = false;
+    let skippedDueToLocks = false;
 
     const availablePlayers = players.filter(p => game.rsvps[p.id] === RSVPStatus.YES || game.rsvps[p.id] === RSVPStatus.TENTATIVE);
     
@@ -1920,8 +1921,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       const counts: Record<string, number> = {};
       availablePlayers.forEach(p => counts[p.id] = 0);
       Object.values(lineup).forEach((inning: any) => {
-        Object.values(inning).forEach(id => {
-          if (id && counts[id as string] !== undefined) {
+        Object.entries(inning).forEach(([pos, id]) => {
+          if (pos !== 'HittingGroup' && id && counts[id as string] !== undefined) {
             counts[id as string]++;
           }
         });
@@ -1929,31 +1930,123 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       return counts;
     };
 
+    // Helper to try and fill a vacant position
+    const tryToFillPosition = (inning: number, pos: string, currentInningLineup: any): boolean => {
+      const assignedIds = new Set(Object.values(currentInningLineup).filter(id => id && typeof id === 'string'));
+      const hittingGroupIdx = currentInningLineup['HittingGroup'];
+      const hittingGroupIds = (game.mode === 'scrimmage' && hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)])
+        ? game.scrimmageGroups[parseInt(hittingGroupIdx)]
+        : [];
+
+      // 1. Try Hitting Group (Extra Hitters) first if scrimmage
+      if (game.mode === 'scrimmage') {
+        const hgCandidates = hittingGroupIds.filter(id => !assignedIds.has(id));
+        const preferred = hgCandidates.filter(id => {
+          const p = players.find(player => player.id === id);
+          return p && canPlay(p, pos);
+        });
+        
+        if (preferred.length > 0) {
+          currentInningLineup[pos] = preferred[0];
+          return true;
+        }
+      }
+
+      // 2. Try any other available players not in the field
+      const otherCandidates = availablePlayers.filter(p => !assignedIds.has(p.id));
+      const preferredOther = otherCandidates.filter(p => canPlay(p, pos));
+      
+      if (preferredOther.length > 0) {
+        currentInningLineup[pos] = preferredOther[0].id;
+        return true;
+      }
+
+      // 3. "Outfield second" - if pos is infield, try to move an outfielder
+      const outfieldPos = ["Left Field", "Center Field", "Right Field"];
+      if (!outfieldPos.includes(pos)) {
+        for (const ofPos of outfieldPos) {
+          const ofPlayerId = currentInningLineup[ofPos];
+          if (ofPlayerId) {
+            const ofPlayer = players.find(p => p.id === ofPlayerId);
+            if (ofPlayer && canPlay(ofPlayer, pos)) {
+              // Move outfielder to this position
+              currentInningLineup[pos] = ofPlayerId;
+              // Now try to fill the outfield position from the bench
+              const filledOF = tryToFillPosition(inning, ofPos, currentInningLineup);
+              if (!filledOF) {
+                delete currentInningLineup[ofPos];
+              }
+              return true;
+            }
+          }
+        }
+      }
+
+      return false;
+    };
+
+    // Phase 0: Fix duplicate players in an inning
+    for (let inning = 1; inning <= 6; inning++) {
+      const inningKey = inning.toString();
+      const inningLineup = newLineup[inningKey] || {};
+      
+      // Find players assigned more than once
+      const playerPositions: Record<string, string[]> = {};
+      Object.entries(inningLineup).forEach(([pos, id]) => {
+        if (id && pos !== 'HittingGroup') {
+          if (!playerPositions[id as string]) playerPositions[id as string] = [];
+          playerPositions[id as string].push(pos);
+        }
+      });
+
+      Object.entries(playerPositions).forEach(([playerId, positions]) => {
+        if (positions.length > 1) {
+          // Duplicate found
+          if (game.lockedInnings?.includes(inning)) {
+            skippedDueToLocks = true;
+            return;
+          }
+
+          const lockedPositionsForPlayer = positions.filter(pos => game.lockedPositions?.includes(pos));
+          
+          if (lockedPositionsForPlayer.length > 1) {
+            // More than one locked position for this player - can't fix
+            skippedDueToLocks = true;
+          } else {
+            // 0 or 1 locked position
+            let positionToKeep = lockedPositionsForPlayer.length === 1 
+              ? lockedPositionsForPlayer[0] 
+              : positions[0]; // If none locked, pick the first one
+            
+            positions.forEach(pos => {
+              if (pos !== positionToKeep) {
+                const replaced = tryToFillPosition(inning, pos, inningLineup);
+                if (!replaced) {
+                  delete inningLineup[pos];
+                }
+                fixedAny = true;
+              }
+            });
+          }
+        }
+      });
+      newLineup[inningKey] = inningLineup;
+    }
+
     // Phase 1: Replace players marked as "Out"
     for (let inning = 1; inning <= 6; inning++) {
       const inningKey = inning.toString();
       const inningLineup = newLineup[inningKey] || {};
       
-      const assignedThisInning = new Set(
-        Object.values(inningLineup)
-          .filter(id => id && game.rsvps[id as string] !== RSVPStatus.NO) as string[]
-      );
-
       for (const pos of fieldPositions) {
         const playerId = inningLineup[pos];
         if (playerId && game.rsvps[playerId] === RSVPStatus.NO) {
-          const pool = availablePlayers.filter(p => !assignedThisInning.has(p.id));
-          if (pool.length > 0) {
-            const preferred = pool.filter(p => canPlay(p, pos));
-            const replacement = preferred.length > 0 
-              ? preferred[Math.floor(Math.random() * preferred.length)]
-              : pool[Math.floor(Math.random() * pool.length)];
-            
-            inningLineup[pos] = replacement.id;
-            assignedThisInning.add(replacement.id);
+          delete inningLineup[pos];
+          const replaced = tryToFillPosition(inning, pos, inningLineup);
+          if (replaced) {
             fixedAny = true;
           } else {
-            delete inningLineup[pos];
+            // Already deleted above
             fixedAny = true;
           }
         }
@@ -2019,9 +2112,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     }
 
     // Phase 3: Fix back-to-back benches
-    // Only attempt if we have enough players to avoid back-to-back benches
-    // (Usually if roster > 10, it's possible to avoid most back-to-back benches)
-    if (availablePlayers.length > 9) {
+    // Attempt to fix back-to-back benches regardless of roster size
+    if (availablePlayers.length > 0) {
       let hasBackToBack = true;
       let iterations = 0;
       while (hasBackToBack && iterations < 10) {
@@ -2029,12 +2121,22 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
         iterations++;
         
         for (const player of availablePlayers) {
-          const isBenched = (inning: number) => !Object.values(newLineup[inning.toString()] || {}).includes(player.id);
+          const isBenched = (inning: number) => {
+            if (inning < 1 || inning > 6) return false;
+            const lineup = newLineup[inning.toString()] || {};
+            const assignedToField = Object.entries(lineup)
+              .filter(([k]) => k !== 'HittingGroup')
+              .map(([_, id]) => id);
+            const hittingGroupIdx = lineup['HittingGroup'];
+            const hittingGroupIds = (game.mode === 'scrimmage' && hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)])
+              ? game.scrimmageGroups[parseInt(hittingGroupIdx)]
+              : [];
+            return !assignedToField.includes(player.id) && !hittingGroupIds.includes(player.id);
+          };
           
           for (let i = 1; i <= 5; i++) {
             if (isBenched(i) && isBenched(i+1)) {
               // Back-to-back bench found at inning i and i+1
-              // Try to swap them into one of these innings
               const targetInnings = [i, i + 1];
               let swapped = false;
 
@@ -2043,12 +2145,18 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                 const inningKey = targetInning.toString();
                 const inningLineup = newLineup[inningKey] || {};
                 
-                // Find a position to swap
-                for (const pos of fieldPositions) {
+                // Get all positions currently in this inning (including Extra Hitters)
+                const positionsInInning = Object.keys(inningLineup).filter(k => k !== 'HittingGroup');
+                // Also consider standard positions that might be empty
+                const allPossiblePositions = Array.from(new Set([...fieldPositions, ...positionsInInning]));
+
+                for (const pos of allPossiblePositions) {
                   if (game.lockedPositions?.includes(pos) && inningLineup[pos]) continue;
                   if (game.lockedInnings?.includes(targetInning)) continue;
 
                   const currentPlayerId = inningLineup[pos] as string;
+                  
+                  // If position is empty, just put the player there
                   if (!currentPlayerId) {
                     inningLineup[pos] = player.id;
                     swapped = true;
@@ -2056,19 +2164,26 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                     break;
                   }
 
+                  // If position is occupied, try to swap
                   if (canPlay(player, pos)) {
-                    // Check if swapping this player out creates a back-to-back bench for them
-                    const isBenchedAfterSwap = (inning: number) => {
-                      if (inning < 1 || inning > 6) return false;
-                      if (inning === targetInning) return true; // They are being swapped out
-                      return !Object.values(newLineup[inning.toString()] || {}).includes(currentPlayerId);
+                    const isBenchedAfterSwap = (inn: number) => {
+                      if (inn < 1 || inn > 6) return false;
+                      if (inn === targetInning) return true; // They are being swapped out
+                      
+                      const l = newLineup[inn.toString()] || {};
+                      const field = Object.entries(l).filter(([k]) => k !== 'HittingGroup').map(([_, id]) => id);
+                      const hgIdx = l['HittingGroup'];
+                      const hgIds = (game.mode === 'scrimmage' && hgIdx != null && game.scrimmageGroups?.[parseInt(hgIdx)])
+                        ? game.scrimmageGroups[parseInt(hgIdx)]
+                        : [];
+                      return !field.includes(currentPlayerId) && !hgIds.includes(currentPlayerId);
                     };
                     
                     const wouldCreateBTB = (isBenchedAfterSwap(targetInning - 1) || isBenchedAfterSwap(targetInning + 1));
                     
-                    const currentPlayCounts = getPlayCounts(newLineup);
-                    // Swap if they have enough innings AND it doesn't create a new BTB issue for them
-                    if (currentPlayCounts[currentPlayerId] > 2 && !wouldCreateBTB) {
+                    // Swap if it doesn't create a new BTB issue for the other player
+                    // We are more lenient here - if it fixes a BTB for 'player', we take it unless it breaks 'currentPlayer'
+                    if (!wouldCreateBTB) {
                       inningLineup[pos] = player.id;
                       swapped = true;
                       fixedAny = true;
@@ -2093,15 +2208,28 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
         await updateDoc(doc(db, 'games', gameId), {
           lineup: newLineup
         });
+        
+        let description = "Replaced 'Out' players, worked in 'Activated' players, and resolved back-to-back benches.";
+        if (skippedDueToLocks) {
+          description += " Note: Some duplicates were skipped due to locks.";
+        }
+
         toast.success("Lineup fixed!", {
-          description: "Replaced 'Out' players, worked in 'Activated' players, and resolved back-to-back benches.",
+          description,
           position: 'top-center'
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
       }
     } else {
-      toast.info("No changes needed for the lineup.");
+      if (skippedDueToLocks) {
+        toast.warning("Unable to fix some issues", {
+          description: "Some duplicate players could not be fixed because multiple positions are locked or the inning is locked.",
+          position: 'top-center'
+        });
+      } else {
+        toast.info("No changes needed for the lineup.");
+      }
     }
   };
 
@@ -3391,6 +3519,57 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                     </div>
                                     {!game.isLocked && (
                                       <div className="flex flex-col sm:flex-row gap-3">
+                                        {(() => {
+                                          const hasOutPlayers = Object.values(game.lineup || {}).some(inning => 
+                                            Object.values(inning).some(playerId => playerId && game.rsvps[playerId as string] === RSVPStatus.NO)
+                                          );
+                                          const availablePlayers = players.filter(p => game.rsvps[p.id] === RSVPStatus.YES || game.rsvps[p.id] === RSVPStatus.TENTATIVE);
+                                          const assignedPlayerIds = new Set();
+                                          Object.values(game.lineup || {}).forEach(inning => {
+                                            Object.entries(inning).forEach(([pos, id]) => {
+                                              if (pos !== 'HittingGroup' && id) assignedPlayerIds.add(id);
+                                            });
+                                          });
+                                          const hasBenchedAvailable = availablePlayers.some(p => !assignedPlayerIds.has(p.id));
+                                          const hasBackToBackBenches = availablePlayers.some(p => {
+                                            const isBenched = (inning: number) => {
+                                              const lineup = game.lineup?.[inning.toString()] || {};
+                                              const assigned = Object.entries(lineup)
+                                                .filter(([k]) => k !== 'HittingGroup')
+                                                .map(([_, id]) => id);
+                                              const hittingGroupIdx = lineup['HittingGroup'];
+                                              const hittingGroupIds = hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)]
+                                                ? game.scrimmageGroups[parseInt(hittingGroupIdx)]
+                                                : [];
+                                              return !assigned.includes(p.id) && !hittingGroupIds.includes(p.id);
+                                            };
+                                            for (let i = 1; i <= 5; i++) {
+                                              if (isBenched(i) && isBenched(i+1)) return true;
+                                            }
+                                            return false;
+                                          });
+                                          const hasDuplicates = Object.values(game.lineup || {}).some(inning => {
+                                            const ids = Object.entries(inning)
+                                              .filter(([k]) => k !== 'HittingGroup')
+                                              .map(([_, id]) => id)
+                                              .filter(id => id);
+                                            return new Set(ids).size !== ids.length;
+                                          });
+
+                                          if (hasOutPlayers || hasBenchedAvailable || hasBackToBackBenches || hasDuplicates) {
+                                            return (
+                                              <button
+                                                onClick={() => handleFixLineup(selectedGameId)}
+                                                className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-black uppercase tracking-widest border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-all"
+                                                title="Replace 'Out' players, work in 'Activated' players, resolve back-to-back benches, and fix duplicates"
+                                              >
+                                                <Wrench size={14} />
+                                                Fix Lineup
+                                              </button>
+                                            );
+                                          }
+                                          return null;
+                                        })()}
                                         <button
                                           onClick={async () => {
                                             setBackupLineup(JSON.parse(JSON.stringify(game.lineup || {})));
@@ -3802,7 +3981,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                         <div 
                                                           key={p.id} 
                                                           className={`text-[10px] font-black truncate max-w-[80px] mx-auto uppercase tracking-tighter ${
-                                                            isBTB ? 'text-rose-500 animate-pulse flex items-center justify-center gap-0.5' : 'text-slate-400 dark:text-slate-500'
+                                                            isBTB ? 'text-rose-500 flex items-center justify-center gap-0.5' : 'text-slate-400 dark:text-slate-500'
                                                           }`}
                                                           title={isBTB ? "Back-to-back benching detected" : ""}
                                                         >
@@ -3870,12 +4049,20 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                     return false;
                                   });
 
-                                  if (hasOutPlayers || hasBenchedAvailable || hasBackToBackBenches) {
+                                  const hasDuplicates = Object.values(game.lineup || {}).some(inning => {
+                                    const ids = Object.entries(inning)
+                                      .filter(([k]) => k !== 'HittingGroup')
+                                      .map(([_, id]) => id)
+                                      .filter(id => id);
+                                    return new Set(ids).size !== ids.length;
+                                  });
+
+                                  if (hasOutPlayers || hasBenchedAvailable || hasBackToBackBenches || hasDuplicates) {
                                     return (
                                       <button
                                         onClick={() => handleFixLineup(selectedGameId)}
                                         className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors border border-amber-200/50 dark:border-amber-800/50"
-                                        title="Replace 'Out' players, work in 'Activated' players, and resolve back-to-back benches"
+                                        title="Replace 'Out' players, work in 'Activated' players, resolve back-to-back benches, and fix duplicates"
                                       >
                                         <Wrench size={14} />
                                         <span className="hidden sm:inline">Fix Lineup</span>
@@ -4097,7 +4284,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                                 <div 
                                                   key={p.id} 
                                                   className={`text-[10px] font-black truncate max-w-[80px] mx-auto uppercase tracking-tighter ${
-                                                    isBTB ? 'text-rose-500 animate-pulse flex items-center justify-center gap-0.5' : 'text-slate-400'
+                                                    isBTB ? 'text-rose-500 flex items-center justify-center gap-0.5' : 'text-slate-400'
                                                   }`}
                                                   title={isBTB ? "Back-to-back benching detected" : ""}
                                                 >

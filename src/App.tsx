@@ -62,6 +62,8 @@ interface Game {
   id: string;
   name: string;
   date: any;
+  time?: string;
+  isHome?: boolean;
   rsvps: Record<string, RSVPStatus>;
   battingOrder?: string[];
   lineup?: Record<string, Record<string, string>>; // Inning -> Position -> PlayerId
@@ -766,6 +768,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   const [gameName, setGameName] = useState('');
   const [gameNameError, setGameNameError] = useState(false);
   const [gameDate, setGameDate] = useState(getLocalDateString());
+  const [gameTime, setGameTime] = useState('');
+  const [isHome, setIsHome] = useState(true);
   const [gameMode, setGameMode] = useState<'standard' | 'scrimmage'>('standard');
   const [backupLineup, setBackupLineup] = useState<Record<string, Record<string, string>> | null>(null);
   const [backupScrimmageGroups, setBackupScrimmageGroups] = useState<string[][] | null>(null);
@@ -809,6 +813,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   });
   const [editGameName, setEditGameName] = useState('');
   const [editGameDate, setEditGameDate] = useState('');
+  const [editGameTime, setEditGameTime] = useState('');
+  const [editIsHome, setEditIsHome] = useState(true);
   const [gameViewTab, setGameViewTab] = useState<'batting' | 'lineup'>('batting');
   const [localBattingOrder, setLocalBattingOrder] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<{ inning: string; position: string } | null>(null);
@@ -828,21 +834,18 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     }
   }, [selectedGameId, games]); // Removed localBattingOrder from dependencies
 
-  const handleMovePlayer = async (playerId: string, direction: 'up' | 'down') => {
+  const handleMovePlayerToPosition = async (playerId: string, newPositionIndex: number) => {
     if (!selectedGameId || !user) return;
     
     // Use localBattingOrder as the base for rapid sequential moves
     const currentOrder = [...localBattingOrder];
-    const index = currentOrder.indexOf(playerId);
-    if (index === -1) return;
+    const currentIndex = currentOrder.indexOf(playerId);
+    if (currentIndex === -1 || currentIndex === newPositionIndex) return;
 
-    if (direction === 'up' && index > 0) {
-      [currentOrder[index], currentOrder[index - 1]] = [currentOrder[index - 1], currentOrder[index]];
-    } else if (direction === 'down' && index < currentOrder.length - 1) {
-      [currentOrder[index], currentOrder[index + 1]] = [currentOrder[index + 1], currentOrder[index]];
-    } else {
-      return; // No move possible
-    }
+    // Remove the player from their current position
+    currentOrder.splice(currentIndex, 1);
+    // Insert the player at the new position
+    currentOrder.splice(newPositionIndex, 0, playerId);
 
     // Update local state immediately for smooth UI
     setLocalBattingOrder(currentOrder);
@@ -855,6 +858,14 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${selectedGameId}`);
     }
+  };
+
+  const handleMovePlayer = (playerId: string, direction: 'up' | 'down') => {
+    const currentIndex = localBattingOrder.indexOf(playerId);
+    if (currentIndex === -1) return;
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= localBattingOrder.length) return;
+    handleMovePlayerToPosition(playerId, newIndex);
   };
 
   // Sync state with URL
@@ -1114,6 +1125,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       await addDoc(collection(db, 'games'), {
         name: gameName.trim(),
         date: new Date(gameDate + 'T12:00:00'),
+        time: gameTime || null,
+        isHome: gameMode === 'scrimmage' ? null : isHome,
         rsvps: playerRSVPs,
         battingOrder: initialBattingOrder,
         mode: gameMode,
@@ -1123,6 +1136,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       navigate('/games');
       setGameName('');
       setGameDate(getLocalDateString());
+      setGameTime('');
+      setIsHome(true);
       setGameMode('standard');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'games');
@@ -1183,11 +1198,15 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
   const handleUpdateGameDetails = async () => {
     if (!selectedGameId || !editGameName.trim()) return;
+    const game = games.find(g => g.id === selectedGameId);
+    if (!game) return;
     try {
       const gameRef = doc(db, 'games', selectedGameId);
       await updateDoc(gameRef, {
         name: editGameName.trim(),
-        date: new Date(editGameDate + 'T12:00:00')
+        date: new Date(editGameDate + 'T12:00:00'),
+        time: editGameTime || null,
+        isHome: game.mode === 'scrimmage' ? null : editIsHome
       });
       setIsEditingRSVPs(false);
     } catch (error) {
@@ -1458,11 +1477,35 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     
     let hittingSchedule: number[];
     if (validSchedules.length > 0) {
-      hittingSchedule = validSchedules[Math.floor(Math.random() * validSchedules.length)];
+      let bestSchedules: number[][] = [];
+      let maxScore = -1;
+
+      for (const schedule of validSchedules) {
+        let score = 0;
+        // Priority: group that batted 1st bats 5th, group that batted 2nd bats 6th
+        if (schedule[4] === schedule[0]) score += 100;
+        if (schedule[5] === schedule[1]) score += 100;
+        
+        // Secondary priority: longest wait time
+        const wait5 = 4 - schedule.indexOf(schedule[4]); 
+        score += wait5;
+        
+        const wait6 = 5 - schedule.indexOf(schedule[5]);
+        score += wait6;
+
+        if (score > maxScore) {
+          maxScore = score;
+          bestSchedules = [schedule];
+        } else if (score === maxScore) {
+          bestSchedules.push(schedule);
+        }
+      }
+      hittingSchedule = bestSchedules[Math.floor(Math.random() * bestSchedules.length)];
     } else {
-      // Fallback: just satisfy P/C constraints, trying to balance hits
+      // Fallback: just satisfy P/C constraints, trying to balance hits and wait time
       hittingSchedule = [];
       const counts = [0, 0, 0, 0];
+      const lastBatted = [-1, -1, -1, -1];
       for (let inning = 1; inning <= 6; inning++) {
         const inningKey = inning.toString();
         const pId = game.lineup?.[inningKey]?.['Pitcher'];
@@ -1470,12 +1513,15 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
         
         let bestGroup = -1;
         let minHits = 999;
+        let maxWait = -1;
         
         const availableGroups = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
         for (const j of availableGroups) {
           if ((!pId || !groups[j].includes(pId)) && (!cId || !groups[j].includes(cId))) {
-            if (counts[j] < minHits) {
+            const wait = lastBatted[j] === -1 ? 999 : inning - lastBatted[j];
+            if (counts[j] < minHits || (counts[j] === minHits && wait > maxWait)) {
               minHits = counts[j];
+              maxWait = wait;
               bestGroup = j;
             }
           }
@@ -1484,6 +1530,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
         if (bestGroup === -1) bestGroup = 0;
         hittingSchedule.push(bestGroup);
         counts[bestGroup]++;
+        lastBatted[bestGroup] = inning;
       }
     }
 
@@ -2179,6 +2226,34 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                     className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
                                   />
                                 </div>
+                                <div className="space-y-1.5">
+                                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Game Time</label>
+                                  <input 
+                                    type="time" 
+                                    value={editGameTime}
+                                    onChange={(e) => setEditGameTime(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                                  />
+                                </div>
+                                {game.mode !== 'scrimmage' && (
+                                  <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Home / Away</label>
+                                    <div className="flex bg-slate-700 p-1 rounded-2xl border border-slate-600">
+                                      <button
+                                        onClick={() => setEditIsHome(true)}
+                                        className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editIsHome ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                      >
+                                        Home
+                                      </button>
+                                      <button
+                                        onClick={() => setEditIsHome(false)}
+                                        className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${!editIsHome ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                      >
+                                        Away
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <>
@@ -2195,6 +2270,22 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                     {game.mode === 'scrimmage' && (
                                       <span className="px-2 py-0.5 bg-indigo-500 text-white rounded text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20">
                                         Scrimmage
+                                      </span>
+                                    )}
+                                    {game.mode !== 'scrimmage' && (
+                                      <span className={`px-2 py-0.5 ${game.isHome ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'} rounded text-[10px] font-black uppercase tracking-widest shadow-sm`}>
+                                        {game.isHome ? 'Home' : 'Away'}
+                                      </span>
+                                    )}
+                                    {game.time && (
+                                      <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-[10px] font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700">
+                                        {(() => {
+                                          const [hours, minutes] = game.time.split(':');
+                                          const h = parseInt(hours);
+                                          const ampm = h >= 12 ? 'PM' : 'AM';
+                                          const h12 = h % 12 || 12;
+                                          return `${h12}:${minutes} ${ampm}`;
+                                        })()}
                                       </span>
                                     )}
                                   </div>
@@ -2240,6 +2331,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                   setEditGameName(game.name);
                                   const dateStr = game.date?.toDate ? getLocalDateString(game.date.toDate()) : getLocalDateString(new Date(game.date));
                                   setEditGameDate(dateStr);
+                                  setEditGameTime(game.time || '');
+                                  setEditIsHome(game.isHome !== false); // Default to true if undefined
                                   setIsEditingRSVPs(true);
                                 }
                               }}
@@ -2579,9 +2672,29 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                       className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group gap-4"
                                     >
                                       <div className="flex items-center gap-4 sm:gap-6">
-                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-black shadow-xl shadow-slate-900/20 dark:shadow-indigo-900/20 group-hover:scale-110 transition-transform flex-shrink-0">
-                                          {index + 1}
-                                        </div>
+                                        {game.mode !== 'scrimmage' ? (
+                                          <div className="relative group/order">
+                                            <select
+                                              disabled={game.isLocked}
+                                              value={index}
+                                              onChange={(e) => handleMovePlayerToPosition(playerId, parseInt(e.target.value))}
+                                              className={`absolute inset-0 w-full h-full opacity-0 z-10 ${game.isLocked ? 'cursor-not-allowed' : 'cursor-pointer'} bg-white dark:bg-slate-900 text-slate-900 dark:text-white`}
+                                            >
+                                              {inOrder.map((_, i) => (
+                                                <option key={i} value={i} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                                                  {i + 1}
+                                                </option>
+                                              ))}
+                                            </select>
+                                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-black shadow-xl shadow-slate-900/20 dark:shadow-indigo-900/20 group-hover:scale-110 transition-transform flex-shrink-0">
+                                              {index + 1}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-black shadow-xl shadow-slate-900/20 dark:shadow-indigo-900/20 group-hover:scale-110 transition-transform flex-shrink-0">
+                                            {index + 1}
+                                          </div>
+                                        )}
                                         <div className="min-w-0 flex-1">
                                           <p className="font-black text-slate-900 dark:text-white text-lg sm:text-xl tracking-tight truncate">
                                             {player.name}
@@ -2639,30 +2752,32 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                                             </button>
                                           ))}
                                         </div>
-                                        <div className="flex sm:flex-col gap-1">
-                                          <button
-                                            onClick={() => handleMovePlayer(playerId, 'up')}
-                                            disabled={index === 0}
-                                            className={`p-2 sm:p-1 rounded-lg transition-all ${
-                                              index === 0 
-                                                ? 'text-slate-100 dark:text-slate-800 cursor-not-allowed' 
-                                                : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
-                                            }`}
-                                          >
-                                            <ChevronUp size={20} />
-                                          </button>
-                                          <button
-                                            onClick={() => handleMovePlayer(playerId, 'down')}
-                                            disabled={index === inOrder.length - 1}
-                                            className={`p-2 sm:p-1 rounded-lg transition-all ${
-                                              index === inOrder.length - 1 
-                                                ? 'text-slate-100 dark:text-slate-800 cursor-not-allowed' 
-                                                : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
-                                            }`}
-                                          >
-                                            <ChevronDown size={20} />
-                                          </button>
-                                        </div>
+                                        {game.mode === 'scrimmage' && (
+                                          <div className="flex sm:flex-col gap-1">
+                                            <button
+                                              onClick={() => handleMovePlayer(playerId, 'up')}
+                                              disabled={index === 0}
+                                              className={`p-2 sm:p-1 rounded-lg transition-all ${
+                                                index === 0 
+                                                  ? 'text-slate-100 dark:text-slate-800 cursor-not-allowed' 
+                                                  : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                                              }`}
+                                            >
+                                              <ChevronUp size={20} />
+                                            </button>
+                                            <button
+                                              onClick={() => handleMovePlayer(playerId, 'down')}
+                                              disabled={index === inOrder.length - 1}
+                                              className={`p-2 sm:p-1 rounded-lg transition-all ${
+                                                index === inOrder.length - 1 
+                                                  ? 'text-slate-100 dark:text-slate-800 cursor-not-allowed' 
+                                                  : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                                              }`}
+                                            >
+                                              <ChevronDown size={20} />
+                                            </button>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   );
@@ -3773,6 +3888,34 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                         className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all text-base sm:text-lg font-medium text-slate-900 dark:text-white"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Game Time (Optional)</label>
+                      <input 
+                        type="time" 
+                        value={gameTime}
+                        onChange={(e) => setGameTime(e.target.value)}
+                        className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all text-base sm:text-lg font-medium text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    {gameMode !== 'scrimmage' && (
+                      <div className="space-y-2">
+                        <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Home / Away</label>
+                        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
+                          <button
+                            onClick={() => setIsHome(true)}
+                            className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${isHome ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+                          >
+                            Home
+                          </button>
+                          <button
+                            onClick={() => setIsHome(false)}
+                            className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${!isHome ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+                          >
+                            Away
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-6 space-y-3">

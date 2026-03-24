@@ -1911,6 +1911,13 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       "Shortstop", "Left Field", "Center Field", "Right Field"
     ];
 
+    const isPosLocked = (pos: string, inning: number) => {
+      if (game.lockedInnings?.includes(inning)) return true;
+      if (game.lockedPositions?.includes(pos)) return true;
+      if (game.mode === 'scrimmage' && (pos === "Pitcher" || pos === "Catcher")) return true;
+      return false;
+    };
+
     const canPlay = (player: Player, pos: string) => {
       if (pos === "Pitcher") return (player.positions || []).includes("Starting Pitcher") || (player.positions || []).includes("Relief Pitcher");
       return (player.positions || []).includes(pos);
@@ -1932,32 +1939,43 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
     // Helper to try and fill a vacant position
     const tryToFillPosition = (inning: number, pos: string, currentInningLineup: any): boolean => {
-      const assignedIds = new Set(Object.values(currentInningLineup).filter(id => id && typeof id === 'string'));
       const hittingGroupIdx = currentInningLineup['HittingGroup'];
       const hittingGroupIds = (game.mode === 'scrimmage' && hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)])
         ? game.scrimmageGroups[parseInt(hittingGroupIdx)]
         : [];
 
-      // 1. Try Hitting Group (Extra Hitters) first if scrimmage
+      // 1. Try Extra Hitters (EH positions) first if scrimmage
       if (game.mode === 'scrimmage') {
-        const hgCandidates = hittingGroupIds.filter(id => !assignedIds.has(id));
-        const preferred = hgCandidates.filter(id => {
-          const p = players.find(player => player.id === id);
-          return p && canPlay(p, pos);
-        });
-        
-        if (preferred.length > 0) {
-          currentInningLineup[pos] = preferred[0];
-          return true;
+        const ehPositions = Object.keys(currentInningLineup).filter(k => k.startsWith('Extra Hitter'));
+        for (const ehPos of ehPositions) {
+          const ehPlayerId = currentInningLineup[ehPos];
+          if (ehPlayerId) {
+            const p = players.find(player => player.id === ehPlayerId);
+            if (p && canPlay(p, pos)) {
+              currentInningLineup[pos] = ehPlayerId;
+              delete currentInningLineup[ehPos];
+              return true;
+            }
+          }
         }
       }
 
-      // 2. Try any other available players not in the field
-      const otherCandidates = availablePlayers.filter(p => !assignedIds.has(p.id));
-      const preferredOther = otherCandidates.filter(p => canPlay(p, pos));
+      // 2. Try players on the "Bench" (not in field, not hitting, not in EH)
+      const allAssignedIds = new Set(Object.values(currentInningLineup).filter(id => id && typeof id === 'string'));
+      const benchCandidates = availablePlayers.filter(p => 
+        !hittingGroupIds.includes(p.id) && 
+        !allAssignedIds.has(p.id)
+      );
+
+      const preferred = benchCandidates.filter(p => canPlay(p, pos));
       
-      if (preferredOther.length > 0) {
-        currentInningLineup[pos] = preferredOther[0].id;
+      if (preferred.length > 0) {
+        currentInningLineup[pos] = preferred[0].id;
+        return true;
+      }
+
+      if (benchCandidates.length > 0) {
+        currentInningLineup[pos] = benchCandidates[0].id;
         return true;
       }
 
@@ -1985,6 +2003,28 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       return false;
     };
 
+    // Phase -1: Ensure hitting group members are NOT in the field (Scrimmage only)
+    if (game.mode === 'scrimmage') {
+      for (let inning = 1; inning <= 6; inning++) {
+        const inningKey = inning.toString();
+        const inningLineup = newLineup[inningKey] || {};
+        const hittingGroupIdx = inningLineup['HittingGroup'];
+        const hittingGroupIds = (hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)])
+          ? game.scrimmageGroups[parseInt(hittingGroupIdx)]
+          : [];
+
+        const allPositions = Object.keys(inningLineup).filter(k => k !== 'HittingGroup');
+        for (const pos of allPositions) {
+          const playerId = inningLineup[pos];
+          if (playerId && hittingGroupIds.includes(playerId)) {
+            delete inningLineup[pos];
+            fixedAny = true;
+          }
+        }
+        newLineup[inningKey] = inningLineup;
+      }
+    }
+
     // Phase 0: Fix duplicate players in an inning
     for (let inning = 1; inning <= 6; inning++) {
       const inningKey = inning.toString();
@@ -2007,7 +2047,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
             return;
           }
 
-          const lockedPositionsForPlayer = positions.filter(pos => game.lockedPositions?.includes(pos));
+          const lockedPositionsForPlayer = positions.filter(pos => isPosLocked(pos, inning));
           
           if (lockedPositionsForPlayer.length > 1) {
             // More than one locked position for this player - can't fix
@@ -2039,6 +2079,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       const inningLineup = newLineup[inningKey] || {};
       
       for (const pos of fieldPositions) {
+        if (isPosLocked(pos, inning)) continue;
         const playerId = inningLineup[pos];
         if (playerId && game.rsvps[playerId] === RSVPStatus.NO) {
           delete inningLineup[pos];
@@ -2083,7 +2124,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
           for (const pos of fieldPositions) {
             // Skip locked positions unless they are empty
-            if (game.lockedPositions?.includes(pos) && inningLineup[pos]) continue;
+            if (isPosLocked(pos, inning) && inningLineup[pos]) continue;
 
             const currentPlayerId = inningLineup[pos] as string;
             if (!currentPlayerId) {
@@ -2124,8 +2165,9 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
           const isBenched = (inning: number) => {
             if (inning < 1 || inning > 6) return false;
             const lineup = newLineup[inning.toString()] || {};
+            // In scrimmage, EH positions are also considered benched for defense
             const assignedToField = Object.entries(lineup)
-              .filter(([k]) => k !== 'HittingGroup')
+              .filter(([k]) => k !== 'HittingGroup' && !k.startsWith('Extra Hitter'))
               .map(([_, id]) => id);
             const hittingGroupIdx = lineup['HittingGroup'];
             const hittingGroupIds = (game.mode === 'scrimmage' && hittingGroupIdx != null && game.scrimmageGroups?.[parseInt(hittingGroupIdx)])
@@ -2145,14 +2187,9 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                 const inningKey = targetInning.toString();
                 const inningLineup = newLineup[inningKey] || {};
                 
-                // Get all positions currently in this inning (including Extra Hitters)
-                const positionsInInning = Object.keys(inningLineup).filter(k => k !== 'HittingGroup');
-                // Also consider standard positions that might be empty
-                const allPossiblePositions = Array.from(new Set([...fieldPositions, ...positionsInInning]));
-
-                for (const pos of allPossiblePositions) {
-                  if (game.lockedPositions?.includes(pos) && inningLineup[pos]) continue;
-                  if (game.lockedInnings?.includes(targetInning)) continue;
+                // Only target standard field positions to resolve a benching issue
+                for (const pos of fieldPositions) {
+                  if (isPosLocked(pos, targetInning) && inningLineup[pos]) continue;
 
                   const currentPlayerId = inningLineup[pos] as string;
                   

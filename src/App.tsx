@@ -524,7 +524,10 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                                             <span className="w-6 h-6 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
                                               {player?.name.charAt(0) || '?'}
                                             </span>
-                                            <span className="font-bold text-slate-700 dark:text-slate-200">{player?.name || 'Unknown Player'}</span>
+                                            <span className="font-bold text-slate-700 dark:text-slate-200">
+                                              {player?.name || 'Unknown Player'}
+                                              {player?.jerseyNumber && <span className="ml-1 text-slate-400 dark:text-slate-500 text-xs">#{player.jerseyNumber}</span>}
+                                            </span>
                                           </div>
                                         );
                                       })}
@@ -546,7 +549,10 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                                     <span className="w-6 h-6 bg-slate-900 dark:bg-emerald-600 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
                                       {index + 1}
                                     </span>
-                                    <span className="font-bold text-slate-700 dark:text-slate-200">{player?.name || 'Unknown Player'}</span>
+                                    <span className="font-bold text-slate-700 dark:text-slate-200">
+                                      {player?.name || 'Unknown Player'}
+                                      {player?.jerseyNumber && <span className="ml-1 text-slate-400 dark:text-slate-500 text-xs">#{player.jerseyNumber}</span>}
+                                    </span>
                                   </div>
                                 );
                               })
@@ -581,16 +587,18 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                                         return p ? (
                                           <span key={playerId} className="px-2 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-md text-xs font-bold shadow-sm border border-slate-200 dark:border-slate-700">
                                             {p.name.split(' ')[0]}
+                                            {p.jerseyNumber && <span className="ml-1 text-slate-400 dark:text-slate-500 text-[10px]">#{p.jerseyNumber}</span>}
                                           </span>
                                         ) : null;
                                       })}
                                       {Object.entries(inning)
                                         .filter(([pos]) => pos.startsWith('Extra Hitter'))
                                         .map(([pos, playerId]) => {
-                                          const p = playersMap[playerId];
+                                          const p = players.find(p => p.id === playerId);
                                           return p ? (
                                             <span key={playerId} className="px-2 py-1 bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-200 rounded-md text-xs font-bold shadow-sm border border-indigo-200 dark:border-indigo-700">
                                               EH: {p.name.split(' ')[0]}
+                                              {p.jerseyNumber && <span className="ml-1 text-indigo-400 dark:text-indigo-300 text-[10px]">#{p.jerseyNumber}</span>}
                                             </span>
                                           ) : null;
                                         })}
@@ -613,6 +621,7 @@ function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode:
                                           <span className={`text-[10px] font-black w-6 shrink-0 ${isDuplicate ? 'text-rose-400 dark:text-rose-500' : 'text-slate-400 dark:text-slate-400'}`}>{getPositionAbbreviation(pos)}</span>
                                           <span className={`text-xs font-bold truncate ${isDuplicate ? 'text-rose-700 dark:text-rose-300' : 'text-slate-700 dark:text-slate-200'}`}>
                                             {player?.name || <span className="italic opacity-30">Empty</span>}
+                                            {player?.jerseyNumber && <span className="ml-1 text-slate-400 dark:text-slate-500 text-[10px]">#{player.jerseyNumber}</span>}
                                           </span>
                                         </div>
                                       );
@@ -4779,13 +4788,13 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
                             <>
                               <button 
                                 onClick={() => startEdit(player)}
-                                className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                               >
                                 <Edit2 size={18} />
                               </button>
                               <button 
                                 onClick={() => handleDeletePlayer(player)}
-                                className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-rose-500 hover:bg-red-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-rose-500 hover:bg-red-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
                               >
                                 <Trash2 size={18} />
                               </button>

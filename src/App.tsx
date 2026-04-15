@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Component, ReactNode } from 'react';
+import React, { useState, useEffect, Component, ReactNode, useMemo, useCallback, useRef } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom';
 import { 
   collection, 
@@ -12,7 +12,9 @@ import {
   updateDoc, 
   serverTimestamp,
   orderBy,
-  getDocFromServer
+  getDocFromServer,
+  getDoc,
+  getDocs
 } from 'firebase/firestore';
 import { 
   signInWithPopup, 
@@ -21,7 +23,64 @@ import {
   User,
   signOut
 } from 'firebase/auth';
+import { 
+  Plus, 
+  Trash2, 
+  Edit2, 
+  LogIn, 
+  LogOut, 
+  User as UserIcon, 
+  Users, 
+  Trophy, 
+  Save, 
+  X, 
+  ClipboardList, 
+  Check, 
+  AlertCircle, 
+  RotateCcw, 
+  LayoutGrid, 
+  RefreshCw, 
+  Lock, 
+  Unlock, 
+  ChevronLeft, 
+  ChevronRight, 
+  ChevronUp, 
+  ChevronDown, 
+  Menu, 
+  Calendar, 
+  History, 
+  Share2, 
+  ExternalLink, 
+  Copy, 
+  Sun, 
+  Moon, 
+  Wrench 
+} from 'lucide-react';
+import { Toaster, toast } from 'sonner';
+
+// Modularized imports
 import { db, auth } from './firebase';
+import { 
+  RSVPStatus, 
+  OperationType, 
+  Player, 
+  TeamSettings, 
+  Game, 
+  EditingCell, 
+  DeleteConfirmation 
+} from './types';
+import { 
+  POSITION_ORDER, 
+  POSITIONS, 
+  POSITION_MAPPING, 
+  ALL_POSITIONS 
+} from './constants';
+import { 
+  getLocalDateString, 
+  getPositionAbbreviation, 
+  handleFirestoreError 
+} from './lib/utils';
+import { firebaseService } from './services/firebaseService';
 
 // --- Connection Test ---
 async function testConnection() {
@@ -34,113 +93,6 @@ async function testConnection() {
   }
 }
 testConnection();
-
-import { Plus, Trash2, Edit2, LogIn, LogOut, User as UserIcon, Users, Trophy, Save, X, ClipboardList, Check, AlertCircle, RotateCcw, LayoutGrid, RefreshCw, Lock, Unlock, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Calendar, History, Share2, ExternalLink, Copy, Sun, Moon, Wrench } from 'lucide-react';
-import { Toaster, toast } from 'sonner';
-
-// --- Types ---
-interface Player {
-  id: string;
-  name: string;
-  positions: string[];
-  battingOrder?: number;
-  jerseyNumber?: string;
-  uid: string;
-  createdAt: any;
-}
-
-interface TeamSettings {
-  id?: string;
-  allowDesignatedHitter: boolean;
-  allowOutfieldTwiceInRow: boolean;
-  publicSchedule?: boolean;
-  uid: string;
-}
-
-interface Game {
-  id: string;
-  name: string;
-  date: any;
-  time?: string;
-  isHome?: boolean;
-  rsvps: Record<string, RSVPStatus>;
-  battingOrder?: string[];
-  lineup?: Record<string, Record<string, string>>; // Inning -> Position -> PlayerId
-  isLocked?: boolean;
-  lockedInnings?: number[];
-  lockedPositions?: string[];
-  uid: string;
-  createdAt: any;
-  mode?: 'standard' | 'scrimmage';
-  scrimmageGroups?: string[][];
-  scrimmageStep?: number;
-}
-
-enum RSVPStatus {
-  YES = 'Yes',
-  NO = 'No',
-  TENTATIVE = 'Tentative'
-}
-
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string;
-    email?: string;
-    emailVerified?: boolean;
-    isAnonymous?: boolean;
-    tenantId?: string | null;
-    providerInfo: {
-      providerId: string;
-      displayName: string | null;
-      email: string | null;
-      photoUrl: string | null;
-    }[];
-  }
-}
-
-// --- Error Handling ---
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email || undefined,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
-    operationType,
-    path
-  };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
-
-const getLocalDateString = (date?: Date) => {
-  const now = date || new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 // --- Error Boundary ---
 interface ErrorBoundaryProps {
@@ -196,55 +148,6 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return this.props.children;
   }
 }
-
-// --- Helper Functions ---
-
-const POSITION_ORDER: Record<string, number> = {
-  "Pitcher": 1,
-  "Starting Pitcher": 1,
-  "Relief Pitcher": 1,
-  "Catcher": 2,
-  "First Base": 3,
-  "Second Base": 4,
-  "Third Base": 5,
-  "Shortstop": 6,
-  "Left Field": 7,
-  "Center Field": 8,
-  "Right Field": 9,
-  "Designated Hitter": 10
-};
-
-const POSITIONS = [
-  "Starting Pitcher",
-  "Relief Pitcher",
-  "Catcher",
-  "First Base",
-  "Second Base",
-  "Third Base",
-  "Shortstop",
-  "Left Field",
-  "Center Field",
-  "Right Field"
-];
-
-const POSITION_MAPPING: Record<string, string> = {
-  "Starting Pitcher": "SP",
-  "Relief Pitcher": "RP",
-  "Pitcher": "P",
-  "Catcher": "C",
-  "First Base": "1B",
-  "Second Base": "2B",
-  "Third Base": "3B",
-  "Shortstop": "SS",
-  "Left Field": "LF",
-  "Center Field": "CF",
-  "Right Field": "RF",
-  "Designated Hitter": "DH"
-};
-
-const getPositionAbbreviation = (pos: string) => {
-  return POSITION_MAPPING[pos] || pos;
-};
 
 function SharedView({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode: (val: boolean) => void }) {
   const location = useLocation();
@@ -1105,23 +1008,16 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   };
 
   const handleUpdateGameRSVP = async (gameId: string, playerId: string, status: RSVPStatus) => {
-    try {
-      const game = games.find(g => g.id === gameId);
-      if (!game) return;
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
 
-      const newRSVPs = { ...game.rsvps, [playerId]: status };
-      
-      // If changing to NO, we might want to remove from batting order, but let's keep it for now
-      // and just filter in the view to allow easy "re-entry"
-      
-      await updateDoc(doc(db, 'games', gameId), {
-        rsvps: newRSVPs
-      });
-      
-      toast.success(`RSVP updated for ${playersMap[playerId]?.name}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
-    }
+    const newRSVPs = { ...game.rsvps, [playerId]: status };
+    
+    await firebaseService.updateGame(gameId, {
+      rsvps: newRSVPs
+    });
+    
+    toast.success(`RSVP updated for ${playersMap[playerId]?.name}`);
   };
 
   const handleRSVPChange = (playerId: string, status: RSVPStatus) => {
@@ -1147,26 +1043,25 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     const tentativePlayers = players.filter(p => playerRSVPs[p.id] === RSVPStatus.TENTATIVE).map(p => p.id).sort(() => Math.random() - 0.5);
     const initialBattingOrder = [...yesPlayers, ...tentativePlayers];
 
-    try {
-      await addDoc(collection(db, 'games'), {
-        name: gameName.trim(),
-        date: new Date(gameDate + 'T12:00:00'),
-        time: gameTime || null,
-        isHome: gameMode === 'scrimmage' ? null : isHome,
-        rsvps: playerRSVPs,
-        battingOrder: initialBattingOrder,
-        mode: gameMode,
-        uid: user.uid,
-        createdAt: serverTimestamp()
-      });
+    const docRef = await firebaseService.addGame({
+      name: gameName.trim(),
+      date: new Date(gameDate + 'T12:00:00'),
+      time: gameTime || null,
+      isHome: gameMode === 'scrimmage' ? null : isHome,
+      rsvps: playerRSVPs,
+      battingOrder: initialBattingOrder,
+      mode: gameMode,
+      uid: user.uid,
+      createdAt: serverTimestamp()
+    });
+
+    if (docRef) {
       navigate('/games');
       setGameName('');
       setGameDate(getLocalDateString());
       setGameTime('');
       setIsHome(true);
       setGameMode('standard');
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'games');
     }
   };
 
@@ -1212,32 +1107,24 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     const newRSVPs = { ...game.rsvps, [playerId]: newStatus };
     const newBattingOrder = recalculateBattingOrder(game.battingOrder || [], newRSVPs, players);
 
-    try {
-      await updateDoc(doc(db, 'games', gameId), {
-        rsvps: newRSVPs,
-        battingOrder: newBattingOrder
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
-    }
+    await firebaseService.updateGame(gameId, {
+      rsvps: newRSVPs,
+      battingOrder: newBattingOrder
+    });
   };
 
   const handleUpdateGameDetails = async () => {
     if (!selectedGameId || !editGameName.trim()) return;
     const game = selectedGame;
     if (!game) return;
-    try {
-      const gameRef = doc(db, 'games', selectedGameId);
-      await updateDoc(gameRef, {
-        name: editGameName.trim(),
-        date: new Date(editGameDate + 'T12:00:00'),
-        time: editGameTime || null,
-        isHome: game.mode === 'scrimmage' ? null : editIsHome
-      });
-      setIsEditingRSVPs(false);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `games/${selectedGameId}`);
-    }
+    
+    await firebaseService.updateGame(selectedGameId, {
+      name: editGameName.trim(),
+      date: new Date(editGameDate + 'T12:00:00'),
+      time: editGameTime || null,
+      isHome: game.mode === 'scrimmage' ? null : editIsHome
+    });
+    setIsEditingRSVPs(false);
   };
 
   const handleReshuffleLineup = async (gameId: string | null) => {
@@ -1261,17 +1148,13 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
   const handleClearLineup = async (gameId: string | null) => {
     if (!gameId) return;
-    try {
-      await updateDoc(doc(db, 'games', gameId), {
-        lineup: {},
-        lockedInnings: [],
-        lockedPositions: []
-      });
-      setShowClearLineupConfirm(false);
-      toast.success('Lineup cleared successfully');
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
-    }
+    await firebaseService.updateGame(gameId, {
+      lineup: {},
+      lockedInnings: [],
+      lockedPositions: []
+    });
+    setShowClearLineupConfirm(false);
+    toast.success('Lineup cleared successfully');
   };
 
   const handleSplitScrimmageGroups = async (gameId: string | null) => {
@@ -2356,20 +2239,16 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       return;
     }
 
-    try {
-      await addDoc(collection(db, 'players'), {
-        name: newName.trim(),
-        jerseyNumber: newJerseyNumber.trim(),
-        positions: newPositions,
-        uid: user.uid,
-        createdAt: serverTimestamp()
-      });
-      setNewName('');
-      setNewJerseyNumber('');
-      setNewPositions([]);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'players');
-    }
+    await firebaseService.addPlayer({
+      name: newName.trim(),
+      jerseyNumber: newJerseyNumber.trim(),
+      positions: newPositions,
+      uid: user.uid,
+      createdAt: serverTimestamp()
+    });
+    setNewName('');
+    setNewJerseyNumber('');
+    setNewPositions([]);
   };
 
   const handleDeletePlayer = (player: Player) => {
@@ -2384,17 +2263,14 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
   const confirmDelete = async () => {
     const { type, id } = deleteConfirmation;
-    try {
-      if (type === 'player') {
-        await deleteDoc(doc(db, 'players', id));
-      } else {
-        await deleteDoc(doc(db, 'games', id));
-        if (selectedGameId === id) navigate('/games');
-      }
-      setDeleteConfirmation(prev => ({ ...prev, isOpen: false }));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `${type}s/${id}`);
+    if (!id) return;
+    if (type === 'player') {
+      await firebaseService.deletePlayer(id);
+    } else {
+      await firebaseService.deleteGame(id);
+      if (selectedGameId === id) navigate('/games');
     }
+    setDeleteConfirmation(prev => ({ ...prev, isOpen: false }));
   };
 
   const startEdit = (player: Player) => {
@@ -2413,25 +2289,17 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
   const handleUpdatePlayer = async (id: string) => {
     if (!editName.trim() || editPositions.length === 0) return;
-    try {
-      await updateDoc(doc(db, 'players', id), {
-        name: editName.trim(),
-        jerseyNumber: editJerseyNumber.trim(),
-        positions: editPositions
-      });
-      setEditingId(null);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `players/${id}`);
-    }
+    await firebaseService.updatePlayer(id, {
+      name: editName.trim(),
+      jerseyNumber: editJerseyNumber.trim(),
+      positions: editPositions
+    });
+    setEditingId(null);
   };
 
   const handleUpdateSettings = async (updates: Partial<TeamSettings>) => {
     if (!user) return;
-    try {
-      await updateDoc(doc(db, 'settings', user.uid), updates);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `settings/${user.uid}`);
-    }
+    await firebaseService.updateSettings(user.uid, updates);
   };
 
   if (loading) {

@@ -1,6 +1,12 @@
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import { POSITION_MAPPING } from "../constants";
 import { OperationType, FirestoreErrorInfo } from "../types";
 import { auth } from "../firebase";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export const getLocalDateString = (date?: Date) => {
   const now = date || new Date();

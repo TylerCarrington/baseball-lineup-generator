@@ -79,8 +79,10 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-xl">
-            <Trophy className="text-slate-900 dark:text-white" size={24} />
+          <div className="flex items-center gap-3 font-bold text-xl">
+            <div className="p-1.5 bg-emerald-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-emerald-600/20">
+              <Trophy size={16} />
+            </div>
             <span className="text-slate-900 dark:text-white">Lineup+</span>
           </div>
           <div className="flex items-center gap-4">

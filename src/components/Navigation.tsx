@@ -27,8 +27,8 @@ export const Navigation: React.FC<NavigationProps> = ({
             onClick={() => handleTabChange('games')}
             className="flex items-center gap-2 sm:gap-3 cursor-pointer group"
           >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-900 dark:bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-              <Trophy size={18} className="sm:size-20" />
+            <div className="p-1.5 w-8 h-8 sm:w-10 sm:h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-600/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+              <Trophy size={18} />
             </div>
             <span className="font-black text-lg sm:text-xl tracking-tighter text-slate-900 dark:text-white uppercase transition-colors">Lineup+</span>
           </div>

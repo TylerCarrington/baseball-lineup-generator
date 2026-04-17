@@ -66,14 +66,16 @@ export function GamesTab({
             variant={settings?.publicSchedule ? 'secondary' : 'outline'}
             onClick={() => {
               if (settings?.publicSchedule) {
-                handleCopyLink(`${window.location.origin}${window.location.pathname}#/shared/${user?.uid}/games`);
+                const link = `${window.location.origin}${window.location.pathname}#/shared/${user?.uid}/games`;
+                handleCopyLink(link);
+                window.open(link, '_blank');
               } else {
                 handleTabChange('settings');
               }
             }}
             icon={copySuccess ? Check : Share2}
             className="flex-1 sm:flex-none"
-            title={settings?.publicSchedule ? 'Copy public schedule link' : 'Enable public sharing in settings'}
+            title={settings?.publicSchedule ? 'Copy public schedule link and open' : 'Enable public sharing in settings'}
           >
             {copySuccess ? 'Copied!' : 'Share'}
           </Button>

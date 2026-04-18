@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { RefreshCw, ChevronUp, ChevronDown, AlertCircle } from 'lucide-react';
 import { Game, Player, RSVPStatus } from '../../types';
 import { getPositionAbbreviation } from '../../lib/utils';
+import { NotAttendingList } from '../common/NotAttendingList';
 
 interface BattingOrderViewProps {
   game: Game;
@@ -12,6 +13,7 @@ interface BattingOrderViewProps {
   handleMovePlayerToPosition?: (playerId: string, newPositionIndex: number) => Promise<void>;
   handleUpdateGameRSVP?: (gameId: string, playerId: string, status: RSVPStatus) => Promise<void>;
   handleMovePlayer?: (playerId: string, direction: 'up' | 'down') => void;
+  previousGame?: Game;
 }
 
 interface BattingOrderRowProps {
@@ -25,6 +27,7 @@ interface BattingOrderRowProps {
   handleUpdateGameRSVP?: (gameId: string, playerId: string, status: RSVPStatus) => Promise<void>;
   handleMovePlayer?: (playerId: string, direction: 'up' | 'down') => void;
   inOrder: string[];
+  previousGame?: Game;
 }
 
 const BattingOrderRow = React.memo<BattingOrderRowProps>(({
@@ -37,8 +40,18 @@ const BattingOrderRow = React.memo<BattingOrderRowProps>(({
   handleMovePlayerToPosition,
   handleUpdateGameRSVP,
   handleMovePlayer,
-  inOrder
+  inOrder,
+  previousGame
 }) => {
+  const previousPosition = React.useMemo(() => {
+    if (!previousGame) return null;
+    const wasOut = previousGame.rsvps?.[player.id] === RSVPStatus.NO;
+    if (wasOut) return 'OUT';
+    const posIndex = previousGame.battingOrder?.indexOf(player.id);
+    if (posIndex !== undefined && posIndex !== -1) return `#${posIndex + 1}`;
+    return null;
+  }, [previousGame, player.id]);
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group gap-4">
       <div className="flex items-center gap-4 sm:gap-6">
@@ -66,12 +79,19 @@ const BattingOrderRow = React.memo<BattingOrderRowProps>(({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="font-black text-slate-900 dark:text-white text-lg sm:text-xl tracking-tight truncate">
-            {player.name}
-            {player.jerseyNumber && (
-              <span className="text-sm text-slate-400 dark:text-slate-500 ml-2">#{player.jerseyNumber}</span>
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
+            <p className="font-black text-slate-900 dark:text-white text-lg sm:text-xl tracking-tight truncate">
+              {player.name}
+              {player.jerseyNumber && (
+                <span className="text-sm text-slate-400 dark:text-slate-500 ml-2">#{player.jerseyNumber}</span>
+              )}
+            </p>
+            {!readOnly && previousPosition && (
+              <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-100 dark:border-amber-500/20 mt-0.5 sm:mt-0">
+                Prev: {previousPosition}
+              </span>
             )}
-          </p>
+          </div>
           {game.lineup ? (
             <div className="flex flex-wrap gap-x-1.5 gap-y-1 mt-1.5">
               {[1, 2, 3, 4, 5, 6].map(inning => {
@@ -94,7 +114,7 @@ const BattingOrderRow = React.memo<BattingOrderRowProps>(({
           )}
         </div>
       </div>
-      {!readOnly && (
+      {!readOnly && !game.isLocked && (
         <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 border-slate-50 dark:border-slate-800 pt-3 sm:pt-0">
           <div className="flex gap-1 flex-1 sm:flex-none">
             {[RSVPStatus.YES, RSVPStatus.TENTATIVE, RSVPStatus.NO].map(status => (
@@ -156,6 +176,7 @@ export const BattingOrderView: React.FC<BattingOrderViewProps> = ({
   handleMovePlayerToPosition,
   handleUpdateGameRSVP,
   handleMovePlayer,
+  previousGame,
 }) => {
   const inOrder = useMemo(() => localBattingOrder.filter(id =>
     players.some(p => p.id === id) &&
@@ -220,45 +241,20 @@ export const BattingOrderView: React.FC<BattingOrderViewProps> = ({
                 handleUpdateGameRSVP={handleUpdateGameRSVP}
                 handleMovePlayer={handleMovePlayer}
                 inOrder={inOrder}
+                previousGame={previousGame}
               />
             );
           })}
         </div>
       </div>
 
-      {outPlayers.length > 0 && !readOnly && (
-        <div className="space-y-3 pt-6 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-lg font-black text-slate-400 dark:text-slate-500 uppercase tracking-tight">Not Attending</h3>
-            <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest">{outPlayers.length} Out</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {outPlayers.map(player => (
-              <div key={player.id} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 opacity-60 hover:opacity-100 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-xl flex items-center justify-center text-xs font-black">
-                    OUT
-                  </div>
-                  <p className="font-bold text-slate-500 dark:text-slate-400">
-                    {player.name}
-                    {player.jerseyNumber && (
-                      <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">#{player.jerseyNumber}</span>
-                    )}
-                  </p>
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => handleUpdateGameRSVP?.(game.id, player.id, RSVPStatus.YES)}
-                    className="px-3 py-1.5 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
-                  >
-                    Activate
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <NotAttendingList 
+        outPlayers={outPlayers} 
+        readOnly={readOnly} 
+        gameId={game.id}
+        isLocked={game.isLocked}
+        handleUpdateGameRSVP={handleUpdateGameRSVP} 
+      />
     </div>
   );
 };

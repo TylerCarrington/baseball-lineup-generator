@@ -54,12 +54,12 @@ export const RSVPManager: React.FC<RSVPManagerProps> = ({
                 </p>
               </div>
             </div>
-            <div className="flex gap-1 bg-slate-50 dark:bg-slate-800 p-1.5 rounded-2xl">
+            <div className="flex gap-1 bg-slate-50 dark:bg-slate-800 p-1.5 rounded-2xl w-full sm:w-auto">
               {[RSVPStatus.YES, RSVPStatus.TENTATIVE, RSVPStatus.NO].map(status => (
                 <button
                   key={status}
                   onClick={() => handleUpdateRSVP(game.id, player.id, status)}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  className={`flex-1 px-2 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                     game.rsvps[player.id] === status
                       ? status === RSVPStatus.YES ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' :
                         status === RSVPStatus.NO ? 'bg-rose-600 text-white shadow-lg shadow-rose-500/20' :
@@ -67,7 +67,7 @@ export const RSVPManager: React.FC<RSVPManagerProps> = ({
                       : 'text-slate-400 dark:text-slate-500 hover:bg-white dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300'
                   }`}
                 >
-                  {status}
+                  {status === RSVPStatus.TENTATIVE ? 'Maybe' : status}
                 </button>
               ))}
             </div>

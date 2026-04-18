@@ -10,6 +10,8 @@ export function useGameDetail(selectedGame: Game | null | undefined) {
   const [isEditingRSVPs, setIsEditingRSVPs] = useState(false);
   
   // Game Editing State
+  const [editOpponent, setEditOpponent] = useState('');
+  const [editLocation, setEditLocation] = useState('');
   const [editGameName, setEditGameName] = useState('');
   const [editGameDate, setEditGameDate] = useState('');
   const [editGameTime, setEditGameTime] = useState('');
@@ -41,7 +43,9 @@ export function useGameDetail(selectedGame: Game | null | undefined) {
   }, [selectedGame?.id]);
 
   const resetEditState = (game: Game) => {
-    setEditGameName(game.name);
+    setEditGameName(game.name || '');
+    setEditOpponent(game.opponent || '');
+    setEditLocation(game.location || '');
     const dateStr = game.date?.toDate ? getLocalDateString(game.date.toDate()) : getLocalDateString(new Date(game.date));
     setEditGameDate(dateStr);
     setEditGameTime(game.time || '');
@@ -57,6 +61,10 @@ export function useGameDetail(selectedGame: Game | null | undefined) {
     setEditingCell,
     isEditingRSVPs,
     setIsEditingRSVPs,
+    editOpponent,
+    setEditOpponent,
+    editLocation,
+    setEditLocation,
     editGameName,
     setEditGameName,
     editGameDate,

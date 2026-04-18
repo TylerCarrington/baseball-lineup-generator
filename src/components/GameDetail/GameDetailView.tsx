@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Game, Player, RSVPStatus, OperationType } from '../../types';
 import { GameHeader } from './GameHeader';
@@ -45,6 +45,8 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
     localBattingOrder, setLocalBattingOrder,
     editingCell, setEditingCell,
     isEditingRSVPs, setIsEditingRSVPs,
+    editOpponent, setEditOpponent,
+    editLocation, setEditLocation,
     editGameName, setEditGameName,
     editGameDate, setEditGameDate,
     editGameTime, setEditGameTime,
@@ -115,6 +117,10 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
         onBack={onBack}
         isEditingRSVPs={isEditingRSVPs}
         setIsEditingRSVPs={setIsEditingRSVPs}
+        editOpponent={editOpponent}
+        setEditOpponent={setEditOpponent}
+        editLocation={editLocation}
+        setEditLocation={setEditLocation}
         editGameName={editGameName}
         setEditGameName={setEditGameName}
         editGameDate={editGameDate}
@@ -125,8 +131,14 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
         setEditIsHome={setEditIsHome}
         handleTogglePublish={handleTogglePublish}
         handleUpdateGameDetails={async () => {
+          const generatedName = game.mode === 'scrimmage' 
+            ? 'Scrimmage' 
+            : `${editIsHome ? 'vs' : '@'} ${editOpponent.trim()}`;
+          
           await handleUpdateGameDetails(game.id, {
-            name: editGameName,
+            name: game.mode === 'standard' ? generatedName : editGameName,
+            opponent: game.mode === 'standard' ? editOpponent : undefined,
+            location: editLocation,
             date: editGameDate,
             time: editGameTime,
             isHome: editIsHome
@@ -179,6 +191,22 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
                   handleMovePlayerToPosition={handleMovePlayerToPosition}
                   handleUpdateGameRSVP={handleUpdateRSVP}
                   handleMovePlayer={handleMovePlayer}
+                  previousGame={useMemo(() => {
+                    const standardGames = games
+                      .filter(g => g.mode !== 'scrimmage')
+                      .sort((a, b) => {
+                        const aDate = a.date?.toDate ? a.date.toDate().getTime() : new Date(a.date).getTime();
+                        const bDate = b.date?.toDate ? b.date.toDate().getTime() : new Date(b.date).getTime();
+                        return aDate - bDate;
+                      });
+                    const currentGameDate = game.date?.toDate ? game.date.toDate().getTime() : new Date(game.date).getTime();
+                    return standardGames.reverse().find(g => {
+                      if (g.id === game.id) return false;
+                      const gDate = g.date?.toDate ? g.date.toDate().getTime() : new Date(g.date).getTime();
+                      // We use <= with the ID check to catch another game on the same exact day
+                      return gDate <= currentGameDate;
+                    });
+                  }, [games, game])}
                 />
               )
             ) : (

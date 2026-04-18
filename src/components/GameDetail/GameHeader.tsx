@@ -6,7 +6,8 @@ import {
   RotateCcw, 
   Check, 
   Save, 
-  Edit2 
+  Edit2,
+  MapPin 
 } from 'lucide-react';
 import { Game, RSVPStatus } from '../../types';
 import { 
@@ -19,6 +20,10 @@ interface GameHeaderProps {
   onBack?: () => void;
   isEditingRSVPs?: boolean;
   setIsEditingRSVPs?: (val: boolean) => void;
+  editOpponent?: string;
+  setEditOpponent?: (val: string) => void;
+  editLocation?: string;
+  setEditLocation?: (val: string) => void;
   editGameName?: string;
   setEditGameName?: (val: string) => void;
   editGameDate?: string;
@@ -38,6 +43,10 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   onBack,
   isEditingRSVPs = false,
   setIsEditingRSVPs,
+  editOpponent = '',
+  setEditOpponent,
+  editLocation = '',
+  setEditLocation,
   editGameName = '',
   setEditGameName,
   editGameDate = '',
@@ -81,16 +90,41 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           <div className="flex-1 min-w-0">
             {isEditingRSVPs ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Game Name</label>
-                  <input 
-                    type="text" 
-                    value={editGameName}
-                    onChange={(e) => setEditGameName(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
-                    placeholder="Game Name"
-                  />
-                </div>
+                {game.mode === 'standard' ? (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Opponent</label>
+                      <input 
+                        type="text" 
+                        value={editOpponent}
+                        onChange={(e) => setEditOpponent?.(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                        placeholder="e.g. Vipers"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location</label>
+                      <input 
+                        type="text" 
+                        value={editLocation}
+                        onChange={(e) => setEditLocation?.(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                        placeholder="e.g. Field 4"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location (Optional)</label>
+                    <input 
+                      type="text" 
+                      value={editLocation}
+                      onChange={(e) => setEditLocation?.(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                      placeholder="e.g. Field 4 (Optional)"
+                    />
+                  </div>
+                )}
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Game Date</label>
                   <input 
@@ -171,6 +205,14 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                       {formattedDate}
                     </span>
                   </div>
+                  {game.location && (
+                    <div className="flex items-center gap-2">
+                      <MapPin size={18} className="text-emerald-500" />
+                      <span className="text-base font-bold">
+                        {game.location}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <Users size={18} className="text-emerald-500" />
                     <span className="text-base font-bold">
@@ -183,17 +225,17 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           </div>
 
           {!readOnly && (
-            <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="flex flex-row items-center gap-3 shrink-0 w-full lg:w-auto">
               <button 
                 onClick={() => handleTogglePublish?.(game.id, isLocked)}
-                className={`flex items-center justify-center gap-2 px-8 py-4 rounded-2xl transition-all text-sm font-black border shadow-lg ${
+                className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 sm:px-8 py-3 sm:py-4 rounded-2xl transition-all text-xs sm:text-sm font-black border shadow-lg ${
                   isLocked 
                     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 shadow-emerald-500/5' 
                     : 'bg-white/10 text-white border-white/10 hover:bg-white/20 shadow-black/5'
                 }`}
               >
-                {isLocked ? <RotateCcw size={20} /> : <Check size={20} />}
-                {isLocked ? 'Unpublish' : 'Publish Lineup'}
+                {isLocked ? <RotateCcw size={18} className="sm:size-20" /> : <Check size={18} className="sm:size-20" />}
+                <span>{isLocked ? 'Unpublish' : 'Publish'}</span>
               </button>
               <button 
                 onClick={() => {
@@ -204,14 +246,14 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                     setIsEditingRSVPs?.(true);
                   }
                 }}
-                className={`flex items-center justify-center gap-2 px-8 py-4 rounded-2xl transition-all text-sm font-black border ${
+                className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 sm:px-8 py-3 sm:py-4 rounded-2xl transition-all text-xs sm:text-sm font-black border ${
                   isEditingRSVPs 
                     ? 'bg-emerald-500 text-white border-emerald-500 shadow-xl shadow-emerald-500/30' 
                     : 'bg-white text-slate-900 border-white hover:bg-slate-100 shadow-xl shadow-black/10'
                 }`}
               >
-                {isEditingRSVPs ? <Save size={20} /> : <Edit2 size={20} />}
-                {isEditingRSVPs ? 'Save Changes' : 'Edit Details'}
+                {isEditingRSVPs ? <Save size={18} className="sm:size-20" /> : <Edit2 size={18} className="sm:size-20" />}
+                <span>{isEditingRSVPs ? 'Save' : 'Edit'}</span>
               </button>
             </div>
           )}

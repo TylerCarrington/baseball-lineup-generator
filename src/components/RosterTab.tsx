@@ -362,11 +362,12 @@ export function RosterTab({
               {players.length} / 15 Players
             </Badge>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <Button
               variant={isAddingPlayer ? 'primary' : 'outline'}
               onClick={() => setIsAddingPlayer(!isAddingPlayer)}
-              icon={Plus}
+              icon={isAddingPlayer ? X : Plus}
+              className="flex-1 sm:flex-none"
             >
               {isAddingPlayer ? 'Cancel' : 'Add Player'}
             </Button>
@@ -374,6 +375,7 @@ export function RosterTab({
               variant="outline"
               onClick={startCreateLineup}
               icon={ClipboardList}
+              className="flex-1 sm:flex-none"
             >
               Add Game
             </Button>

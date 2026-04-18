@@ -18,6 +18,8 @@ import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { useSharedData } from '../hooks/useSharedData';
+import { NotAttendingList } from './common/NotAttendingList';
+import { RSVPStatus } from '../types';
 
 interface SharedViewProps {
   darkMode: boolean;
@@ -253,6 +255,29 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                                       );
                                     })}
                                 </div>
+                                {(() => {
+                                  const assignedIds = new Set(Object.values(inning).filter(Boolean) as string[]);
+                                  const benchedPlayers = players.filter(p => 
+                                    selectedGame.rsvps?.[p.id] !== RSVPStatus.NO && 
+                                    !assignedIds.has(p.id)
+                                  );
+
+                                  if (benchedPlayers.length === 0) return null;
+
+                                  return (
+                                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                                      <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Bench</div>
+                                      <div className="flex flex-wrap gap-2">
+                                        {benchedPlayers.map(p => (
+                                          <Badge key={p.id} variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                                            {p.name.split(' ')[0]}
+                                            {p.jerseyNumber && <span className="ml-1 opacity-70 text-[10px]">#{p.jerseyNumber}</span>}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             ))
                           ) : (
@@ -260,6 +285,13 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                               No fielding lineup set yet.
                             </p>
                           )}
+                        </div>
+
+                        <div className="mt-8">
+                          <NotAttendingList 
+                            outPlayers={players.filter(p => selectedGame.rsvps?.[p.id] === RSVPStatus.NO).sort((a, b) => a.name.localeCompare(b.name))} 
+                            readOnly={true} 
+                          />
                         </div>
                       </div>
                     )}
@@ -356,9 +388,33 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                                   <Badge variant="info">Scrimmage</Badge>
                                 )}
                               </div>
-                              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                                {gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                                  {gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                </p>
+                                {game.time && (
+                                  <>
+                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                                      {(() => {
+                                        const [hours, minutes] = game.time.split(':');
+                                        const h = parseInt(hours);
+                                        const ampm = h >= 12 ? 'PM' : 'AM';
+                                        const h12 = h % 12 || 12;
+                                        return `${h12}:${minutes} ${ampm}`;
+                                      })()}
+                                    </p>
+                                  </>
+                                )}
+                                {game.location && (
+                                  <>
+                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                                      {game.location}
+                                    </p>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </Card>

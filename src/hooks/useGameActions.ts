@@ -45,9 +45,11 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
     });
   };
 
-  const handleUpdateGameDetails = async (gameId: string, updates: { name: string; date: string; time?: string | null; isHome: boolean | null }) => {
+  const handleUpdateGameDetails = async (gameId: string, updates: { name: string; opponent?: string; location?: string; date: string; time?: string | null; isHome: boolean | null }) => {
     await firebaseService.updateGame(gameId, {
       name: updates.name.trim(),
+      opponent: updates.opponent?.trim() || undefined,
+      location: updates.location?.trim() || undefined,
       date: new Date(updates.date + 'T12:00:00'),
       time: updates.time || null,
       isHome: updates.isHome

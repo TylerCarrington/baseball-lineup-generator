@@ -33,7 +33,9 @@ export interface TeamSettings {
 
 export interface Game {
   id: string;
-  name: string;
+  name?: string; // Legacy
+  opponent?: string;
+  location?: string;
   date: any;
   time?: string;
   isHome?: boolean;

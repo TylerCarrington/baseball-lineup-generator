@@ -3,6 +3,7 @@ import { Check, Lock, Unlock, AlertCircle, Wrench, RefreshCw, Trash2 } from 'luc
 import { Game, Player, RSVPStatus } from '../../types';
 import { getPositionAbbreviation } from '../../lib/utils';
 import { LineupCell } from '../common/LineupCell';
+import { NotAttendingList } from '../common/NotAttendingList';
 
 interface FieldingLineupViewProps {
   game: Game;
@@ -154,7 +155,8 @@ export const FieldingLineupView: React.FC<FieldingLineupViewProps> = ({
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-50/50 dark:bg-slate-800/50">
-                <th scope="col" className="text-left py-5 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">Position</th>
+                <th scope="col" className="sticky left-0 z-30 bg-slate-50 dark:bg-slate-800 py-5 pl-4 pr-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-r border-slate-100 dark:border-slate-800 shadow-[2px_0_8px_rgba(0,0,0,0.05)] w-14 text-center">Pos</th>
+                <th scope="col" className="text-left py-5 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">Details</th>
                 {[1, 2, 3, 4, 5, 6].map(inning => (
                   <th key={inning} scope="col" className="text-center py-5 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">
                     <div className="flex flex-col items-center gap-2">
@@ -174,19 +176,21 @@ export const FieldingLineupView: React.FC<FieldingLineupViewProps> = ({
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {fieldPositions.map(pos => (
                 <tr key={pos} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                  <th scope="row" className="text-left py-5 px-6 font-black text-slate-900 dark:text-slate-200 text-sm">
+                  <th scope="row" className="sticky left-0 z-20 bg-white dark:bg-slate-900 group-hover:bg-slate-50/50 dark:group-hover:bg-slate-800/50 py-5 pl-4 pr-2 text-center shadow-[2px_0_8px_rgba(0,0,0,0.05)] border-r border-slate-100 dark:border-slate-800 transition-colors">
+                    <span className="inline-flex w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg items-center justify-center text-[10px] text-slate-600 dark:text-slate-300 font-black">
+                      {getPositionAbbreviation(pos)}
+                    </span>
+                  </th>
+                  <th scope="row" className="text-left py-5 px-4 font-black text-slate-900 dark:text-slate-200 text-sm font-normal">
                     <div className="flex items-center gap-3">
                       <button 
                         onClick={() => handleTogglePositionLock(selectedGameId, pos)}
-                        className={`p-1.5 rounded-lg transition-all ${game.lockedPositions?.includes(pos) ? 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : 'text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+                        className={`p-1.5 rounded-lg transition-all shrink-0 ${game.lockedPositions?.includes(pos) ? 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : 'text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'}`}
                         title={game.lockedPositions?.includes(pos) ? "Unlock Position" : "Lock Position"}
                       >
                         {game.lockedPositions?.includes(pos) ? <Lock size={14} /> : <Unlock size={14} />}
                       </button>
-                      <span className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-[10px] text-slate-500 dark:text-slate-400 font-black">
-                        {getPositionAbbreviation(pos)}
-                      </span>
-                      {pos}
+                      <span className="whitespace-nowrap">{pos}</span>
                     </div>
                   </th>
                   {[1, 2, 3, 4, 5, 6].map(inning => {
@@ -227,8 +231,15 @@ export const FieldingLineupView: React.FC<FieldingLineupViewProps> = ({
                   })}
                 </tr>
               ))}
-              <tr className="bg-slate-50/30">
-                <th scope="row" className="text-left py-5 px-6 font-black text-slate-400 text-sm uppercase tracking-widest">Bench</th>
+              <tr className="bg-slate-50/30 dark:bg-slate-800/30">
+                <th scope="row" className="sticky left-0 z-20 bg-slate-50 dark:bg-slate-800 py-5 pl-4 pr-2 text-center shadow-[2px_0_8px_rgba(0,0,0,0.05)] border-r border-slate-100 dark:border-slate-800">
+                  <span className="inline-flex items-center justify-center text-[10px] text-slate-400 font-black">
+                    B
+                  </span>
+                </th>
+                <th scope="row" className="text-left py-5 px-4 font-black text-slate-400 text-sm uppercase tracking-widest relative">
+                  Bench
+                </th>
                 {[1, 2, 3, 4, 5, 6].map((inning, idx) => {
                   const benchedPlayers = benchedPlayersByInning[idx];
 
@@ -264,6 +275,13 @@ export const FieldingLineupView: React.FC<FieldingLineupViewProps> = ({
           </table>
         </div>
       </div>
+
+      <NotAttendingList 
+        outPlayers={players.filter(p => game.rsvps[p.id] === RSVPStatus.NO).sort((a, b) => a.name.localeCompare(b.name))} 
+        readOnly={false} 
+        gameId={game.id}
+        isLocked={isLocked}
+      />
     </div>
   );
 };

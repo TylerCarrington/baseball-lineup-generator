@@ -20,8 +20,9 @@ export function CreateGameView({
   const navigate = useNavigate();
   
   // Internalised state for creation
-  const [gameName, setGameName] = useState('');
-  const [gameNameError, setGameNameError] = useState(false);
+  const [opponent, setOpponent] = useState('');
+  const [opponentError, setOpponentError] = useState(false);
+  const [location, setLocation] = useState('');
   const [gameDate, setGameDate] = useState(getLocalDateString());
   const [gameTime, setGameTime] = useState('');
   const [isHome, setIsHome] = useState(true);
@@ -45,23 +46,29 @@ export function CreateGameView({
   };
 
   const handleCreateGame = async () => {
-    if (!user || !gameName.trim()) {
-      setGameNameError(true);
-      toast.error("Game name is required", {
-        description: "Please provide a name for this game before continuing.",
+    if (gameMode === 'standard' && !opponent.trim()) {
+      setOpponentError(true);
+      toast.error("Opponent is required", {
+        description: "Please specify the opponent for standard games.",
         position: 'top-center',
       });
       return;
     }
-    setGameNameError(false);
+    setOpponentError(false);
 
     // Initial batting order: Yes first, then Tentative
     const yesPlayers = players.filter(p => playerRSVPs[p.id] === RSVPStatus.YES).map(p => p.id).sort(() => Math.random() - 0.5);
     const tentativePlayers = players.filter(p => playerRSVPs[p.id] === RSVPStatus.TENTATIVE).map(p => p.id).sort(() => Math.random() - 0.5);
     const initialBattingOrder = [...yesPlayers, ...tentativePlayers];
 
+    const generatedName = gameMode === 'scrimmage' 
+      ? 'Scrimmage' 
+      : `${isHome ? 'vs' : '@'} ${opponent.trim()}`;
+
     const docRef = await firebaseService.addGame({
-      name: gameName.trim(),
+      name: generatedName,
+      opponent: opponent.trim() || undefined,
+      location: location.trim() || undefined,
       date: new Date(gameDate + 'T12:00:00'),
       time: gameTime || null,
       isHome: gameMode === 'scrimmage' ? null : isHome,
@@ -98,22 +105,62 @@ export function CreateGameView({
             </button>
           </div>
 
+          <div className="mb-6 space-y-3">
+            <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Game Mode</label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setGameMode('standard')}
+                className={`flex items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all ${
+                  gameMode === 'standard'
+                    ? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600 shadow-lg shadow-slate-900/20 dark:shadow-indigo-600/20'
+                    : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                }`}
+              >
+                <Users size={20} />
+                <span className="font-bold">Standard</span>
+              </button>
+              <button
+                onClick={() => setGameMode('scrimmage')}
+                className={`flex items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all ${
+                  gameMode === 'scrimmage'
+                    ? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600 shadow-lg shadow-slate-900/20 dark:shadow-indigo-600/20'
+                    : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                }`}
+              >
+                <ClipboardList size={20} />
+                <span className="font-bold">Scrimmage</span>
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {gameMode === 'standard' && (
+              <div className="space-y-2">
+                <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Opponent</label>
+                <input 
+                  type="text" 
+                  value={opponent}
+                  onChange={(e) => {
+                    setOpponent(e.target.value);
+                    if (e.target.value.trim()) setOpponentError(false);
+                  }}
+                  placeholder="e.g. Vipers"
+                  className={`w-full px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-slate-800 border rounded-2xl focus:outline-none focus:ring-4 transition-all text-base sm:text-lg font-medium text-slate-900 dark:text-white ${
+                    opponentError 
+                      ? 'border-red-500 focus:ring-red-500/10 focus:border-red-500' 
+                      : 'border-slate-200 dark:border-slate-700 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500'
+                  }`}
+                />
+              </div>
+            )}
             <div className="space-y-2">
-              <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Game Name</label>
+              <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Location (Optional)</label>
               <input 
                 type="text" 
-                value={gameName}
-                onChange={(e) => {
-                  setGameName(e.target.value);
-                  if (e.target.value.trim()) setGameNameError(false);
-                }}
-                placeholder="e.g. May 20th - Vipers"
-                className={`w-full px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-slate-800 border rounded-2xl focus:outline-none focus:ring-4 transition-all text-base sm:text-lg font-medium text-slate-900 dark:text-white ${
-                  gameNameError 
-                    ? 'border-red-500 focus:ring-red-500/10 focus:border-red-500' 
-                    : 'border-slate-200 dark:border-slate-700 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500'
-                }`}
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g. Field 4"
+                className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all text-base sm:text-lg font-medium text-slate-900 dark:text-white"
               />
             </div>
             <div className="space-y-2">
@@ -154,44 +201,6 @@ export function CreateGameView({
               </div>
             )}
           </div>
-
-          <div className="mt-6 space-y-3">
-            <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Game Mode</label>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => setGameMode('standard')}
-                className={`flex items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all ${
-                  gameMode === 'standard'
-                    ? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600 shadow-lg shadow-slate-900/20 dark:shadow-indigo-600/20'
-                    : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${gameMode === 'standard' ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                  <ClipboardList size={18} />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-black uppercase tracking-tight">Standard</p>
-                  <p className="text-[10px] opacity-70">Full lineup generation</p>
-                </div>
-              </button>
-              <button
-                onClick={() => setGameMode('scrimmage')}
-                className={`flex items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all ${
-                  gameMode === 'scrimmage'
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/20'
-                    : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${gameMode === 'scrimmage' ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                  <Users size={18} />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-black uppercase tracking-tight">Scrimmage</p>
-                  <p className="text-[10px] opacity-70">Manual P/C & Groups</p>
-                </div>
-              </button>
-            </div>
-          </div>
         </div>
 
         <div className="p-6 sm:p-8">
@@ -218,7 +227,7 @@ export function CreateGameView({
                     <button
                       key={status}
                       onClick={() => handleRSVPChange(player.id, status)}
-                      className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
+                      className={`flex-1 px-3 sm:px-4 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
                         playerRSVPs[player.id] === status
                           ? status === RSVPStatus.YES 
                             ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
@@ -228,7 +237,7 @@ export function CreateGameView({
                           : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
                       }`}
                     >
-                      {status}
+                      {status === RSVPStatus.TENTATIVE ? 'Maybe' : status}
                     </button>
                   ))}
                 </div>

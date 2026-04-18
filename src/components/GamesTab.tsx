@@ -61,7 +61,7 @@ export function GamesTab({
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Game Schedule</h2>
           <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">Manage your {showPastGames ? 'past' : 'upcoming'} games and lineups</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Button
             variant={settings?.publicSchedule ? 'secondary' : 'outline'}
             onClick={() => {
@@ -74,7 +74,7 @@ export function GamesTab({
               }
             }}
             icon={copySuccess ? Check : Share2}
-            className="flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none px-3 sm:px-6 text-xs sm:text-sm"
             title={settings?.publicSchedule ? 'Copy public schedule link and open' : 'Enable public sharing in settings'}
           >
             {copySuccess ? 'Copied!' : 'Share'}
@@ -84,15 +84,15 @@ export function GamesTab({
             variant={showPastGames ? 'primary' : 'outline'}
             onClick={() => setShowPastGames(!showPastGames)}
             icon={History}
-            className="flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none px-3 sm:px-6 text-xs sm:text-sm"
           >
-            {showPastGames ? 'Showing Past' : 'Show Past'}
+            {showPastGames ? 'Past' : 'Upcoming'}
           </Button>
 
           <Button
             onClick={startCreateLineup}
             icon={Plus}
-            className="flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap"
           >
             New Game
           </Button>
@@ -160,9 +160,25 @@ export function GamesTab({
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                        <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
-                          {gameDateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric' })}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                            {gameDateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric' })}
+                          </span>
+                          {game.time && (
+                            <>
+                              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
+                              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                                {(() => {
+                                  const [hours, minutes] = game.time.split(':');
+                                  const h = parseInt(hours);
+                                  const ampm = h >= 12 ? 'PM' : 'AM';
+                                  const h12 = h % 12 || 12;
+                                  return `${h12}:${minutes} ${ampm}`;
+                                })()}
+                              </span>
+                            </>
+                          )}
+                        </div>
                         <span className="hidden sm:block w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
                         <div className="flex items-center gap-2">
                           {game.isLocked ? (
@@ -173,6 +189,11 @@ export function GamesTab({
                             <Badge variant="default" className="font-black uppercase tracking-widest">
                               Draft
                             </Badge>
+                          )}
+                          {game.location && (
+                            <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap ml-2">
+                              • {game.location}
+                            </span>
                           )}
                         </div>
                       </div>

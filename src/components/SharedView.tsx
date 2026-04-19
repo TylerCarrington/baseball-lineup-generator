@@ -331,7 +331,7 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                   onClick={() => setShowPastGames(!showPastGames)}
                   icon={History}
                 >
-                  {showPastGames ? 'Showing All Events' : 'Show Past Events'}
+                  {showPastGames ? 'Show Upcoming' : 'Show Past'}
                 </Button>
               </div>
 

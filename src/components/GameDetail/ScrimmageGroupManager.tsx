@@ -307,7 +307,7 @@ export const ScrimmageGroupManager: React.FC<ScrimmageGroupManagerProps> = ({
                 {step2HasIssues && (
                   <div className="flex items-center gap-1 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mt-1">
                     <AlertCircle size={12} />
-                    Some players in groups are marked as 'Out'
+                    Some players in groups are marked as 'No'
                   </div>
                 )}
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Review groups and move players if needed</p>
@@ -320,7 +320,7 @@ export const ScrimmageGroupManager: React.FC<ScrimmageGroupManagerProps> = ({
                     <button
                       key={num}
                       onClick={() => handleUpdateNumGroups(game.id, num)}
-                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${numGroups === num ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${numGroups === num ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                       {num}
                     </button>
@@ -430,7 +430,7 @@ export const ScrimmageGroupManager: React.FC<ScrimmageGroupManagerProps> = ({
                       <button
                         onClick={() => handleFixLineup(selectedGameId)}
                         className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-black uppercase tracking-widest border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-all"
-                        title="Replace 'Out' players, work in 'Activated' players, resolve back-to-back benches, and fix duplicates"
+                        title="Replace 'No' players, work in 'Activated' players, resolve back-to-back benches, and fix duplicates"
                       >
                         <Wrench size={14} />
                         Fix Lineup
@@ -553,7 +553,7 @@ export const ScrimmageGroupManager: React.FC<ScrimmageGroupManagerProps> = ({
                                         let statusBg = isDark ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-50 text-emerald-600';
 
                                         if (isPlayerOut) {
-                                          statusLabel = 'OUT';
+                                          statusLabel = 'NO';
                                           statusColor = isDark ? '#fb7185' : '#f43f5e'; // Rose-400 : Rose-500
                                           statusBg = isDark ? 'bg-rose-900/30 text-rose-400' : 'bg-rose-50 text-rose-500';
                                         } else if (isHitting) {
@@ -734,7 +734,7 @@ export const ScrimmageGroupManager: React.FC<ScrimmageGroupManagerProps> = ({
                                           let statusBg = isDark ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-50 text-emerald-600';
 
                                           if (isPlayerOut) {
-                                            statusLabel = 'OUT';
+                                            statusLabel = 'NO';
                                             statusColor = isDark ? '#fb7185' : '#f43f5e'; // Rose-400 : Rose-500
                                             statusBg = isDark ? 'bg-rose-900/30 text-rose-400' : 'bg-rose-50 text-rose-500';
                                           } else if (isHitting) {

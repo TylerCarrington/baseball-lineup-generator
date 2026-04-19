@@ -108,7 +108,7 @@ export const LineupCell = React.memo<LineupCellProps>(({
                   let statusBg = darkMode ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-50 text-emerald-600';
 
                   if (isPlayerOut) {
-                    statusLabel = 'OUT';
+                    statusLabel = 'NO';
                     statusColor = darkMode ? '#fb7185' : '#f43f5e'; // Rose-400 : Rose-500
                     statusBg = darkMode ? 'bg-rose-900/30 text-rose-400' : 'bg-rose-50 text-rose-500';
                   } else if (isCurrent) {

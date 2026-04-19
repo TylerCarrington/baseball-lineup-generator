@@ -43,7 +43,7 @@ export const GroupManagementView: React.FC<GroupManagementViewProps> = ({
               {step2HasIssues && (
                 <div className="flex items-center gap-1 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mt-1">
                   <AlertCircle size={12} />
-                  Some players in groups are marked as 'Out'
+                  Some players in groups are marked as 'No'
                 </div>
               )}
               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Review groups and move players if needed</p>
@@ -56,7 +56,7 @@ export const GroupManagementView: React.FC<GroupManagementViewProps> = ({
                   <button
                     key={num}
                     onClick={() => handleUpdateNumGroups(game.id, num)}
-                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${numGroups === num ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${numGroups === num ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                   >
                     {num}
                   </button>
@@ -116,7 +116,7 @@ export const GroupManagementView: React.FC<GroupManagementViewProps> = ({
                         )}
                       </span>
                       {!readOnly && (
-                        <div className="flex gap-1 opacity-0 group-hover/player:opacity-100 transition-opacity">
+                        <div className="flex gap-1">
                           {Array.from({ length: numGroups }).map((_, idx) => idx).filter(idx => idx !== groupIndex).map(targetIdx => (
                             <button
                               key={targetIdx}
@@ -146,7 +146,7 @@ export const GroupManagementView: React.FC<GroupManagementViewProps> = ({
                                 : 'bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-700 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
                             }`}
                           >
-                            {status === RSVPStatus.YES ? 'In' : status === RSVPStatus.TENTATIVE ? 'Maybe' : 'Out'}
+                            {status === RSVPStatus.YES ? 'Yes' : status === RSVPStatus.TENTATIVE ? 'Maybe' : 'No'}
                           </button>
                         ))}
                       </div>
@@ -179,7 +179,7 @@ export const GroupManagementView: React.FC<GroupManagementViewProps> = ({
                 <div key={player.id} className="flex flex-col gap-2 p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl group/unassigned shadow-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{player.name}</span>
-                    <div className="flex gap-1 opacity-0 group-hover/unassigned:opacity-100 transition-opacity">
+                    <div className="flex gap-1">
                       {Array.from({ length: numGroups }).map((_, idx) => (
                         <button
                           key={idx}
@@ -208,17 +208,17 @@ export const GroupManagementView: React.FC<GroupManagementViewProps> = ({
                               ? status === RSVPStatus.YES 
                                 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' 
                                 : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-                              : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-700 hover:text-slate-500 hover:bg-slate-100'
+                              : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-700 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                           }`}
                         >
-                          {status === RSVPStatus.YES ? 'In' : 'Maybe'}
+                          {status === RSVPStatus.YES ? 'Yes' : 'Maybe'}
                         </button>
                       ))}
                       <button
                         onClick={() => handleUpdateGameRSVP(game.id, player.id, RSVPStatus.NO)}
-                        className="flex-1 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all border bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-700 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50"
+                        className="flex-1 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all border bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-700 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-900/20 dark:hover:border-rose-800"
                       >
-                        Out
+                        No
                       </button>
                     </div>
                   )}
@@ -230,14 +230,14 @@ export const GroupManagementView: React.FC<GroupManagementViewProps> = ({
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
               <div className="flex items-center justify-between px-2 mb-4">
                 <h4 className="text-sm font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Not Attending</h4>
-                <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest">{outPlayers.length} Out</span>
+                <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest">{outPlayers.length} No</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {outPlayers.map(player => (
                   <div key={player.id} className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 opacity-60 hover:opacity-100 transition-all">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-xl flex items-center justify-center text-xs font-black">
-                        OUT
+                        NO
                       </div>
                       <p className="font-bold text-sm text-slate-500 dark:text-slate-400">{player.name}</p>
                     </div>

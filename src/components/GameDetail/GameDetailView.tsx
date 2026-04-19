@@ -115,20 +115,39 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
   const isLocked = game.isLocked || false;
 
   const previousGame = useMemo(() => {
-    const standardGames = games
-      .filter(g => g.mode !== 'scrimmage')
+    const standardGames = [...games]
+      .filter(g => g.type !== 'practice' && g.mode !== 'scrimmage')
       .sort((a, b) => {
         const aDate = a.date?.toDate ? a.date.toDate().getTime() : new Date(a.date).getTime();
         const bDate = b.date?.toDate ? b.date.toDate().getTime() : new Date(b.date).getTime();
+        
+        if (aDate === bDate) {
+          if (a.time && b.time) return a.time.localeCompare(b.time);
+          if (a.time) return 1;
+          if (b.time) return -1;
+          
+          const aCreated = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const bCreated = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          return aCreated - bCreated;
+        }
         return aDate - bDate;
       });
-    const currentGameDate = game.date?.toDate ? game.date.toDate().getTime() : new Date(game.date).getTime();
-    return standardGames.reverse().find(g => {
-      if (g.id === game.id) return false;
-      const gDate = g.date?.toDate ? g.date.toDate().getTime() : new Date(g.date).getTime();
-      // We use <= with the ID check to catch another game on the same exact day
-      return gDate <= currentGameDate;
-    });
+
+    const currentIndex = standardGames.findIndex(g => g.id === game.id);
+    
+    if (currentIndex > 0) {
+      return standardGames[currentIndex - 1];
+    }
+    
+    if (currentIndex === -1) {
+      const currentGameDate = game.date?.toDate ? game.date.toDate().getTime() : new Date(game.date).getTime();
+      return [...standardGames].reverse().find(g => {
+        const gDate = g.date?.toDate ? g.date.toDate().getTime() : new Date(g.date).getTime();
+        return gDate <= currentGameDate;
+      });
+    }
+
+    return undefined;
   }, [games, game]);
 
   return (

@@ -494,7 +494,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                     <select
                       value={activityForm.category}
                       onChange={(e) => setActivityForm({...activityForm, category: e.target.value, drillName: ''})}
-                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm"
+                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm"
                     >
                       <option value="">Select Category...</option>
                       {Object.keys(DRILL_CATEGORIES).map(cat => (
@@ -508,7 +508,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                       value={activityForm.drillName}
                       onChange={(e) => setActivityForm({...activityForm, drillName: e.target.value})}
                       disabled={!activityForm.category}
-                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm disabled:opacity-50"
+                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm disabled:opacity-50"
                     >
                       <option value="">Select Drill...</option>
                       {(activityForm.category ? DRILL_CATEGORIES[activityForm.category] : []).map(drill => (
@@ -525,7 +525,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                   <select
                     value={activityForm.type}
                     onChange={(e) => setActivityForm({...activityForm, type: e.target.value as 'team' | 'groups' | 'rotating'})}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold appearance-none"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold appearance-none"
                   >
                     <option value="team">Whole Team</option>
                     <option value="groups">Split Groups</option>
@@ -563,7 +563,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                       
                       setActivityForm({...activityForm, startTimeOffset: calculatedOffset});
                     }}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold"
+                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold"
                   />
                 </div>
               </div>
@@ -576,7 +576,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                   min="5"
                   value={activityForm.duration}
                   onChange={(e) => setActivityForm({...activityForm, duration: Math.max(5, parseInt(e.target.value) || 5)})}
-                  className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold"
+                  className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold"
                 />
               </div>
 
@@ -599,7 +599,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                               groupCategoryMap: { ...activityForm.groupCategoryMap, [i]: e.target.value },
                               groupMap: { ...activityForm.groupMap, [i]: '' } // Reset drill when category changes
                             })}
-                            className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold"
+                            className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold"
                           >
                             <option value="">Select Category *</option>
                             {Object.keys(DRILL_CATEGORIES).map(cat => (
@@ -613,7 +613,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                               groupMap: { ...activityForm.groupMap, [i]: e.target.value }
                             })}
                             disabled={!activityForm.groupCategoryMap?.[i]}
-                            className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold disabled:opacity-50"
+                            className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold disabled:opacity-50"
                           >
                             <option value="">Select Drill (Optional)</option>
                             {(activityForm.groupCategoryMap?.[i] ? DRILL_CATEGORIES[activityForm.groupCategoryMap[i]] : []).map(drill => (

@@ -88,7 +88,7 @@ export function GamesTab({
             icon={History}
             className="flex-1 sm:flex-none px-3 sm:px-6 text-xs sm:text-sm"
           >
-            {showPastGames ? 'Past' : 'Upcoming'}
+            {showPastGames ? 'Show Upcoming' : 'Show Past'}
           </Button>
 
           <Button

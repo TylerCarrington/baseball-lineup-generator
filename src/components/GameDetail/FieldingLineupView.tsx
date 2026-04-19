@@ -76,7 +76,7 @@ export const FieldingLineupView: React.FC<FieldingLineupViewProps> = ({
     if (hasOutPlayers || hasBenchedAvailable || hasBackToBackBenches || hasDuplicates) {
       return {
         show: true,
-        title: "Replace 'Out' players, work in 'Activated' players, resolve back-to-back benches, and fix duplicates"
+        title: "Replace 'No' players, work in 'Activated' players, resolve back-to-back benches, and fix duplicates"
       };
     }
     return null;

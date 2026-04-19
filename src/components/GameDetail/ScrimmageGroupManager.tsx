@@ -5,6 +5,8 @@ import { db } from '../../firebase';
 import { Game, Player, RSVPStatus } from '../../types';
 import { getPositionAbbreviation } from '../../lib/utils';
 
+import { GroupManagementView } from './GroupManagementView';
+
 interface ScrimmageGroupManagerProps {
   game: Game;
   players: Player[];
@@ -17,6 +19,7 @@ interface ScrimmageGroupManagerProps {
   handleUpdateLineupCell: (gameId: string, inning: string, position: string, playerId: string) => void;
   handleMoveScrimmagePlayer: (gameId: string, fromGroup: number, toGroup: number, playerId: string) => void;
   handleFixLineup: (gameId: string) => void;
+  handleUpdateNumGroups: (gameId: string, numGroups: number) => void;
   editingCell: { inning: string; position: string } | null;
   setEditingCell: React.Dispatch<React.SetStateAction<{ inning: string; position: string } | null>>;
   backupLineup: any;
@@ -38,6 +41,7 @@ export const ScrimmageGroupManager: React.FC<ScrimmageGroupManagerProps> = ({
   handleUpdateLineupCell,
   handleMoveScrimmagePlayer,
   handleFixLineup,
+  handleUpdateNumGroups,
   editingCell,
   setEditingCell,
   backupLineup,
@@ -47,6 +51,7 @@ export const ScrimmageGroupManager: React.FC<ScrimmageGroupManagerProps> = ({
   darkMode,
 }) => {
   const currentStep = game.scrimmageStep || 1;
+  const numGroups = game.numGroups || 4;
   const fieldPositions = ["Pitcher", "Catcher"];
   
   const hasOutPlayersInBatteries = currentStep === 1 && [1, 2, 3, 4, 5, 6].some(inning => {
@@ -296,15 +301,32 @@ export const ScrimmageGroupManager: React.FC<ScrimmageGroupManagerProps> = ({
       {currentStep === 2 && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-4">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 2: Group Players</h3>
-              {step2HasIssues && (
-                <div className="flex items-center gap-1 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mt-1">
-                  <AlertCircle size={12} />
-                  Some players in groups are marked as 'Out'
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Step 2: Group Players</h3>
+                {step2HasIssues && (
+                  <div className="flex items-center gap-1 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mt-1">
+                    <AlertCircle size={12} />
+                    Some players in groups are marked as 'Out'
+                  </div>
+                )}
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Review groups and move players if needed</p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1"># of Groups</label>
+                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
+                  {[1, 2, 3, 4].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => handleUpdateNumGroups(game.id, num)}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${numGroups === num ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+                    >
+                      {num}
+                    </button>
+                  ))}
                 </div>
-              )}
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Review groups and move players if needed</p>
+              </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               {(backupLineup || backupScrimmageGroups) && (
@@ -346,54 +368,14 @@ export const ScrimmageGroupManager: React.FC<ScrimmageGroupManagerProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[0, 1, 2, 3].map(groupIndex => (
-              <div key={groupIndex} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Group {groupIndex + 1}</h4>
-                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                    {game.scrimmageGroups?.[groupIndex]?.length || 0} Players
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {game.scrimmageGroups?.[groupIndex]?.map(playerId => {
-                    const player = players.find(p => p.id === playerId);
-                    const isPlayerOut = game.rsvps[playerId] === RSVPStatus.NO;
-                    return (
-                      <div key={playerId} className={`group/player p-3 rounded-xl border text-sm font-bold flex items-center justify-between transition-all ${
-                        isPlayerOut 
-                          ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300' 
-                          : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-                      }`}>
-                        <span className="flex items-center gap-2">
-                          {isPlayerOut && <AlertCircle size={14} />}
-                          {player?.name}
-                          {player?.jerseyNumber && (
-                            <span className="text-[10px] opacity-50 ml-1">#{player.jerseyNumber}</span>
-                          )}
-                        </span>
-                        <div className="flex gap-1 opacity-0 group-hover/player:opacity-100 transition-opacity">
-                          {[0, 1, 2, 3].filter(idx => idx !== groupIndex).map(targetIdx => (
-                            <button
-                              key={targetIdx}
-                              onClick={() => handleMoveScrimmagePlayer(game.id, groupIndex, targetIdx, playerId)}
-                              className="w-6 h-6 flex items-center justify-center bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-md text-[10px] font-black text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                              title={`Move to Group ${targetIdx + 1}`}
-                            >
-                              {targetIdx + 1}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {(!game.scrimmageGroups?.[groupIndex] || game.scrimmageGroups[groupIndex].length === 0) && (
-                    <p className="text-xs text-slate-400 italic text-center py-4">No players assigned</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <GroupManagementView
+            game={game}
+            players={players}
+            handleMoveScrimmagePlayer={handleMoveScrimmagePlayer}
+            handleSplitScrimmageGroups={handleSplitScrimmageGroups}
+            handleUpdateNumGroups={handleUpdateNumGroups}
+            handleFixLineup={handleFixLineup}
+          />
         </div>
       )}
 

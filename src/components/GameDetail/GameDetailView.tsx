@@ -8,6 +8,7 @@ import { ScrimmageGroupsView } from './ScrimmageGroupsView';
 import { BattingOrderView } from './BattingOrderView';
 import { ScrimmageGroupManager } from './ScrimmageGroupManager';
 import { FieldingLineupView } from './FieldingLineupView';
+import { PracticeAgendaView } from './PracticeAgendaView';
 import { useGameDetail } from '../../hooks/useGameDetail';
 import { useGameActions } from '../../hooks/useGameActions';
 import { db } from '../../firebase';
@@ -15,6 +16,8 @@ import { handleFirestoreError } from '../../lib/utils';
 import { useSettings } from '../../hooks/useSettings';
 import { User } from 'firebase/auth';
 import { ChevronLeft } from 'lucide-react';
+
+import { GroupManagementView } from './GroupManagementView';
 
 interface GameDetailViewProps {
   game: Game;
@@ -71,7 +74,8 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
     handleFixLineup,
     handleTogglePositionLock,
     handleToggleInningLock,
-    handleTogglePublish
+    handleTogglePublish,
+    handleUpdateNumGroups
   } = useGameActions(games, players, settings);
 
   const handleMovePlayerToPosition = async (playerId: string, newPositionIndex: number) => {
@@ -110,6 +114,23 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
 
   const isLocked = game.isLocked || false;
 
+  const previousGame = useMemo(() => {
+    const standardGames = games
+      .filter(g => g.mode !== 'scrimmage')
+      .sort((a, b) => {
+        const aDate = a.date?.toDate ? a.date.toDate().getTime() : new Date(a.date).getTime();
+        const bDate = b.date?.toDate ? b.date.toDate().getTime() : new Date(b.date).getTime();
+        return aDate - bDate;
+      });
+    const currentGameDate = game.date?.toDate ? game.date.toDate().getTime() : new Date(game.date).getTime();
+    return standardGames.reverse().find(g => {
+      if (g.id === game.id) return false;
+      const gDate = g.date?.toDate ? g.date.toDate().getTime() : new Date(g.date).getTime();
+      // We use <= with the ID check to catch another game on the same exact day
+      return gDate <= currentGameDate;
+    });
+  }, [games, game]);
+
   return (
     <div key="game-view">
       <GameHeader
@@ -137,7 +158,7 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
           
           await handleUpdateGameDetails(game.id, {
             name: game.mode === 'standard' ? generatedName : editGameName,
-            opponent: game.mode === 'standard' ? editOpponent : undefined,
+            opponent: game.mode === 'standard' ? editOpponent : null,
             location: editLocation,
             date: editGameDate,
             time: editGameTime,
@@ -175,8 +196,25 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
                 handleUpdateRSVP={handleUpdateRSVP}
                 onFinish={() => setIsEditingRSVPs(false)}
               />
-            ) : gameViewTab === 'batting' ? (
-              game.mode === 'scrimmage' ? (
+            ) : (gameViewTab === 'batting' || gameViewTab === 'groups' || gameViewTab === 'agenda') ? (
+              game.type === 'practice' ? (
+                gameViewTab === 'agenda' ? (
+                  <PracticeAgendaView game={game} readOnly={isLocked} />
+                ) : (
+                  <div className="space-y-12">
+                    <GroupManagementView
+                      game={game}
+                      players={players}
+                      handleMoveScrimmagePlayer={handleMoveScrimmagePlayer}
+                      handleSplitScrimmageGroups={handleSplitScrimmageGroups}
+                      handleUpdateNumGroups={handleUpdateNumGroups}
+                      handleFixLineup={handleFixLineup}
+                      readOnly={isLocked}
+                      handleUpdateGameRSVP={handleUpdateRSVP}
+                    />
+                  </div>
+                )
+              ) : game.mode === 'scrimmage' ? (
                 <ScrimmageGroupsView
                   game={game}
                   players={players}
@@ -191,22 +229,7 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
                   handleMovePlayerToPosition={handleMovePlayerToPosition}
                   handleUpdateGameRSVP={handleUpdateRSVP}
                   handleMovePlayer={handleMovePlayer}
-                  previousGame={useMemo(() => {
-                    const standardGames = games
-                      .filter(g => g.mode !== 'scrimmage')
-                      .sort((a, b) => {
-                        const aDate = a.date?.toDate ? a.date.toDate().getTime() : new Date(a.date).getTime();
-                        const bDate = b.date?.toDate ? b.date.toDate().getTime() : new Date(b.date).getTime();
-                        return aDate - bDate;
-                      });
-                    const currentGameDate = game.date?.toDate ? game.date.toDate().getTime() : new Date(game.date).getTime();
-                    return standardGames.reverse().find(g => {
-                      if (g.id === game.id) return false;
-                      const gDate = g.date?.toDate ? g.date.toDate().getTime() : new Date(g.date).getTime();
-                      // We use <= with the ID check to catch another game on the same exact day
-                      return gDate <= currentGameDate;
-                    });
-                  }, [games, game])}
+                  previousGame={previousGame}
                 />
               )
             ) : (
@@ -223,6 +246,7 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
                   handleUpdateLineupCell={handleUpdateLineupCell}
                   handleMoveScrimmagePlayer={handleMoveScrimmagePlayer}
                   handleFixLineup={handleFixLineup}
+                  handleUpdateNumGroups={handleUpdateNumGroups}
                   editingCell={editingCell}
                   setEditingCell={setEditingCell}
                   backupLineup={backupLineup}

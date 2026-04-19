@@ -10,7 +10,8 @@ import {
   ClipboardList, 
   LayoutGrid, 
   History, 
-  ChevronRight 
+  ChevronRight,
+  Users
 } from 'lucide-react';
 import { POSITION_ORDER } from '../constants';
 import { getPositionAbbreviation, cn } from '../lib/utils';
@@ -29,6 +30,7 @@ interface SharedViewProps {
 import { GameHeader } from './GameDetail/GameHeader';
 import { GameDetailTabs } from './GameDetail/GameDetailTabs';
 import { BattingOrderView } from './GameDetail/BattingOrderView';
+import { PracticeAgendaView } from './GameDetail/PracticeAgendaView';
 
 export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
   const location = useLocation();
@@ -40,8 +42,17 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
   const gameId = pathParts[4];
   
   const { games, players, settings, loading, error } = useSharedData(ownerId);
-  const [activeTab, setActiveTab] = useState<'batting' | 'lineup'>('batting');
+  const selectedGame = gameId ? games.find(g => g.id === gameId) : null;
+  const [activeTab, setActiveTab] = useState<'batting' | 'lineup' | 'agenda' | 'groups'>('batting');
   const [showPastGames, setShowPastGames] = useState(false);
+
+  // Set default tab based on game type once selectedGame is available
+  React.useEffect(() => {
+    if (selectedGame) {
+      if (selectedGame.type === 'practice') setActiveTab('agenda');
+      else setActiveTab('batting');
+    }
+  }, [selectedGame?.type]);
 
   if (loading) {
     return (
@@ -74,8 +85,6 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
       </div>
     );
   }
-
-  const selectedGame = gameId ? games.find(g => g.id === gameId) : null;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
@@ -112,7 +121,7 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Lineup Not Published</h3>
                   <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-xs mx-auto">
-                    The lineup for this game is still being finalized. Please check back later.
+                    The {selectedGame.type === 'practice' ? 'agenda' : 'lineup'} for this {selectedGame.type === 'practice' ? 'practice' : 'game'} is still being finalized. Please check back later.
                   </p>
                   <Button 
                     onClick={() => navigate(`/shared/${ownerId}/games`)}
@@ -140,49 +149,59 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                     />
 
                   <div>
+                    {/* Agenda */}
+                    {activeTab === 'agenda' && selectedGame.type === 'practice' && (
+                      <PracticeAgendaView game={selectedGame} readOnly={true} />
+                    )}
+
                     {/* Batting Order / Groups */}
-                    {activeTab === 'batting' && (
+                    {(activeTab === 'batting' || activeTab === 'groups') && (
                       <div>
-                        {selectedGame.mode === 'scrimmage' ? (
-                          <>
+                        {selectedGame.mode === 'scrimmage' || selectedGame.type === 'practice' ? (
+                          <div className="space-y-6">
                             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                              <ClipboardList size={20} className="text-slate-400 dark:text-slate-500" />
+                              {selectedGame.type === 'practice' ? <ClipboardList size={20} className="text-slate-400 dark:text-slate-500" /> : <Users size={20} className="text-slate-400 dark:text-slate-500" />}
                               Groups
                             </h3>
                             <div className="space-y-2">
                               {selectedGame.scrimmageGroups && selectedGame.scrimmageGroups.some(g => g.length > 0) ? (
-                                <div className="space-y-4">
-                                  {[0, 1, 2, 3].map(groupIndex => {
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+                                  {Array.from({ length: selectedGame.numGroups || 4 }).map((_, groupIndex) => {
                                     const group = selectedGame.scrimmageGroups?.[groupIndex] || [];
                                     if (group.length === 0) return null;
                                     return (
-                                      <div key={groupIndex} className="space-y-2">
-                                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">Group {groupIndex + 1}</h4>
-                                        {group.map(playerId => {
-                                          const player = players.find(p => p.id === playerId);
-                                          return (
-                                            <div key={playerId} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 transition-colors duration-300">
-                                              <span className="w-6 h-6 bg-slate-900 dark:bg-indigo-600 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
-                                                {player?.name.charAt(0) || '?'}
-                                              </span>
-                                              <span className="font-bold text-slate-700 dark:text-slate-200">
-                                                {player?.name || 'Unknown Player'}
-                                                {player?.jerseyNumber && <span className="ml-1 text-slate-400 dark:text-slate-500 text-xs">#{player.jerseyNumber}</span>}
-                                              </span>
-                                            </div>
-                                          );
-                                        })}
+                                      <div key={groupIndex} className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 transition-colors duration-300">
+                                        <div className="flex items-center justify-between mb-4">
+                                          <h4 className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Group {groupIndex + 1}</h4>
+                                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{group.length} Players</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                          {group.map(playerId => {
+                                            const player = players.find(p => p.id === playerId);
+                                            return (
+                                              <div key={playerId} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors duration-300">
+                                                <span className="w-8 h-8 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-lg flex items-center justify-center text-xs font-black shrink-0">
+                                                  {player?.name.charAt(0) || '?'}
+                                                </span>
+                                                <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">
+                                                  {player?.name || 'Unknown Player'}
+                                                  {player?.jerseyNumber && <span className="ml-1 text-[10px] text-slate-400 dark:text-slate-500 opacity-50">#{player.jerseyNumber}</span>}
+                                                </span>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
                                       </div>
                                     );
                                   })}
                                 </div>
                               ) : (
-                                <p className="text-sm text-slate-400 dark:text-slate-500 italic p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 border-dashed text-center transition-colors duration-300">
+                                <p className="text-sm text-slate-400 dark:text-slate-500 italic p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 border-dashed text-center transition-colors duration-300">
                                   No groups set yet.
                                 </p>
                               )}
                             </div>
-                          </>
+                          </div>
                         ) : (
                           <BattingOrderView 
                             game={selectedGame}
@@ -269,7 +288,7 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                                       <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Bench</div>
                                       <div className="flex flex-wrap gap-2">
                                         {benchedPlayers.map(p => (
-                                          <Badge key={p.id} variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                                          <Badge key={p.id} variant="default" className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                                             {p.name.split(' ')[0]}
                                             {p.jerseyNumber && <span className="ml-1 opacity-70 text-[10px]">#{p.jerseyNumber}</span>}
                                           </Badge>
@@ -304,15 +323,15 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
             <div>
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
                 <div>
-                  <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Game Schedule</h2>
-                  <p className="text-slate-500 dark:text-slate-400 mt-1">View upcoming games and lineups</p>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Event Schedule</h2>
+                  <p className="text-slate-500 dark:text-slate-400 mt-1">View upcoming events and lineups</p>
                 </div>
                 <Button
                   variant={showPastGames ? 'primary' : 'outline'}
                   onClick={() => setShowPastGames(!showPastGames)}
                   icon={History}
                 >
-                  {showPastGames ? 'Showing All Games' : 'Show Past Games'}
+                  {showPastGames ? 'Showing All Events' : 'Show Past Events'}
                 </Button>
               </div>
 
@@ -335,7 +354,7 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                     <Card className="p-12 text-center border-dashed border-2" hover={false}>
                       <Calendar size={48} className="text-slate-200 dark:text-slate-700 mx-auto mb-4" />
                       <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                        {showPastGames ? 'No past games' : 'No upcoming games'}
+                        {showPastGames ? 'No past events' : 'No upcoming events'}
                       </h3>
                       <p className="text-slate-500 dark:text-slate-400">
                         Check back later for updates.
@@ -377,24 +396,27 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                           <div className="flex items-start gap-4">
                             <div className={cn(
                               "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors",
-                              isPublished ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" : "bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600"
+                              isPublished ? (game.type === 'practice' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400") : "bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600"
                             )}>
-                              <Calendar size={24} />
+                              {game.type === 'practice' ? <ClipboardList size={24} /> : <Calendar size={24} />}
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <h3 className="font-bold text-lg text-slate-900 dark:text-white truncate">{game.name}</h3>
+                                {game.type === 'practice' && (
+                                  <Badge variant="warning">Practice</Badge>
+                                )}
                                 {game.mode === 'scrimmage' && (
                                   <Badge variant="info">Scrimmage</Badge>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
                                   {gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                 </p>
                                 {game.time && (
                                   <>
-                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
+                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full shrink-0"></span>
                                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
                                       {(() => {
                                         const [hours, minutes] = game.time.split(':');
@@ -406,10 +428,18 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                                     </p>
                                   </>
                                 )}
+                                {game.type === 'practice' && game.duration && (
+                                  <>
+                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full shrink-0"></span>
+                                    <span className="text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                                      {game.duration} min
+                                    </span>
+                                  </>
+                                )}
                                 {game.location && (
                                   <>
-                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full shrink-0"></span>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium truncate">
                                       {game.location}
                                     </p>
                                   </>

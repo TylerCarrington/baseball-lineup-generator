@@ -1,11 +1,11 @@
 import React from 'react';
-import { ClipboardList, LayoutGrid, AlertCircle } from 'lucide-react';
+import { ClipboardList, LayoutGrid, AlertCircle, Users } from 'lucide-react';
 import { Game, RSVPStatus } from '../../types';
 
 interface GameDetailTabsProps {
   game: Game;
-  gameViewTab: 'batting' | 'lineup';
-  setGameViewTab: (tab: 'batting' | 'lineup') => void;
+  gameViewTab: 'batting' | 'lineup' | 'agenda' | 'groups';
+  setGameViewTab: (tab: 'batting' | 'lineup' | 'agenda' | 'groups') => void;
   onFieldLineupClick?: () => void;
   readOnly?: boolean;
 }
@@ -48,33 +48,50 @@ export const GameDetailTabs: React.FC<GameDetailTabsProps> = ({
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
-      <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl gap-1 w-full sm:w-auto">
+      <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl gap-1 w-full sm:w-auto overflow-x-auto no-scrollbar">
+        {game.type === 'practice' && (
+          <button 
+            onClick={() => setGameViewTab('agenda')}
+            className={`flex-1 sm:flex-none px-6 sm:px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+              gameViewTab === 'agenda' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}
+          >
+            <ClipboardList size={20} />
+            Agenda
+          </button>
+        )}
         <button 
-          onClick={() => setGameViewTab('batting')}
-          className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 ${
-            gameViewTab === 'batting' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          onClick={() => setGameViewTab(game.type === 'practice' ? 'groups' : 'batting')}
+          className={`flex-1 sm:flex-none px-6 sm:px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+            (gameViewTab === 'batting' || gameViewTab === 'groups') ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
           }`}
         >
-          <ClipboardList size={20} />
-          {game.mode === 'scrimmage' ? 'Groups' : 'Batting Order'}
-        </button>
-        <button 
-          onClick={() => {
-            if (onFieldLineupClick) onFieldLineupClick();
-            setGameViewTab('lineup');
-          }}
-          className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 relative ${
-            gameViewTab === 'lineup' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-          }`}
-        >
-          <LayoutGrid size={20} />
-          Field Lineup
-          {hasScrimmageIssues && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
-              <AlertCircle size={10} className="text-white" />
-            </div>
+          {game.mode === 'scrimmage' || game.type === 'practice' ? (
+            <Users size={20} />
+          ) : (
+            <ClipboardList size={20} />
           )}
+          {game.type === 'practice' ? 'Groups' : (game.mode === 'scrimmage' ? 'Groups' : 'Batting Order')}
         </button>
+        {game.type !== 'practice' && (
+          <button 
+            onClick={() => {
+              if (onFieldLineupClick) onFieldLineupClick();
+              setGameViewTab('lineup');
+            }}
+            className={`flex-1 sm:flex-none px-6 sm:px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 relative whitespace-nowrap ${
+              gameViewTab === 'lineup' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}
+          >
+            <LayoutGrid size={20} />
+            Lineup
+            {hasScrimmageIssues && (
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
+                <AlertCircle size={10} className="text-white" />
+              </div>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

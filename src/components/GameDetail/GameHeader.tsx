@@ -225,17 +225,17 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           </div>
 
           {!readOnly && (
-            <div className="flex flex-row items-center gap-3 shrink-0 w-full lg:w-auto">
+            <div className="flex flex-row items-center gap-2 shrink-0 w-full lg:w-auto">
               <button 
                 onClick={() => handleTogglePublish?.(game.id, isLocked)}
-                className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 sm:px-8 py-3 sm:py-4 rounded-2xl transition-all text-xs sm:text-sm font-black border shadow-lg ${
+                className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl transition-all text-[11px] font-black border shadow-sm ${
                   isLocked 
                     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 shadow-emerald-500/5' 
                     : 'bg-white/10 text-white border-white/10 hover:bg-white/20 shadow-black/5'
                 }`}
               >
-                {isLocked ? <RotateCcw size={18} className="sm:size-20" /> : <Check size={18} className="sm:size-20" />}
-                <span>{isLocked ? 'Unpublish' : 'Publish'}</span>
+                {isLocked ? <RotateCcw size={14} /> : <Check size={14} />}
+                <span className="uppercase tracking-widest">{isLocked ? 'Unpublish' : 'Publish'}</span>
               </button>
               <button 
                 onClick={() => {
@@ -246,14 +246,14 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                     setIsEditingRSVPs?.(true);
                   }
                 }}
-                className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 sm:px-8 py-3 sm:py-4 rounded-2xl transition-all text-xs sm:text-sm font-black border ${
+                className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl transition-all text-[11px] font-black border ${
                   isEditingRSVPs 
-                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-xl shadow-emerald-500/30' 
-                    : 'bg-white text-slate-900 border-white hover:bg-slate-100 shadow-xl shadow-black/10'
+                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20' 
+                    : 'bg-white text-slate-900 border-white hover:bg-slate-100 shadow-md shadow-black/5'
                 }`}
               >
-                {isEditingRSVPs ? <Save size={18} className="sm:size-20" /> : <Edit2 size={18} className="sm:size-20" />}
-                <span>{isEditingRSVPs ? 'Save' : 'Edit'}</span>
+                {isEditingRSVPs ? <Save size={14} /> : <Edit2 size={14} />}
+                <span className="uppercase tracking-widest">{isEditingRSVPs ? 'Save' : 'Edit'}</span>
               </button>
             </div>
           )}

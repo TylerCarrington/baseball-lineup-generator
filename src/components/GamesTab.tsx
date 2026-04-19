@@ -5,7 +5,9 @@ import {
   Check, 
   Share2, 
   ClipboardList, 
-  Trash2 
+  Trash2,
+  CalendarCheck,
+  Trophy
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { toast } from 'sonner';
@@ -58,8 +60,8 @@ export function GamesTab({
     <div className="max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Game Schedule</h2>
-          <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">Manage your {showPastGames ? 'past' : 'upcoming'} games and lineups</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Event Schedule</h2>
+          <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">Manage your {showPastGames ? 'past' : 'upcoming'} events and lineups</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Button
@@ -94,7 +96,7 @@ export function GamesTab({
             icon={Plus}
             className="flex-1 sm:flex-none px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap"
           >
-            New Game
+            New Event
           </Button>
         </div>
       </div>
@@ -106,12 +108,12 @@ export function GamesTab({
               <ClipboardList size={32} />
             </div>
             <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
-              {showPastGames ? 'No past games' : 'No upcoming games'}
+              {showPastGames ? 'No past events' : 'No upcoming events'}
             </h3>
             <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-8 max-w-xs mx-auto">
               {showPastGames 
-                ? "You haven't completed any games yet." 
-                : "Create your first game to start managing your team's lineup and availability."}
+                ? "You haven't completed any events yet." 
+                : "Create your first event to start managing your team's lineup and availability."}
             </p>
             {!showPastGames && (
               <Button 
@@ -119,7 +121,7 @@ export function GamesTab({
                 size="lg"
                 className="w-full sm:w-auto"
               >
-                Schedule First Game
+                Schedule First Event
               </Button>
             )}
           </Card>
@@ -143,7 +145,9 @@ export function GamesTab({
                     <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center shadow-md shrink-0 transition-colors ${
                       showPastGames 
                         ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500' 
-                        : 'bg-slate-900 dark:bg-emerald-600 text-white'
+                        : game.type === 'practice' 
+                          ? 'bg-amber-500 text-white' 
+                          : 'bg-slate-900 dark:bg-emerald-600 text-white'
                     }`}>
                       <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-tighter opacity-70">
                         {gameDateObj.toLocaleDateString('en-US', { month: 'short' })}
@@ -155,6 +159,9 @@ export function GamesTab({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate group-hover:text-slate-900 dark:group-hover:text-emerald-400 transition-colors">{game.name}</h3>
+                        {game.type === 'practice' && (
+                          <Badge variant="warning">Practice</Badge>
+                        )}
                         {game.mode === 'scrimmage' && (
                           <Badge variant="info">Scrimmage</Badge>
                         )}
@@ -175,6 +182,14 @@ export function GamesTab({
                                   const h12 = h % 12 || 12;
                                   return `${h12}:${minutes} ${ampm}`;
                                 })()}
+                              </span>
+                            </>
+                          )}
+                          {game.type === 'practice' && game.duration && (
+                            <>
+                              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
+                              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                                {game.duration} min
                               </span>
                             </>
                           )}
@@ -226,7 +241,7 @@ export function GamesTab({
                             isOpen: true,
                             type: 'game',
                             id: game.id,
-                            title: 'Delete Game',
+                            title: `Delete ${game.type === 'practice' ? 'Practice' : 'Game'}`,
                             message: `Are you sure you want to delete "${game.name}"? This action cannot be undone.`
                           });
                         }}

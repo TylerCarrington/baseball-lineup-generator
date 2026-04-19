@@ -3,10 +3,41 @@ import { db } from "../firebase";
 import { OperationType } from "../types";
 import { handleFirestoreError } from "../lib/utils";
 
+/**
+ * Removes undefined values from an object recursively to prevent Firestore errors.
+ * Safely ignores Date objects and Firestore internal types.
+ */
+function stripUndefined(obj: any): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+  
+  // Preserving Date objects
+  if (obj instanceof Date) return obj;
+
+  // Preserving Firestore FieldValues and other specialized objects
+  // (Detecting by checking if it's not a plain object or array)
+  if (obj.constructor && obj.constructor.name !== 'Object' && obj.constructor.name !== 'Array') {
+    return obj;
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(stripUndefined);
+  }
+  
+  const newObj: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      if (obj[key] !== undefined) {
+        newObj[key] = stripUndefined(obj[key]);
+      }
+    }
+  }
+  return newObj;
+}
+
 export const firebaseService = {
   async updateGame(gameId: string, data: any) {
     try {
-      await updateDoc(doc(db, 'games', gameId), data);
+      await updateDoc(doc(db, 'games', gameId), stripUndefined(data));
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
     }
@@ -22,7 +53,7 @@ export const firebaseService = {
 
   async addGame(data: any) {
     try {
-      return await addDoc(collection(db, 'games'), data);
+      return await addDoc(collection(db, 'games'), stripUndefined(data));
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'games');
     }
@@ -30,7 +61,7 @@ export const firebaseService = {
 
   async updatePlayer(playerId: string, data: any) {
     try {
-      await updateDoc(doc(db, 'players', playerId), data);
+      await updateDoc(doc(db, 'players', playerId), stripUndefined(data));
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `players/${playerId}`);
     }
@@ -46,7 +77,7 @@ export const firebaseService = {
 
   async addPlayer(data: any) {
     try {
-      return await addDoc(collection(db, 'players'), data);
+      return await addDoc(collection(db, 'players'), stripUndefined(data));
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'players');
     }
@@ -54,7 +85,7 @@ export const firebaseService = {
 
   async updateSettings(userId: string, data: any) {
     try {
-      await updateDoc(doc(db, 'settings', userId), data);
+      await updateDoc(doc(db, 'settings', userId), stripUndefined(data));
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `settings/${userId}`);
     }

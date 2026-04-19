@@ -4,7 +4,7 @@ import { getLocalDateString } from '../lib/utils';
 
 export function useGameDetail(selectedGame: Game | null | undefined) {
   // Game Detail UI State
-  const [gameViewTab, setGameViewTab] = useState<'batting' | 'lineup'>('batting');
+  const [gameViewTab, setGameViewTab] = useState<'batting' | 'lineup' | 'agenda' | 'groups'>('batting');
   const [localBattingOrder, setLocalBattingOrder] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<{ inning: string; position: string } | null>(null);
   const [isEditingRSVPs, setIsEditingRSVPs] = useState(false);
@@ -39,8 +39,8 @@ export function useGameDetail(selectedGame: Game | null | undefined) {
   useEffect(() => {
     setIsEditingRSVPs(false);
     setEditingCell(null);
-    setGameViewTab('batting');
-  }, [selectedGame?.id]);
+    setGameViewTab(selectedGame?.type === 'practice' ? 'agenda' : 'batting');
+  }, [selectedGame?.id, selectedGame?.type]);
 
   const resetEditState = (game: Game) => {
     setEditGameName(game.name || '');

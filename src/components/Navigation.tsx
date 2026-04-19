@@ -43,7 +43,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               onClick={() => handleTabChange('games')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTab === 'games' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
-              Games
+              Events
             </button>
             <button 
               onClick={() => handleTabChange('settings')}
@@ -89,7 +89,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               onClick={() => handleTabChange('games')}
               className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${currentTab === 'games' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
-              Games
+              Events
             </button>
             <button 
               onClick={() => handleTabChange('settings')}

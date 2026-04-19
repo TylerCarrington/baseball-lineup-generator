@@ -39,17 +39,54 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
     const newRSVPs = { ...game.rsvps, [playerId]: newStatus };
     const newBattingOrder = recalculateBattingOrder(game.battingOrder || [], newRSVPs, players);
 
-    await firebaseService.updateGame(gameId, {
+    const updates: any = {
       rsvps: newRSVPs,
       battingOrder: newBattingOrder
-    });
+    };
+
+    if (game.scrimmageGroups && game.scrimmageGroups.length > 0 && (game.type === 'practice' || game.mode === 'scrimmage')) {
+      let newGroups = [...game.scrimmageGroups.map(g => [...(g || [])])];
+      const currentStatus = game.rsvps[playerId];
+      const isCurrentlyOut = currentStatus === RSVPStatus.NO || !currentStatus;
+      const isNowIn = newStatus === RSVPStatus.YES || newStatus === RSVPStatus.TENTATIVE;
+      
+      const isInAGroup = newGroups.some(group => group.includes(playerId));
+
+      let groupsChanged = false;
+
+      if (newStatus === RSVPStatus.NO && isInAGroup) {
+        newGroups = newGroups.map(group => group.filter(id => id !== playerId));
+        groupsChanged = true;
+      } else if (isNowIn && (!isInAGroup && isCurrentlyOut)) {
+        const numGroups = game.numGroups || 4;
+        while (newGroups.length < numGroups) newGroups.push([]);
+
+        let minIdx = 0;
+        let minCount = newGroups[0].length;
+        for (let i = 1; i < numGroups; i++) {
+          const count = newGroups[i].length;
+          if (count < minCount) {
+            minCount = count;
+            minIdx = i;
+          }
+        }
+        newGroups[minIdx].push(playerId);
+        groupsChanged = true;
+      }
+
+      if (groupsChanged) {
+        updates.scrimmageGroups = JSON.stringify(newGroups);
+      }
+    }
+
+    await firebaseService.updateGame(gameId, updates);
   };
 
-  const handleUpdateGameDetails = async (gameId: string, updates: { name: string; opponent?: string; location?: string; date: string; time?: string | null; isHome: boolean | null }) => {
+  const handleUpdateGameDetails = async (gameId: string, updates: { name: string; opponent?: string | null; location?: string | null; date: string; time?: string | null; isHome: boolean | null }) => {
     await firebaseService.updateGame(gameId, {
       name: updates.name.trim(),
-      opponent: updates.opponent?.trim() || undefined,
-      location: updates.location?.trim() || undefined,
+      opponent: updates.opponent?.trim() ?? null,
+      location: updates.location?.trim() ?? null,
       date: new Date(updates.date + 'T12:00:00'),
       time: updates.time || null,
       isHome: updates.isHome
@@ -94,7 +131,7 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
         scrimmageGroups: JSON.stringify(groups),
         scrimmageStep: 2
       });
-      toast.success('Players split into 4 groups');
+      toast.success(`Players split into ${groups.length} groups`);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
     }
@@ -196,12 +233,14 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
     if (!game) return;
 
     try {
-      const { newLineup, fixedAny, skippedDueToLocks } = fixLineup(game, players);
+      const { newLineup, newGroups, fixedAny, skippedDueToLocks } = fixLineup(game, players);
       
       if (fixedAny) {
-        await updateDoc(doc(db, 'games', gameId), {
-          lineup: newLineup
-        });
+        const updates: any = { lineup: newLineup };
+        if (newGroups) {
+          updates.scrimmageGroups = JSON.stringify(newGroups);
+        }
+        await updateDoc(doc(db, 'games', gameId), updates);
 
         toast.success("Lineup fixed!", {
           position: 'top-center'
@@ -273,6 +312,24 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
     }
   };
 
+  const handleUpdateNumGroups = async (gameId: string, numGroups: number) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    // If changing number of groups, we should probably reshuffle/split again to avoid empty columns or overflow
+    const groups = splitScrimmageGroups({ ...game, numGroups }, players);
+
+    try {
+      await updateDoc(doc(db, 'games', gameId), {
+        numGroups,
+        scrimmageGroups: JSON.stringify(groups)
+      });
+      toast.success(`Number of groups updated to ${numGroups}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+    }
+  };
+
   return {
     handleUpdateRSVP,
     handleUpdateGameDetails,
@@ -288,6 +345,7 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
     handleFixLineup,
     handleTogglePositionLock,
     handleToggleInningLock,
-    handleTogglePublish
+    handleTogglePublish,
+    handleUpdateNumGroups
   };
 }

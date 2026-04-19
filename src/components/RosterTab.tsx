@@ -377,7 +377,7 @@ export function RosterTab({
               icon={ClipboardList}
               className="flex-1 sm:flex-none"
             >
-              Add Game
+              Add Event
             </Button>
           </div>
         </div>

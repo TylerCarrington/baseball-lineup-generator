@@ -13,21 +13,20 @@ export const ScrimmageGroupsView: React.FC<ScrimmageGroupsViewProps> = ({
   players,
   handleUpdateGameRSVP,
 }) => {
+  const numGroups = game.numGroups || 4;
   const groups = game.scrimmageGroups || [];
   const inPlayers = players.filter(p => game.rsvps[p.id] !== RSVPStatus.NO);
   const outPlayers = players.filter(p => game.rsvps[p.id] === RSVPStatus.NO).sort((a, b) => a.name.localeCompare(b.name));
   
-  const groupedPlayers: Record<string, Player[]> = {
-    'Group 1': [],
-    'Group 2': [],
-    'Group 3': [],
-    'Group 4': [],
-    'Unassigned': []
-  };
+  const groupedPlayers: Record<string, Player[]> = {};
+  for (let i = 1; i <= numGroups; i++) {
+    groupedPlayers[`Group ${i}`] = [];
+  }
+  groupedPlayers['Unassigned'] = [];
   
   inPlayers.forEach(p => {
     let assigned = false;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < numGroups; i++) {
       if (groups[i] && groups[i].includes(p.id)) {
         groupedPlayers[`Group ${i + 1}`].push(p);
         assigned = true;
@@ -43,9 +42,11 @@ export const ScrimmageGroupsView: React.FC<ScrimmageGroupsViewProps> = ({
     groupedPlayers[key].sort((a, b) => a.name.localeCompare(b.name));
   });
 
+  const groupNames = [...Array.from({ length: numGroups }).map((_, i) => `Group ${i + 1}`), 'Unassigned'];
+
   return (
     <div className="space-y-8">
-      {['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Unassigned'].map(groupName => {
+      {groupNames.map(groupName => {
         const groupPlayers = groupedPlayers[groupName];
         if (groupPlayers.length === 0) return null;
         
@@ -60,7 +61,7 @@ export const ScrimmageGroupsView: React.FC<ScrimmageGroupsViewProps> = ({
                 <thead>
                   <tr className="bg-slate-50/50 dark:bg-slate-800/50">
                     <th scope="col" className="text-left py-4 px-5 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-50 dark:border-slate-800 min-w-[150px]">Player</th>
-                    {[1, 2, 3, 4, 5, 6].map(inning => (
+                    {game.type !== 'practice' && [1, 2, 3, 4, 5, 6].map(inning => (
                       <th key={inning} scope="col" className="text-center py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-50 dark:border-slate-800">Inn {inning}</th>
                     ))}
                     <th scope="col" className="text-right py-4 px-5 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-50 dark:border-slate-800 min-w-[140px]">RSVP Status</th>
@@ -69,7 +70,7 @@ export const ScrimmageGroupsView: React.FC<ScrimmageGroupsViewProps> = ({
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                   {groupPlayers.map(player => {
                     const inningPositions: Record<number, string> = {};
-                    if (game.lineup) {
+                    if (game.type !== 'practice' && game.lineup) {
                       [1, 2, 3, 4, 5, 6].forEach(inning => {
                         const inningLineup = game.lineup?.[inning.toString()] || {};
                         let position = Object.entries(inningLineup).find(([key, id]) => id === player.id && key !== 'HittingGroup')?.[0];
@@ -100,7 +101,7 @@ export const ScrimmageGroupsView: React.FC<ScrimmageGroupsViewProps> = ({
                             <span className="font-black text-slate-900 dark:text-slate-200 text-sm">{player.name}</span>
                           </div>
                         </th>
-                        {[1, 2, 3, 4, 5, 6].map(inning => {
+                        {game.type !== 'practice' && [1, 2, 3, 4, 5, 6].map(inning => {
                           const position = inningPositions[inning];
                           const isHitting = position === 'Hitting';
                           return (

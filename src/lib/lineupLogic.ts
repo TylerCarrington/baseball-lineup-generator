@@ -195,7 +195,7 @@ export function generateLineup(game: Game, players: Player[], settings: any): Re
   return lineup;
 }
 
-export function fixLineup(game: Game, players: Player[]): { newLineup: Record<string, Record<string, string>>, fixedAny: boolean, skippedDueToLocks: boolean } {
+export function fixLineup(game: Game, players: Player[]): { newLineup: Record<string, Record<string, string>>, newGroups?: string[][], fixedAny: boolean, skippedDueToLocks: boolean } {
   if (!game.lineup) return { newLineup: {}, fixedAny: false, skippedDueToLocks: false };
 
   const newLineup = JSON.parse(JSON.stringify(game.lineup));
@@ -203,6 +203,16 @@ export function fixLineup(game: Game, players: Player[]): { newLineup: Record<st
   let skippedDueToLocks = false;
 
   const availablePlayers = players.filter(p => game.rsvps[p.id] === RSVPStatus.YES || game.rsvps[p.id] === RSVPStatus.TENTATIVE);
+  
+  // Clean up scrimmage groups
+  let newGroups = game.scrimmageGroups ? [...game.scrimmageGroups.map(g => [...g])] : undefined;
+  if (newGroups) {
+    newGroups = newGroups.map(group => {
+      const filtered = group.filter(pId => game.rsvps[pId] !== RSVPStatus.NO);
+      if (filtered.length !== group.length) fixedAny = true;
+      return filtered;
+    });
+  }
   
   const fieldPositions = [
     "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
@@ -510,7 +520,7 @@ export function fixLineup(game: Game, players: Player[]): { newLineup: Record<st
     }
   }
 
-  return { newLineup, fixedAny, skippedDueToLocks };
+  return { newLineup, newGroups, fixedAny, skippedDueToLocks };
 }
 
 export function generateScrimmageLineup(game: Game): Record<string, Record<string, string>> {
@@ -808,12 +818,13 @@ export function generateBatteries(game: Game, players: Player[]): Record<string,
 
 export function splitScrimmageGroups(game: Game, players: Player[]): string[][] {
   const availablePlayers = players.filter(p => game.rsvps[p.id] !== RSVPStatus.NO);
+  const numGroups = game.numGroups || 4;
   
   const shuffled = [...availablePlayers].sort(() => Math.random() - 0.5);
   
-  const groups: string[][] = [[], [], [], []];
+  const groups: string[][] = Array.from({ length: numGroups }, () => []);
   shuffled.forEach((p, i) => {
-    groups[i % 4].push(p.id);
+    groups[i % numGroups].push(p.id);
   });
 
   return groups;

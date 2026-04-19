@@ -31,13 +31,26 @@ export interface TeamSettings {
   uid: string;
 }
 
+export interface PracticeActivity {
+  id: string;
+  name: string;
+  duration: number;
+  type: 'team' | 'groups' | 'rotating';
+  category?: string;
+  drillName?: string;
+  groupMap?: Record<number, string>; // GroupIndex (0-3) -> Drill Name
+  groupCategoryMap?: Record<number, string>; // GroupIndex (0-3) -> Category Name
+  startTimeOffset?: number; // Minutes from practice start. If undefined, follows previous activity.
+}
+
 export interface Game {
   id: string;
-  name?: string; // Legacy
+  name?: string; // Auto-generated for games, manual or auto for practices
   opponent?: string;
   location?: string;
   date: any;
   time?: string;
+  duration?: number; // In minutes
   isHome?: boolean;
   rsvps: Record<string, RSVPStatus>;
   battingOrder?: string[];
@@ -48,9 +61,17 @@ export interface Game {
   uid: string;
   createdAt: any;
   mode?: 'standard' | 'scrimmage';
+  type?: 'game' | 'practice'; // Defaults to 'game'
   scrimmageGroups?: string[][];
   scrimmageStep?: number;
+  practiceAgenda?: PracticeActivity[];
+  numGroups?: number; // Configurable (1-4)
 }
+
+/** 
+ * Alias for Game to begin transition to Event nomenclature
+ */
+export type AppEvent = Game;
 
 export interface FirestoreErrorInfo {
   error: string;

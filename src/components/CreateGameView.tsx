@@ -121,33 +121,50 @@ export function CreateGameView({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <button
                 onClick={() => {
                   setEventType('game');
+                  setGameMode('standard');
                   setViewStep(2);
                 }}
-                className="group relative overflow-hidden p-8 bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-100 dark:border-slate-700 hover:border-slate-900 dark:hover:border-indigo-500 transition-all text-left"
+                className="group relative overflow-hidden p-6 sm:p-8 bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-100 dark:border-slate-700 hover:border-slate-900 dark:hover:border-indigo-500 transition-all text-left"
               >
                 <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white mb-6 group-hover:bg-slate-900 dark:group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                   <Trophy size={24} />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Game / Scrimmage</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Schedule a matchup against an opponent or an intrasquad scrimmage.</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Game</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Schedule a matchup against an opponent.</p>
+              </button>
+
+              <button
+                onClick={() => {
+                  setEventType('game');
+                  setGameMode('scrimmage');
+                  setViewStep(2);
+                }}
+                className="group relative overflow-hidden p-6 sm:p-8 bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-100 dark:border-slate-700 hover:border-slate-900 dark:hover:border-indigo-500 transition-all text-left"
+              >
+                <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white mb-6 group-hover:bg-slate-900 dark:group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <ClipboardList size={24} />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Scrimmage</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Organize an intrasquad scrimmage.</p>
               </button>
 
               <button
                 onClick={() => {
                   setEventType('practice');
+                  setGameMode('standard');
                   setViewStep(2);
                 }}
-                className="group relative overflow-hidden p-8 bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-100 dark:border-slate-700 hover:border-slate-900 dark:hover:border-indigo-500 transition-all text-left"
+                className="group relative overflow-hidden p-6 sm:p-8 bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-100 dark:border-slate-700 hover:border-slate-900 dark:hover:border-indigo-500 transition-all text-left"
               >
                 <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white mb-6 group-hover:bg-slate-900 dark:group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                   <CalendarCheck size={24} />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Team Practice</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Organize training sessions, warmups, and rotating group drills.</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Practice</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Organize training sessions and drills.</p>
               </button>
             </div>
           </div>
@@ -163,9 +180,9 @@ export function CreateGameView({
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-                Add {eventType === 'practice' ? 'New Practice' : 'New Game'}
+                Add {eventType === 'practice' ? 'New Practice' : gameMode === 'scrimmage' ? 'New Scrimmage' : 'New Game'}
               </h2>
-              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">Set player availability for this {eventType === 'practice' ? 'practice' : 'game'}</p>
+              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">Set player availability for this {eventType === 'practice' ? 'practice' : gameMode === 'scrimmage' ? 'scrimmage' : 'game'}</p>
             </div>
             <div className="flex items-center gap-2">
               <button 
@@ -184,35 +201,7 @@ export function CreateGameView({
             </div>
           </div>
 
-          {eventType === 'game' && (
-            <div className="mb-6 space-y-3">
-              <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Game Mode</label>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => setGameMode('standard')}
-                  className={`flex items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all ${
-                    gameMode === 'standard'
-                      ? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600 shadow-lg shadow-slate-900/20 dark:shadow-indigo-600/20'
-                      : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <Users size={20} />
-                  <span className="font-bold">Standard</span>
-                </button>
-                <button
-                  onClick={() => setGameMode('scrimmage')}
-                  className={`flex items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all ${
-                    gameMode === 'scrimmage'
-                      ? 'bg-slate-900 dark:bg-indigo-600 text-white border-slate-900 dark:border-indigo-600 shadow-lg shadow-slate-900/20 dark:shadow-indigo-600/20'
-                      : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <ClipboardList size={20} />
-                  <span className="font-bold">Scrimmage</span>
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Mode selection has been removed since it's on step 1 */}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {eventType === 'game' && gameMode === 'standard' && (
@@ -246,7 +235,7 @@ export function CreateGameView({
             </div>
             <div className="space-y-2">
               <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">
-                {eventType === 'practice' ? 'Practice Date' : 'Game Date'}
+                {eventType === 'practice' ? 'Practice Date' : gameMode === 'scrimmage' ? 'Scrimmage Date' : 'Game Date'}
               </label>
               <input 
                 type="date" 
@@ -257,7 +246,7 @@ export function CreateGameView({
             </div>
             <div className="space-y-2">
               <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">
-                {eventType === 'practice' ? 'Practice Time' : 'Game Time'} (Optional)
+                {eventType === 'practice' ? 'Practice Time' : gameMode === 'scrimmage' ? 'Scrimmage Time' : 'Game Time'} (Optional)
               </label>
               <input 
                 type="time" 
@@ -369,7 +358,7 @@ export function CreateGameView({
             onClick={handleCreateGame}
             className="flex-1 py-4 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl font-bold hover:bg-slate-800 dark:hover:bg-indigo-500 transition-all shadow-lg shadow-slate-900/20 dark:shadow-indigo-900/20 active:scale-[0.98]"
           >
-            Add {eventType === 'practice' ? 'Practice' : 'Game'}
+            Add {eventType === 'practice' ? 'Practice' : gameMode === 'scrimmage' ? 'Scrimmage' : 'Game'}
           </button>
           <button 
             onClick={onCancel}

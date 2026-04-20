@@ -89,15 +89,15 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
                     x={coords.x} 
                     y={coords.y} 
                     textAnchor={coords.anchor as any}
-                    className="fill-black font-extrabold text-[5.5px]"
+                    className="fill-black font-black text-[7.5px]"
                   >
                     {player.name}
                   </text>
                   <text 
                     x={coords.x} 
-                    y={coords.y + 5} 
+                    y={coords.y + 7} 
                     textAnchor={coords.anchor as any}
-                    className="fill-gray-600 font-bold text-[4.5px]"
+                    className="fill-gray-700 font-extrabold text-[6px]"
                   >
                     #{player.jerseyNumber || ''}
                   </text>

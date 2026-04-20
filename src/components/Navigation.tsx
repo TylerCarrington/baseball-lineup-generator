@@ -20,7 +20,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   handleLogout
 }) => {
   return (
-    <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 transition-all duration-300">
+    <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 transition-all duration-300 print:hidden">
       <div className="max-w-5xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <div 
@@ -77,7 +77,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900">
+        <div className="md:hidden border-t border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 print:hidden">
           <div className="p-4 flex flex-col gap-2">
             <button 
               onClick={() => handleTabChange('roster')}

@@ -68,7 +68,7 @@ export function GamesTab({
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Event Schedule</h2>
           <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">Manage your {showPastGames ? 'past' : 'upcoming'} events and lineups</p>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto print:hidden">
           <Button
             variant={settings?.publicSchedule ? 'secondary' : 'outline'}
             onClick={() => {
@@ -241,7 +241,7 @@ export function GamesTab({
                         {rsvpCounts[RSVPStatus.NO] || 0} No
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 print:hidden">
                       <Button
                         variant="ghost"
                         size="icon"

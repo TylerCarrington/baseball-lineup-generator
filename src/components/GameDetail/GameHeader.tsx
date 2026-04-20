@@ -7,7 +7,8 @@ import {
   Check, 
   Save, 
   Edit2,
-  MapPin 
+  MapPin,
+  Printer
 } from 'lucide-react';
 import { Game, RSVPStatus, Player } from '../../types';
 import { 
@@ -232,7 +233,14 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           </div>
 
           {!readOnly && (
-            <div className="flex flex-row items-center gap-2 shrink-0 w-full lg:w-auto">
+            <div className="flex flex-row flex-wrap items-center gap-2 shrink-0 w-full lg:w-auto print:hidden">
+              <button 
+                onClick={() => window.open(window.location.origin + window.location.pathname + '#/print/' + game.id, '_blank')}
+                className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl transition-all text-[11px] font-black border border-white/10 bg-white/10 text-white hover:bg-white/20 shadow-sm"
+              >
+                <Printer size={14} />
+                <span className="uppercase tracking-widest">Print</span>
+              </button>
               <button 
                 onClick={() => handleTogglePublish?.(game.id, isLocked)}
                 className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl transition-all text-[11px] font-black border shadow-sm ${

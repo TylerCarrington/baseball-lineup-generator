@@ -5,3 +5,27 @@
 }
 
 @variant dark (&:where(.dark, .dark *));
+
+@media print {
+  html, body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background-color: white !important;
+    color: black !important;
+  }
+  
+  header, nav, .print\:hidden {
+    display: none !important;
+  }
+  
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .dark {
+    /* override tailwind dark mode globals */
+    color-scheme: light !important;
+  }
+}

@@ -136,7 +136,7 @@ const RosterPlayerCard = React.memo<RosterPlayerCardProps>(({
         </div>
       )}
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 print:hidden">
         {isEditing ? (
           <>
             <Button
@@ -362,7 +362,7 @@ export function RosterTab({
               {players.length} / 15 Players
             </Badge>
           </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-3 w-full sm:w-auto print:hidden">
             <Button
               variant={isAddingPlayer ? 'primary' : 'outline'}
               onClick={() => setIsAddingPlayer(!isAddingPlayer)}

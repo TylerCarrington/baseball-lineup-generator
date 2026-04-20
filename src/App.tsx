@@ -16,6 +16,7 @@ import { SettingsTab } from './components/SettingsTab';
 import { GamesTab } from './components/GamesTab';
 import { CreateGameView } from './components/CreateGameView';
 import { GameDetailView } from './components/GameDetail/GameDetailView';
+import { PrintGameView } from './components/PrintGameView';
 import { SharedView } from './components/SharedView';
 import { Navigation } from './components/Navigation';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
@@ -46,7 +47,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, type: 'player' as 'player'|'game', id: '', title: '', message: '' });
 
   const pathParts = location.pathname.split('/');
-  const selectedGameId = (pathParts[1] === 'games' && pathParts[2] && pathParts[2] !== 'new') ? pathParts[2] : null;
+  const isPrintMode = location.pathname.startsWith('/print/');
+  const selectedGameId = ((pathParts[1] === 'games' && pathParts[2] && pathParts[2] !== 'new') ? pathParts[2] : (isPrintMode && pathParts[2] ? pathParts[2] : null));
   const currentTab = pathParts[1] || 'games';
 
   const { players } = usePlayers(user, isAuthReady);
@@ -70,6 +72,11 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950"><div className="text-slate-900 dark:text-emerald-500"><Trophy size={48} /></div></div>;
 
   if (location.pathname.startsWith('/shared/')) return <SharedView darkMode={darkMode} setDarkMode={setDarkMode} />;
+
+  if (isPrintMode) {
+    if (!selectedGame || loading) return <div className="text-center py-12">Loading game for print...</div>;
+    return <PrintGameView game={selectedGame} players={players} games={games} user={user} isAuthReady={isAuthReady} setGames={setGames} />;
+  }
 
   if (!user) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 transition-colors">
@@ -118,7 +125,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <HashRouter>
-        <div className={darkMode ? 'dark' : ''}>
+        <div className={darkMode && !window.location.hash.startsWith('#/print/') ? 'dark' : ''}>
           <BaseballApp darkMode={darkMode} setDarkMode={setDarkMode} />
           <Toaster richColors closeButton position="top-right" />
         </div>

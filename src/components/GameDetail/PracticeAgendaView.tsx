@@ -328,7 +328,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
       </div>
 
       {/* Calendar Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
         <div>
           <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Timeline</h3>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Drag blocks to schedule</p>
@@ -364,7 +364,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
         onDragEnd={handleDragEnd}
         modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
       >
-        <div className="relative border border-slate-200 dark:border-slate-800 rounded-3xl bg-white dark:bg-slate-900 overflow-hidden shadow-xl">
+        <div className="relative border border-slate-200 dark:border-slate-800 rounded-3xl bg-white dark:bg-slate-900 overflow-hidden shadow-xl print:shadow-none print:border-none">
           {/* Time Slots Background (Full Width) */}
           {!readOnly && timeSlots.map((slot, i) => i < timeSlots.length - 1 && (
             <div 
@@ -380,7 +380,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                 setEditingActivityId(null);
                 setIsAddingActivity(true);
               }}
-              className="absolute left-0 right-0 group cursor-pointer hover:bg-slate-50 dark:hover:bg-indigo-500/5 transition-colors z-0"
+              className="absolute left-0 right-0 group cursor-pointer hover:bg-slate-50 dark:hover:bg-indigo-500/5 transition-colors z-0 print:hidden"
               style={{ 
                 top: `${slot * PIXELS_PER_MINUTE}px`, 
                 height: `${MINUTES_PER_SLOT * PIXELS_PER_MINUTE}px` 
@@ -754,7 +754,7 @@ function ActivityItem({
             {...attributes} 
             {...listeners} 
             onClick={(e) => e.stopPropagation()} // Prevent edit modal on drag start
-            className="w-6 shrink-0 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-grab active:cursor-grabbing bg-white/50 dark:bg-black/20 rounded-lg"
+            className="w-6 shrink-0 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-grab active:cursor-grabbing bg-white/50 dark:bg-black/20 rounded-lg print:hidden"
           >
             <GripVertical size={14} />
           </div>
@@ -768,7 +768,7 @@ function ActivityItem({
               {activity.name}
             </h4>
             <div className="flex items-center gap-1.5 shrink-0">
-              {activity.type === 'rotating' && <RotateCw size={10} className="text-emerald-500 animate-spin-slow" />}
+              {activity.type === 'rotating' && <RotateCw size={10} className="text-emerald-500 animate-spin-slow print:hidden" />}
               <span className="text-[9px] font-black opacity-60 uppercase">{activity.duration}m</span>
               {!readOnly && !isOverlay && (
                 <button 
@@ -776,7 +776,7 @@ function ActivityItem({
                     e.stopPropagation();
                     if (onDelete) onDelete(activity.id);
                   }}
-                  className="p-1 hover:bg-rose-500 hover:text-white rounded-md transition-colors"
+                  className="p-1 hover:bg-rose-500 hover:text-white rounded-md transition-colors print:hidden"
                 >
                   <Trash2 size={10} />
                 </button>

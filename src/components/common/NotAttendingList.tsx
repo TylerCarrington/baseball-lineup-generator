@@ -39,7 +39,7 @@ export const NotAttendingList: React.FC<NotAttendingListProps> = ({
               </p>
             </div>
             {!readOnly && !isLocked && gameId && handleUpdateGameRSVP && (
-              <div className="flex gap-1">
+              <div className="flex gap-1 print:hidden">
                 <button
                   onClick={() => handleUpdateGameRSVP(gameId, player.id, RSVPStatus.YES)}
                   className="px-3 py-1.5 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"

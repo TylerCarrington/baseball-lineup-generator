@@ -47,7 +47,7 @@ export const GameDetailTabs: React.FC<GameDetailTabsProps> = ({
   const hasScrimmageIssues = !readOnly && getScrimmageIssues();
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6 print:hidden">
       <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl gap-1 w-full sm:w-auto overflow-x-auto no-scrollbar">
         {game.type === 'practice' && (
           <button 

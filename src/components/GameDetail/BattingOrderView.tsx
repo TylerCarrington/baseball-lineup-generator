@@ -87,7 +87,7 @@ const BattingOrderRow = React.memo<BattingOrderRowProps>(({
               )}
             </p>
             {!readOnly && previousPosition && (
-              <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-100 dark:border-amber-500/20 mt-0.5 sm:mt-0">
+              <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-100 dark:border-amber-500/20 mt-0.5 sm:mt-0 print:hidden">
                 Prev: {previousPosition}
               </span>
             )}
@@ -115,8 +115,8 @@ const BattingOrderRow = React.memo<BattingOrderRowProps>(({
         </div>
       </div>
       {!readOnly && !game.isLocked && (
-        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 border-slate-50 dark:border-slate-800 pt-3 sm:pt-0">
-          <div className="flex gap-1 flex-1 sm:flex-none">
+        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 border-t sm:border-t-0 border-slate-50 dark:border-slate-800 pt-3 sm:pt-0 print:hidden">
+          <div className="flex gap-1 flex-1 sm:flex-none print:hidden">
             {[RSVPStatus.YES, RSVPStatus.TENTATIVE, RSVPStatus.NO].map(status => (
               <button
                 key={status}
@@ -214,7 +214,7 @@ export const BattingOrderView: React.FC<BattingOrderViewProps> = ({
             {!game.isLocked && !readOnly && handleReshuffleLineup && (
               <button
                 onClick={() => handleReshuffleLineup(game.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors print:hidden"
               >
                 <RefreshCw size={12} />
                 Reshuffle

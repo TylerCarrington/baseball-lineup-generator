@@ -116,7 +116,7 @@ export const FieldingLineupView: React.FC<FieldingLineupViewProps> = ({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 print:hidden">
           {fixButtonInfo && (
             <button
               onClick={() => handleFixLineup(selectedGameId)}
@@ -163,7 +163,7 @@ export const FieldingLineupView: React.FC<FieldingLineupViewProps> = ({
                       <span className="text-slate-900 dark:text-slate-200">Inning {inning}</span>
                       <button 
                         onClick={() => handleToggleInningLock(selectedGameId, inning)}
-                        className={`p-1.5 rounded-lg transition-all ${game.lockedInnings?.includes(inning) ? 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : 'text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+                        className={`p-1.5 rounded-lg transition-all print:hidden ${game.lockedInnings?.includes(inning) ? 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : 'text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'}`}
                         title={game.lockedInnings?.includes(inning) ? "Unlock Inning" : "Lock Inning"}
                       >
                         {game.lockedInnings?.includes(inning) ? <Lock size={14} /> : <Unlock size={14} />}
@@ -185,7 +185,7 @@ export const FieldingLineupView: React.FC<FieldingLineupViewProps> = ({
                     <div className="flex items-center gap-3">
                       <button 
                         onClick={() => handleTogglePositionLock(selectedGameId, pos)}
-                        className={`p-1.5 rounded-lg transition-all shrink-0 ${game.lockedPositions?.includes(pos) ? 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : 'text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+                        className={`p-1.5 rounded-lg transition-all shrink-0 print:hidden ${game.lockedPositions?.includes(pos) ? 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : 'text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'}`}
                         title={game.lockedPositions?.includes(pos) ? "Unlock Position" : "Lock Position"}
                       >
                         {game.lockedPositions?.includes(pos) ? <Lock size={14} /> : <Unlock size={14} />}

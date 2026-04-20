@@ -11,7 +11,9 @@ import {
   LayoutGrid, 
   History, 
   ChevronRight,
-  Users
+  Users,
+  Clock,
+  MapPin
 } from 'lucide-react';
 import { POSITION_ORDER } from '../constants';
 import { getPositionAbbreviation, cn } from '../lib/utils';
@@ -411,14 +413,17 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                                   <Badge variant="info">Scrimmage</Badge>
                                 )}
                               </div>
-                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                                  {gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                </p>
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                                  <Calendar size={14} className="flex-shrink-0" />
+                                  <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
+                                    {gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                  </span>
+                                </div>
                                 {game.time && (
-                                  <>
-                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full shrink-0"></span>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                                    <Clock size={14} className="flex-shrink-0" />
+                                    <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
                                       {(() => {
                                         const [hours, minutes] = game.time.split(':');
                                         const h = parseInt(hours);
@@ -426,24 +431,25 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                                         const h12 = h % 12 || 12;
                                         return `${h12}:${minutes} ${ampm}`;
                                       })()}
-                                    </p>
-                                  </>
+                                      {game.type === 'practice' && game.duration && ` (${game.duration} min)`}
+                                    </span>
+                                  </div>
                                 )}
-                                {game.type === 'practice' && game.duration && (
-                                  <>
-                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full shrink-0"></span>
-                                    <span className="text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                                {!game.time && game.type === 'practice' && game.duration && (
+                                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                                    <Clock size={14} className="flex-shrink-0" />
+                                    <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
                                       {game.duration} min
                                     </span>
-                                  </>
+                                  </div>
                                 )}
                                 {game.location && (
-                                  <>
-                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full shrink-0"></span>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium truncate">
+                                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                                    <MapPin size={14} className="flex-shrink-0" />
+                                    <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
                                       {game.location}
-                                    </p>
-                                  </>
+                                    </span>
+                                  </div>
                                 )}
                               </div>
                             </div>

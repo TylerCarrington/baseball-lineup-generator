@@ -65,7 +65,7 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
 
     return (
       <div key={inning} className="relative border border-gray-100 p-1.5 rounded-md bg-white">
-        <div className="absolute top-0.5 left-1.5 font-black text-[9px] uppercase tracking-tighter text-gray-300">Inning {inning}</div>
+        <div className="absolute top-0.5 left-1.5 font-bold text-[10px] uppercase tracking-tighter text-black">Inning {inning}</div>
         
         <div className="aspect-square relative w-[80%] mx-auto overflow-visible py-2 mt-1">
           <svg viewBox="-20 -10 140 120" className="w-full h-full text-gray-200 overflow-visible">
@@ -89,15 +89,15 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
                     x={coords.x} 
                     y={coords.y} 
                     textAnchor={coords.anchor as any}
-                    className="fill-black font-bold text-[4.5px]"
+                    className="fill-black font-extrabold text-[5.5px]"
                   >
                     {player.name}
                   </text>
                   <text 
                     x={coords.x} 
-                    y={coords.y + 4} 
+                    y={coords.y + 5} 
                     textAnchor={coords.anchor as any}
-                    className="fill-gray-500 font-medium text-[3.5px]"
+                    className="fill-gray-600 font-bold text-[4.5px]"
                   >
                     #{player.jerseyNumber || ''}
                   </text>

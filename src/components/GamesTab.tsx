@@ -7,7 +7,10 @@ import {
   ClipboardList, 
   Trash2,
   CalendarCheck,
-  Trophy
+  Trophy,
+  MapPin,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { toast } from 'sonner';
@@ -172,14 +175,17 @@ export function GamesTab({
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
-                            {gameDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                          </span>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                          <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                            <Calendar size={14} className="flex-shrink-0" />
+                            <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
+                              {gameDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
                           {game.time && (
-                            <>
-                              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
-                              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                              <Clock size={14} className="flex-shrink-0" />
+                              <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
                                 {(() => {
                                   const [hours, minutes] = game.time.split(':');
                                   const h = parseInt(hours);
@@ -187,28 +193,28 @@ export function GamesTab({
                                   const h12 = h % 12 || 12;
                                   return `${h12}:${minutes} ${ampm}`;
                                 })()}
+                                {game.type === 'practice' && game.duration && ` (${game.duration} min)`}
                               </span>
-                            </>
+                            </div>
                           )}
-                          {game.type === 'practice' && game.duration && (
-                            <>
-                              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
-                              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                          {!game.time && game.type === 'practice' && game.duration && (
+                            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                              <Clock size={14} className="flex-shrink-0" />
+                              <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
                                 {game.duration} min
                               </span>
-                            </>
+                            </div>
                           )}
                           {game.location && (
-                            <>
-                              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
-                              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                              <MapPin size={14} className="flex-shrink-0" />
+                              <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
                                 {game.location}
                               </span>
-                            </>
+                            </div>
                           )}
                         </div>
-                        <span className="hidden sm:block w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 sm:ml-auto">
                           {game.isLocked ? (
                             <Badge variant="success" className="font-black uppercase tracking-widest">
                               Published

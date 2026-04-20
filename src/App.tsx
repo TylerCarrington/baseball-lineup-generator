@@ -88,7 +88,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       <main className="max-w-5xl mx-auto px-4 py-8">
         <Routes>
           <Route path="/" element={<Navigate to="/games" replace />} />
-          <Route path="/games" element={<GamesTab games={games} user={user} settings={settings} showPastGames={showPastGames} setShowPastGames={setShowPastGames} handleCopyLink={handleCopyLink} handleTabChange={(t) => navigate(`/${t}`)} copySuccess={copySuccess} startCreateLineup={() => navigate('/games/new')} handleViewGame={(id) => navigate(`/games/${id}`)} setDeleteConfirmation={setDeleteConfirmation} />} />
+          <Route path="/games" element={<GamesTab games={games} players={players} user={user} settings={settings} showPastGames={showPastGames} setShowPastGames={setShowPastGames} handleCopyLink={handleCopyLink} handleTabChange={(t) => navigate(`/${t}`)} copySuccess={copySuccess} startCreateLineup={() => navigate('/games/new')} handleViewGame={(id) => navigate(`/games/${id}`)} setDeleteConfirmation={setDeleteConfirmation} />} />
           <Route path="/games/new" element={<CreateGameView players={players} user={user} />} />
           <Route path="/games/:id" element={selectedGame ? <GameDetailView game={selectedGame} players={players} games={games} user={user} isAuthReady={isAuthReady} darkMode={darkMode} setShowClearLineupConfirm={setShowClearLineupConfirm} onBack={() => navigate('/games')} setGames={setGames} /> : <div className="text-center py-12 text-slate-500">Loading game...</div>} />
           <Route path="/roster" element={<RosterTab players={players} user={user} startCreateLineup={() => navigate('/games/new')} setDeleteConfirmation={setDeleteConfirmation} />} />

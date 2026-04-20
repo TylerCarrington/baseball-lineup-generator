@@ -135,6 +135,7 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
               <div key="game-detail">
                 <GameHeader 
                   game={selectedGame} 
+                  players={players}
                   readOnly={true} 
                   onBack={() => navigate(`/shared/${ownerId}/games`)}
                 />

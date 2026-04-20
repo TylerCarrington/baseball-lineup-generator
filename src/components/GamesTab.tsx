@@ -26,6 +26,7 @@ interface GamesTabProps {
   copySuccess: boolean;
   startCreateLineup: () => void;
   games: Game[];
+  players: import('../types').Player[];
   handleViewGame: (id: string) => void;
   setDeleteConfirmation: (val: any) => void;
 }
@@ -40,6 +41,7 @@ export function GamesTab({
   copySuccess,
   startCreateLineup,
   games,
+  players,
   handleViewGame,
   setDeleteConfirmation
 }: GamesTabProps) {
@@ -127,8 +129,11 @@ export function GamesTab({
           </Card>
         ) : (
           filteredGames.map((game) => {
-            const rsvpCounts = (Object.values(game.rsvps) as string[]).reduce((acc, status) => {
-              acc[status] = (acc[status] || 0) + 1;
+            const activePlayerIds = new Set(players.map(p => p.id));
+            const rsvpCounts = (Object.entries(game.rsvps)).reduce((acc, [id, status]) => {
+              if (activePlayerIds.has(id)) {
+                acc[status] = (acc[status] || 0) + 1;
+              }
               return acc;
             }, {} as Record<string, number>);
 

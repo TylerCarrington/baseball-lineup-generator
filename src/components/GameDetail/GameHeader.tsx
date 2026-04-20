@@ -9,13 +9,14 @@ import {
   Edit2,
   MapPin 
 } from 'lucide-react';
-import { Game, RSVPStatus } from '../../types';
+import { Game, RSVPStatus, Player } from '../../types';
 import { 
   getLocalDateString 
 } from '../../lib/utils';
 
 interface GameHeaderProps {
   game: Game;
+  players: Player[];
   readOnly?: boolean;
   onBack?: () => void;
   isEditingRSVPs?: boolean;
@@ -39,6 +40,7 @@ interface GameHeaderProps {
 
 export const GameHeader: React.FC<GameHeaderProps> = ({
   game,
+  players,
   readOnly = false,
   onBack,
   isEditingRSVPs = false,
@@ -60,7 +62,12 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   resetEditState,
 }) => {
   const isLocked = game.isLocked || false;
-  const confirmedCount = Object.values(game.rsvps || {}).filter(v => v === RSVPStatus.YES).length;
+  
+  // Filter YES RSVPs to only include those players who are still in the `players` array
+  const activePlayerIds = new Set(players.map(p => p.id));
+  const confirmedCount = Object.entries(game.rsvps || {})
+    .filter(([id, status]) => status === RSVPStatus.YES && activePlayerIds.has(id))
+    .length;
 
   const gameDateObj = game.date?.toDate ? game.date.toDate() : new Date(game.date);
   const formattedDate = gameDateObj.toLocaleDateString('en-US', { 

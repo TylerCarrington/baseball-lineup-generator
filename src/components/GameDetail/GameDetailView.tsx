@@ -154,6 +154,7 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
     <div key="game-view">
       <GameHeader
         game={game}
+        players={players}
         onBack={onBack}
         isEditingRSVPs={isEditingRSVPs}
         setIsEditingRSVPs={setIsEditingRSVPs}

@@ -174,7 +174,7 @@ export function GamesTab({
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                         <div className="flex items-center gap-2">
                           <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
-                            {gameDateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric' })}
+                            {gameDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                           </span>
                           {game.time && (
                             <>
@@ -198,6 +198,14 @@ export function GamesTab({
                               </span>
                             </>
                           )}
+                          {game.location && (
+                            <>
+                              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
+                              <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                                {game.location}
+                              </span>
+                            </>
+                          )}
                         </div>
                         <span className="hidden sm:block w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full"></span>
                         <div className="flex items-center gap-2">
@@ -209,11 +217,6 @@ export function GamesTab({
                             <Badge variant="default" className="font-black uppercase tracking-widest">
                               Draft
                             </Badge>
-                          )}
-                          {game.location && (
-                            <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap ml-2">
-                              • {game.location}
-                            </span>
                           )}
                         </div>
                       </div>

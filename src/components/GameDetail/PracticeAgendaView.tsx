@@ -1270,14 +1270,20 @@ function ActivityItem({
             </h4>
             <div className="flex items-center gap-1.5 shrink-0">
               {activity.type === 'rotating' && <RotateCw size={10} className="text-emerald-500 animate-spin-slow print:hidden" />}
-              <span className="text-[9px] font-black opacity-60 uppercase">{activity.duration}m</span>
+              <span className={`text-[9px] font-black uppercase ${
+                activity.type === 'rotating' ? 'text-emerald-700/60 dark:text-emerald-400/60' :
+                activity.type === 'groups' ? 'text-amber-700/60 dark:text-amber-400/60' : 'text-indigo-700/60 dark:text-indigo-400/60'
+              }`}>{activity.duration}m</span>
               {!readOnly && !isOverlay && (
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onDelete) onDelete(activity.id);
                   }}
-                  className="p-1 hover:bg-rose-500 hover:text-white rounded-md transition-colors print:hidden"
+                  className={`p-1 hover:bg-rose-500 hover:text-white rounded-md transition-colors print:hidden ${
+                    activity.type === 'rotating' ? 'text-emerald-700/50 dark:text-emerald-400/50' :
+                    activity.type === 'groups' ? 'text-amber-700/50 dark:text-amber-400/50' : 'text-indigo-700/50 dark:text-indigo-400/50'
+                  }`}
                 >
                   <Trash2 size={10} />
                 </button>

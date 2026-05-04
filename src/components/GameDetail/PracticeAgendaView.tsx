@@ -21,6 +21,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -191,6 +192,12 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 5,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
@@ -719,7 +726,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                         </div>
                         
                         {!readOnly && (
-                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-0.5">
                             <div className="flex items-center mr-2 border-r border-slate-200 dark:border-slate-700 pr-2 gap-0.5">
                               <button 
                                 onClick={() => handleMoveSection(index, 'up')}
@@ -1090,7 +1097,7 @@ function SortableNote({
               <p className="text-sm font-bold text-slate-700 dark:text-slate-300 break-words">{note.text}</p>
             </div>
             {!readOnly && (
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <div className="flex gap-1 shrink-0">
                 <button
                   onClick={onEdit}
                   className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg transition-colors"

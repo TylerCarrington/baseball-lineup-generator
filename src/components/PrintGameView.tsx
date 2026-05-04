@@ -171,33 +171,111 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
 
         {/* Practice view remains simple */}
         {game.type === 'practice' ? (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold uppercase border-b border-black pb-2 mb-6 text-black">Expected Players</h2>
-            <ul className="grid grid-cols-3 gap-2 py-4">
-              {attendingPlayers.map(player => (
-                  <li key= {player.id} className="text-lg font-bold text-black" >
-                    {player.name} {game.rsvps?.[player.id] === RSVPStatus.TENTATIVE && <span className="text-black italic text-sm font-bold">(?)</span>}
-                  </li>
-              ))}
-            </ul>
+          <div className="grid grid-cols-[1fr_250px] gap-8">
+            {/* Practice Agenda */}
+            <div className="space-y-8">
+              {game.practiceAgenda && game.practiceAgenda.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-black uppercase border-b border-black pb-1 mb-4 text-black tracking-widest">Practice Agenda</h2>
+                  <div className="space-y-0">
+                    {(() => {
+                      let runningCumulative = 0;
+                      const agendaWithTimes = game.practiceAgenda.map(activity => {
+                        const startOffset = activity.startTimeOffset !== undefined ? activity.startTimeOffset : runningCumulative;
+                        runningCumulative = startOffset + (activity.duration || 0);
+                        return { ...activity, startOffset };
+                      }).sort((a, b) => a.startOffset - b.startOffset);
 
-            {noteSections.length > 0 && (
-              <div className="mt-12 space-y-10">
-                {noteSections.map((section) => (
-                  <div key={section.id}>
-                    <h2 className="text-2xl font-bold uppercase border-b border-black pb-2 mb-6 text-black">{section.title}</h2>
-                    <ul className="space-y-4">
-                      {section.notes.map((note, index) => (
-                        <li key={index} className="flex gap-4 items-start">
-                          <div className="mt-2 w-2 h-2 rounded-full bg-black shrink-0" />
-                          <p className="text-lg font-bold text-black">{note.text}</p>
-                        </li>
-                      ))}
-                    </ul>
+                      const getClockTime = (baseTime: string, offsetMinutes: number) => {
+                        const [hoursStr, minutesStr] = baseTime.split(':');
+                        let hours = parseInt(hoursStr, 10);
+                        let minutes = parseInt(minutesStr, 10) + offsetMinutes;
+                        hours += Math.floor(minutes / 60);
+                        minutes = minutes % 60;
+                        const ampm = hours >= 12 ? 'pm' : 'am';
+                        const h12 = hours % 12 || 12;
+                        return `${h12}:${minutes.toString().padStart(2, '0')}${ampm}`;
+                      };
+
+                      return agendaWithTimes.map((activity) => {
+                        return (
+                          <div key={activity.id} className="flex gap-4 items-start py-2.5 border-b border-black last:border-0 border-opacity-30">
+                            <div className="w-16 shrink-0 pt-0.5">
+                              <div className="text-sm font-black text-black leading-none">
+                                {game.time ? getClockTime(game.time, activity.startOffset) : `${activity.startOffset}m`}
+                              </div>
+                              <div className="text-[8px] font-black text-black uppercase tracking-widest mt-1">{activity.duration} min</div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between mb-0.5 gap-2">
+                                <h3 className="text-sm font-black text-black uppercase tracking-tight leading-tight">{activity.name}</h3>
+                                <span className="text-[8px] font-black uppercase text-black border border-black px-1 py-0.5 rounded leading-none shrink-0">{activity.type}</span>
+                              </div>
+                              <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-1.5">
+                                {(activity.type === 'groups' || activity.type === 'rotating') && activity.groupMap && (
+                                  Object.entries(activity.groupMap).map(([idx, drill]) => (
+                                    drill && (
+                                      <div key={idx} className="flex flex-col">
+                                        <span className="text-[7px] font-black uppercase text-black opacity-60 leading-none mb-0.5">
+                                          {activity.type === 'rotating' ? `Drill ${parseInt(idx) + 1}` : `Group ${parseInt(idx) + 1}`}
+                                        </span>
+                                        <span className="text-xs font-bold text-black leading-snug">{drill}</span>
+                                      </div>
+                                    )
+                                  ))
+                                )}
+                                {activity.drillName && (
+                                  <div className="flex flex-col">
+                                    <span className="text-[7px] font-black uppercase text-black opacity-60 leading-none mb-0.5">Drill</span>
+                                    <span className="text-xs font-bold text-black leading-snug">{activity.drillName}</span>
+                                  </div>
+                                )}
+                                {activity.category && (
+                                  <div className="flex flex-col">
+                                    <span className="text-[7px] font-black uppercase text-black opacity-60 leading-none mb-0.5">Category</span>
+                                    <span className="text-xs font-bold text-black leading-snug">{activity.category}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
+
+            {/* Expected Players / Notes */}
+            <div className="space-y-8">
+              {notAttendingPlayers.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-black uppercase border-b border-black pb-1 mb-2 text-black tracking-widest">Players Out</h2>
+                  <p className="text-xs font-bold text-black leading-snug">
+                    {notAttendingPlayers.map(p => `${p.name}${p.jerseyNumber ? ` (#${p.jerseyNumber})` : ''}`).join(' • ')}
+                  </p>
+                </div>
+              )}
+
+              {noteSections.length > 0 && (
+                <div className="space-y-6">
+                  {noteSections.map((section) => (
+                    <div key={section.id}>
+                      <h2 className="text-sm font-black uppercase border-b border-black pb-1 mb-2 text-black tracking-widest">{section.title}</h2>
+                      <ul className="space-y-1.5">
+                        {section.notes.map((note, index) => (
+                          <li key={index} className="flex gap-2 items-start">
+                            <div className="mt-1.5 w-1 h-1 rounded-full bg-black shrink-0" />
+                            <p className="text-[11px] font-bold text-black leading-tight">{note.text}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           /* Multi-column Layout for Games */

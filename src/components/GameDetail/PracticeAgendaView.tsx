@@ -25,13 +25,22 @@ import {
   useDraggable,
   useDroppable,
   DragOverlay,
-  defaultDropAnimationSideEffects
+  defaultDropAnimationSideEffects,
+  DragOverEvent,
+  DragStartEvent
 } from '@dnd-kit/core';
 import {
   restrictToVerticalAxis,
-  restrictToFirstScrollableAncestor
+  restrictToFirstScrollableAncestor,
+  restrictToWindowEdges
 } from '@dnd-kit/modifiers';
-import { Game, PracticeActivity } from '../../types';
+import { 
+  SortableContext, 
+  verticalListSortingStrategy, 
+  arrayMove, 
+  useSortable 
+} from '@dnd-kit/sortable';
+import { Game, PracticeActivity, PracticeNote, PracticeNoteSection } from '../../types';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -151,9 +160,30 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
   const remainingTime = practiceDuration - scheduledTime;
 
   const practiceNotes = game.practiceNotes || [];
+  const noteSections = useMemo(() => {
+    if (game.practiceNoteSections && game.practiceNoteSections.length > 0) {
+      return game.practiceNoteSections;
+    }
+    // Backward compatibility: If we have old practiceNotes, migrate them to a "General" section
+    if (practiceNotes.length > 0) {
+      return [{
+        id: 'general-section',
+        title: 'General',
+        notes: practiceNotes.map(n => ({ id: crypto.randomUUID(), text: n }))
+      }];
+    }
+    return [];
+  }, [game.practiceNoteSections, practiceNotes]);
+
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [newNote, setNewNote] = useState('');
-  const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
+  const [addingNoteToSectionId, setAddingNoteToSectionId] = useState<string | null>(null);
+  const [editingNoteIndex, setEditingNoteIndex] = useState<{sectionId: string, index: number} | null>(null);
   const [editingNoteText, setEditingNoteText] = useState('');
+  const [newSectionTitle, setNewSectionTitle] = useState('');
+  const [isAddingSection, setIsAddingSection] = useState(false);
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editingSectionTitle, setEditingSectionTitle] = useState('');
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -275,28 +305,143 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
     setActivityForm({ name: '', duration: 15, type: 'team', category: '', drillName: '', groupMap: { 0: '', 1: '', 2: '', 3: '' }, groupCategoryMap: { 0: '', 1: '', 2: '', 3: '' }, startTimeOffset: 0 });
   };
 
-  const handleAddNote = async () => {
+  const handleAddSection = async () => {
+    if (!newSectionTitle.trim()) return;
+    const newSection: PracticeNoteSection = {
+      id: crypto.randomUUID(),
+      title: newSectionTitle.trim(),
+      notes: []
+    };
+    const updatedSections = [...noteSections, newSection];
+    await firebaseService.updateGame(game.id, { 
+      practiceNoteSections: updatedSections,
+      practiceNotes: [] // Clear old format
+    });
+    setNewSectionTitle('');
+    setIsAddingSection(false);
+    toast.success("Section added");
+  };
+
+  const handleUpdateSection = async () => {
+    if (!editingSectionId || !editingSectionTitle.trim()) return;
+    const updatedSections = noteSections.map(s => 
+      s.id === editingSectionId ? { ...s, title: editingSectionTitle.trim() } : s
+    );
+    await firebaseService.updateGame(game.id, { practiceNoteSections: updatedSections });
+    setEditingSectionId(null);
+    setEditingSectionTitle('');
+    toast.success("Section renamed");
+  };
+
+  const handleDeleteSection = async (sectionId: string) => {
+    const updatedSections = noteSections.filter(s => s.id !== sectionId);
+    await firebaseService.updateGame(game.id, { practiceNoteSections: updatedSections });
+    toast.success("Section removed");
+  };
+
+  const handleAddNoteToSection = async (sectionId: string) => {
     if (!newNote.trim()) return;
-    const updatedNotes = [...practiceNotes, newNote.trim()];
-    await firebaseService.updateGame(game.id, { practiceNotes: updatedNotes });
+    const updatedSections = noteSections.map(s => {
+      if (s.id === sectionId) {
+        return { ...s, notes: [...s.notes, { id: crypto.randomUUID(), text: newNote.trim() }] };
+      }
+      return s;
+    });
+    await firebaseService.updateGame(game.id, { 
+      practiceNoteSections: updatedSections,
+      practiceNotes: []
+    });
     setNewNote('');
+    setAddingNoteToSectionId(null);
     toast.success("Note added");
   };
 
-  const handleDeleteNote = async (index: number) => {
-    const updatedNotes = practiceNotes.filter((_, i) => i !== index);
-    await firebaseService.updateGame(game.id, { practiceNotes: updatedNotes });
+  const handleDeleteNote = async (sectionId: string, noteId: string) => {
+    const updatedSections = noteSections.map(s => {
+      if (s.id === sectionId) {
+        return { ...s, notes: s.notes.filter(n => n.id !== noteId) };
+      }
+      return s;
+    });
+    await firebaseService.updateGame(game.id, { practiceNoteSections: updatedSections });
     toast.success("Note removed");
   };
 
   const handleUpdateNote = async () => {
     if (editingNoteIndex === null || !editingNoteText.trim()) return;
-    const updatedNotes = [...practiceNotes];
-    updatedNotes[editingNoteIndex] = editingNoteText.trim();
-    await firebaseService.updateGame(game.id, { practiceNotes: updatedNotes });
+    const updatedSections = noteSections.map(s => {
+      if (s.id === editingNoteIndex.sectionId) {
+        const updatedNotes = [...s.notes];
+        updatedNotes[editingNoteIndex.index] = { ...updatedNotes[editingNoteIndex.index], text: editingNoteText.trim() };
+        return { ...s, notes: updatedNotes };
+      }
+      return s;
+    });
+    await firebaseService.updateGame(game.id, { practiceNoteSections: updatedSections });
     setEditingNoteIndex(null);
     setEditingNoteText('');
     toast.success("Note updated");
+  };
+
+  const handleNoteDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveNoteId(null);
+    if (!over || readOnly) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Find active section and over section
+    const activeSection = noteSections.find(s => s.notes.some(n => n.id === activeId));
+    const overSection = noteSections.find(s => s.id === overId || s.notes.some(n => n.id === overId));
+
+    if (!activeSection || !overSection) return;
+
+    if (activeSection.id === overSection.id) {
+      // Reorder within same section
+      const oldIndex = activeSection.notes.findIndex(n => n.id === activeId);
+      const newIndex = overSection.notes.findIndex(n => n.id === overId);
+      
+      if (oldIndex !== newIndex) {
+        const updatedSection = {
+          ...activeSection,
+          notes: arrayMove(activeSection.notes, oldIndex, newIndex)
+        };
+        const updatedSections = noteSections.map(s => s.id === updatedSection.id ? updatedSection : s);
+        await firebaseService.updateGame(game.id, { practiceNoteSections: updatedSections });
+      }
+    } else {
+      // Move between sections
+      const activeIndex = activeSection.notes.findIndex(n => n.id === activeId);
+      const note = activeSection.notes[activeIndex];
+      
+      const newActiveSection = {
+        ...activeSection,
+        notes: activeSection.notes.filter(n => n.id !== activeId)
+      };
+      
+      let overIndex = overSection.notes.findIndex(n => n.id === overId);
+      if (overIndex === -1) {
+        overIndex = overSection.notes.length;
+      }
+
+      const newOverSection = {
+        ...overSection,
+        notes: [
+          ...overSection.notes.slice(0, overIndex),
+          note,
+          ...overSection.notes.slice(overIndex)
+        ]
+      };
+
+      const updatedSections = noteSections.map(s => {
+        if (s.id === newActiveSection.id) return newActiveSection;
+        if (s.id === newOverSection.id) return newOverSection;
+        return s;
+      });
+      await firebaseService.updateGame(game.id, { practiceNoteSections: updatedSections });
+      toast.success("Note moved");
+    }
   };
 
   const handleEditClick = (activity: PracticeActivity) => {
@@ -488,85 +633,157 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
         </DragOverlay>
       </DndContext>
 
-      {/* Notes Section */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Practice Notes</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Free-form training focus & reminders</p>
+      {/* Notes Section with Sections */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={(e) => setActiveNoteId(e.active.id as string)}
+        onDragEnd={handleNoteDragEnd}
+        modifiers={[restrictToWindowEdges]}
+      >
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Practice Notes</h3>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Organized training focus & reminders</p>
+            </div>
+            {!readOnly && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                icon={Plus}
+                onClick={() => setIsAddingSection(true)}
+              >
+                New Section
+              </Button>
+            )}
           </div>
-          <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center">
-            <ClipboardList size={20} />
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          {!readOnly && (
-            <Card className="p-4" hover={false}>
+          {!readOnly && isAddingSection && (
+            <Card className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30" hover={false}>
               <div className="flex gap-3">
                 <input
                   type="text"
-                  placeholder="Add a new note..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-                  className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-0 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-sm"
+                  autoFocus
+                  placeholder="Section Title (e.g. Warmups, Drills, Reminders)..."
+                  value={newSectionTitle}
+                  onChange={(e) => setNewSectionTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddSection();
+                    if (e.key === 'Escape') setIsAddingSection(false);
+                  }}
+                  className="flex-1 px-4 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-sm"
                 />
-                <Button onClick={handleAddNote} icon={Plus}>Add Note</Button>
+                <Button onClick={handleAddSection}>Add Section</Button>
+                <Button variant="outline" onClick={() => setIsAddingSection(false)}>Cancel</Button>
               </div>
             </Card>
           )}
 
-          {practiceNotes.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {practiceNotes.map((note, index) => (
-                <Card key={index} className="p-4 bg-slate-50 dark:bg-slate-800/50 group" hover={false}>
-                  {editingNoteIndex === index ? (
-                    <div className="flex gap-3">
+          {noteSections.length > 0 ? (
+            <div className="grid grid-cols-1 gap-8">
+              {noteSections.map((section) => (
+                <div key={section.id} className="space-y-4">
+                  <div className="flex items-center justify-between group">
+                    {editingSectionId === section.id ? (
+                      <div className="flex gap-2 flex-1">
+                        <input
+                          type="text"
+                          autoFocus
+                          value={editingSectionTitle}
+                          onChange={(e) => setEditingSectionTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleUpdateSection();
+                            if (e.key === 'Escape') setEditingSectionId(null);
+                          }}
+                          className="px-3 py-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-sm"
+                        />
+                        <button onClick={handleUpdateSection} className="text-emerald-500 font-bold text-xs uppercase">Save</button>
+                        <button onClick={() => setEditingSectionId(null)} className="text-slate-400 font-bold text-xs uppercase">Cancel</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{section.title}</h4>
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md">{section.notes.length}</span>
+                        {!readOnly && (
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => {
+                                setEditingSectionId(section.id);
+                                setEditingSectionTitle(section.title);
+                              }}
+                              className="p-1 text-slate-400 hover:text-indigo-500 transition-colors"
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteSection(section.id)}
+                              className="p-1 text-slate-400 hover:text-rose-500 transition-colors"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {!readOnly && addingNoteToSectionId !== section.id && (
+                      <button 
+                        onClick={() => setAddingNoteToSectionId(section.id)}
+                        className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:underline"
+                      >
+                        + Add Note
+                      </button>
+                    )}
+                  </div>
+
+                  <DroppableSection id={section.id}>
+                    <SortableContext 
+                      items={section.notes.map(n => n.id)} 
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 min-h-[40px]">
+                        {section.notes.map((note, index) => (
+                          <SortableNote 
+                            key={note.id}
+                            id={note.id}
+                            note={note}
+                            readOnly={readOnly}
+                            isEditing={editingNoteIndex?.sectionId === section.id && editingNoteIndex?.index === index}
+                            editingText={editingNoteText}
+                            setEditingText={setEditingNoteText}
+                            onEdit={() => {
+                              setEditingNoteIndex({ sectionId: section.id, index });
+                              setEditingNoteText(note.text);
+                            }}
+                            onSave={handleUpdateNote}
+                            onCancel={() => setEditingNoteIndex(null)}
+                            onDelete={() => handleDeleteNote(section.id, note.id)}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DroppableSection>
+
+                  {!readOnly && addingNoteToSectionId === section.id && (
+                    <div className="flex gap-3 mt-2">
                       <input
                         type="text"
                         autoFocus
-                        value={editingNoteText}
-                        onChange={(e) => setEditingNoteText(e.target.value)}
+                        placeholder="Type note..."
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleUpdateNote();
-                          if (e.key === 'Escape') setEditingNoteIndex(null);
+                          if (e.key === 'Enter') handleAddNoteToSection(section.id);
+                          if (e.key === 'Escape') setAddingNoteToSectionId(null);
                         }}
-                        className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-sm"
+                        className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-0 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-sm"
                       />
-                      <div className="flex gap-1">
-                        <Button size="sm" onClick={handleUpdateNote}>Save</Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditingNoteIndex(null)}>Cancel</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex gap-3 flex-1 min-w-0">
-                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
-                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300 break-words">{note}</p>
-                      </div>
-                      {!readOnly && (
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => {
-                              setEditingNoteIndex(index);
-                              setEditingNoteText(note);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg transition-colors"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteNote(index)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
+                      <Button size="sm" onClick={() => handleAddNoteToSection(section.id)}>Save</Button>
+                      <Button size="sm" variant="outline" onClick={() => setAddingNoteToSectionId(null)}>Cancel</Button>
                     </div>
                   )}
-                </Card>
+                </div>
               ))}
             </div>
           ) : (
@@ -575,11 +792,22 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                 <ClipboardList size={24} />
               </div>
               <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No practice notes yet</p>
-              {!readOnly && <p className="text-xs text-slate-500 mt-1">Add your first note to help organize your session</p>}
+              {!readOnly && <p className="text-xs text-slate-500 mt-1">Add sections and notes to organize your session</p>}
             </div>
           )}
         </div>
-      </div>
+
+        <DragOverlay>
+          {activeNoteId ? (
+            <div className="w-[300px]">
+              <NoteCard 
+                text={noteSections.flatMap(s => s.notes).find(n => n.id === activeNoteId)?.text || ''} 
+                isDragging 
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Modal and Helper Components */}
       {isAddingActivity && (
@@ -762,6 +990,105 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
         </div>
       )}
     </div>
+  );
+}
+
+function DroppableSection({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id });
+  return <div ref={setNodeRef}>{children}</div>;
+}
+
+function SortableNote({ 
+  id, 
+  note, 
+  readOnly, 
+  isEditing, 
+  editingText, 
+  setEditingText, 
+  onEdit, 
+  onSave, 
+  onCancel, 
+  onDelete 
+}: any) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id });
+
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 60 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card className={`p-4 bg-slate-50 dark:bg-slate-800/50 group h-full ${isDragging ? 'shadow-2xl ring-2 ring-indigo-500' : ''}`} hover={false}>
+        {isEditing ? (
+          <div className="flex gap-3 h-full items-center">
+            <input
+              type="text"
+              autoFocus
+              value={editingText}
+              onChange={(e) => setEditingText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') onSave();
+                if (e.key === 'Escape') onCancel();
+              }}
+              className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-sm"
+            />
+            <div className="flex gap-1">
+              <Button size="sm" onClick={onSave}>Save</Button>
+              <Button size="sm" variant="outline" onClick={onCancel}>Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start justify-between gap-4 h-full">
+            <div className="flex gap-3 flex-1 min-w-0 h-full items-start">
+              {!readOnly && (
+                <div {...attributes} {...listeners} className="mt-1 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-900 dark:hover:text-white shrink-0">
+                  <GripVertical size={14} />
+                </div>
+              )}
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300 break-words">{note.text}</p>
+            </div>
+            {!readOnly && (
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <button
+                  onClick={onEdit}
+                  className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg transition-colors"
+                >
+                  <Edit2 size={14} />
+                </button>
+                <button
+                  onClick={onDelete}
+                  className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function NoteCard({ text, isDragging }: { text: string; isDragging?: boolean }) {
+  return (
+    <Card className={`p-4 bg-white dark:bg-slate-800 shadow-2xl border-indigo-500 border-2 ${isDragging ? 'rotate-1 scale-105' : ''} z-[100]`} hover={false}>
+      <div className="flex items-start gap-3">
+        <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{text}</p>
+      </div>
+    </Card>
   );
 }
 

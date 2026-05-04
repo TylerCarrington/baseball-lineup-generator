@@ -53,6 +53,20 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
     return players.filter(p => game.rsvps?.[p.id] === RSVPStatus.NO);
   }, [players, game.rsvps]);
 
+  const noteSections = useMemo(() => {
+    if (game.practiceNoteSections && game.practiceNoteSections.length > 0) {
+      return game.practiceNoteSections;
+    }
+    if (game.practiceNotes && game.practiceNotes.length > 0) {
+      return [{
+        id: 'general',
+        title: 'Practice Notes',
+        notes: game.practiceNotes.map(n => ({ id: '', text: n }))
+      }];
+    }
+    return [];
+  }, [game.practiceNoteSections, game.practiceNotes]);
+
   const renderDiamond = (inning: number) => {
     const inningStr = inning.toString();
     const inningLineup = game.lineup?.[inningStr] || {};
@@ -167,17 +181,21 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
               ))}
             </ul>
 
-            {game.practiceNotes && game.practiceNotes.length > 0 && (
-              <div className="mt-12">
-                <h2 className="text-2xl font-bold uppercase border-b border-black pb-2 mb-6 text-black">Practice Notes</h2>
-                <ul className="space-y-4">
-                  {game.practiceNotes.map((note, index) => (
-                    <li key={index} className="flex gap-4 items-start">
-                      <div className="mt-2 w-2 h-2 rounded-full bg-black shrink-0" />
-                      <p className="text-lg font-bold text-black">{note}</p>
-                    </li>
-                  ))}
-                </ul>
+            {noteSections.length > 0 && (
+              <div className="mt-12 space-y-10">
+                {noteSections.map((section) => (
+                  <div key={section.id}>
+                    <h2 className="text-2xl font-bold uppercase border-b border-black pb-2 mb-6 text-black">{section.title}</h2>
+                    <ul className="space-y-4">
+                      {section.notes.map((note, index) => (
+                        <li key={index} className="flex gap-4 items-start">
+                          <div className="mt-2 w-2 h-2 rounded-full bg-black shrink-0" />
+                          <p className="text-lg font-bold text-black">{note.text}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </div>
             )}
           </div>

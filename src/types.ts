@@ -43,6 +43,17 @@ export interface PracticeActivity {
   startTimeOffset?: number; // Minutes from practice start. If undefined, follows previous activity.
 }
 
+export interface PracticeNote {
+  id: string;
+  text: string;
+}
+
+export interface PracticeNoteSection {
+  id: string;
+  title: string;
+  notes: PracticeNote[];
+}
+
 export interface Game {
   id: string;
   name?: string; // Auto-generated for games, manual or auto for practices
@@ -66,6 +77,7 @@ export interface Game {
   scrimmageStep?: number;
   practiceAgenda?: PracticeActivity[];
   practiceNotes?: string[];
+  practiceNoteSections?: PracticeNoteSection[];
   numGroups?: number; // Configurable (1-4)
 }
 

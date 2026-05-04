@@ -41,6 +41,7 @@ export interface PracticeActivity {
   groupMap?: Record<number, string>; // GroupIndex (0-3) -> Drill Name
   groupCategoryMap?: Record<number, string>; // GroupIndex (0-3) -> Category Name
   startTimeOffset?: number; // Minutes from practice start. If undefined, follows previous activity.
+  notes?: string;
 }
 
 export interface PracticeNote {

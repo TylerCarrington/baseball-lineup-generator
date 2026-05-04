@@ -284,7 +284,8 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
               drillName: activityForm.type === 'team' ? activityForm.drillName : undefined,
               groupMap: activityForm.type !== 'team' ? activityForm.groupMap : undefined,
               groupCategoryMap: activityForm.type !== 'team' ? activityForm.groupCategoryMap : undefined,
-              startTimeOffset: activityForm.startTimeOffset ?? 0
+              startTimeOffset: activityForm.startTimeOffset ?? 0,
+              notes: activityForm.notes || undefined
             } 
           : a
       );
@@ -301,7 +302,8 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
         drillName: activityForm.type === 'team' ? activityForm.drillName : undefined,
         groupMap: activityForm.type !== 'team' ? activityForm.groupMap : undefined,
         groupCategoryMap: activityForm.type !== 'team' ? activityForm.groupCategoryMap : undefined,
-        startTimeOffset: activityForm.startTimeOffset ?? 0
+        startTimeOffset: activityForm.startTimeOffset ?? 0,
+        notes: activityForm.notes || undefined
       };
 
       const updatedAgenda = [...agenda, activity];
@@ -311,7 +313,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
 
     setIsAddingActivity(false);
     setEditingActivityId(null);
-    setActivityForm({ name: '', duration: 15, type: 'team', category: '', drillName: '', groupMap: { 0: '', 1: '', 2: '', 3: '' }, groupCategoryMap: { 0: '', 1: '', 2: '', 3: '' }, startTimeOffset: 0 });
+    setActivityForm({ name: '', duration: 15, type: 'team', category: '', drillName: '', groupMap: { 0: '', 1: '', 2: '', 3: '' }, groupCategoryMap: { 0: '', 1: '', 2: '', 3: '' }, startTimeOffset: 0, notes: '' });
   };
 
   const handleAddSection = async () => {
@@ -472,7 +474,8 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
       drillName: activity.drillName || '',
       groupMap: activity.groupMap || { 0: '', 1: '', 2: '', 3: '' },
       groupCategoryMap: activity.groupCategoryMap || { 0: '', 1: '', 2: '', 3: '' },
-      startTimeOffset: activity.startTimeOffset
+      startTimeOffset: activity.startTimeOffset,
+      notes: activity.notes || ''
     });
     setIsAddingActivity(true);
   };
@@ -1017,6 +1020,16 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
               )}
             </div>
 
+            <div className="pt-2">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2">Activity Notes (Optional)</label>
+              <textarea
+                value={activityForm.notes || ''}
+                onChange={(e) => setActivityForm({...activityForm, notes: e.target.value})}
+                placeholder="Add context to this activity (e.g., focus on throws to first)"
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold text-sm min-h-[80px] resize-y"
+              />
+            </div>
+
             <div className="flex gap-3 pt-2">
               <Button fullWidth onClick={handleSaveActivity}>{editingActivityId ? 'Update Block' : 'Add Block'}</Button>
               <Button fullWidth variant="outline" onClick={() => {
@@ -1314,6 +1327,14 @@ function ActivityItem({
             <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1 truncate">
               {activity.type === 'rotating' ? 'Rotation System' : activity.type === 'groups' ? 'Split Groups' : 'Whole Team'}
             </p>
+          )}
+
+          {activity.notes && (
+            <div className="mt-1 border-t border-slate-200/50 dark:border-slate-700/50 pt-1">
+              <p className="text-[9px] font-bold text-slate-600 dark:text-slate-400 break-words leading-tight line-clamp-2">
+                Note: {activity.notes}
+              </p>
+            </div>
           )}
 
           {isOverlapping && !isOverlay && (

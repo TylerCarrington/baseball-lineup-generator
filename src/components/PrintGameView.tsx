@@ -237,6 +237,12 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
                                   </div>
                                 )}
                               </div>
+                              {activity.notes && (
+                                <div className="mt-2 text-xs font-bold text-black border-t border-black border-opacity-10 pt-1">
+                                  <span className="opacity-60 italic mr-1">Note:</span>
+                                  {activity.notes}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );

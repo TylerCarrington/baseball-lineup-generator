@@ -1102,7 +1102,7 @@ function SortableNote({
           <div className="flex items-start justify-between gap-4 h-full">
             <div className="flex gap-3 flex-1 min-w-0 h-full items-start">
               {!readOnly && (
-                <div {...attributes} {...listeners} className="mt-1 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-900 dark:hover:text-white shrink-0">
+                <div {...attributes} {...listeners} className="mt-1 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-900 dark:hover:text-white shrink-0" style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}>
                   <GripVertical size={14} />
                 </div>
               )}
@@ -1256,6 +1256,7 @@ function ActivityItem({
             {...listeners} 
             onClick={(e) => e.stopPropagation()} // Prevent edit modal on drag start
             className="w-6 shrink-0 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-grab active:cursor-grabbing bg-white/50 dark:bg-black/20 rounded-lg print:hidden"
+            style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
           >
             <GripVertical size={14} />
           </div>

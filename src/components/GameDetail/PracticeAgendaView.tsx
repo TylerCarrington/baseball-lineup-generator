@@ -11,6 +11,8 @@ import {
   ClipboardList,
   GripVertical,
   X,
+  ArrowDown,
+  ArrowUp,
   RotateCw,
   Edit2
 } from 'lucide-react';
@@ -337,6 +339,14 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
     const updatedSections = noteSections.filter(s => s.id !== sectionId);
     await firebaseService.updateGame(game.id, { practiceNoteSections: updatedSections });
     toast.success("Section removed");
+  };
+
+  const handleMoveSection = async (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= noteSections.length) return;
+
+    const updatedSections = arrayMove(noteSections, index, newIndex);
+    await firebaseService.updateGame(game.id, { practiceNoteSections: updatedSections });
   };
 
   const handleAddNoteToSection = async (sectionId: string) => {
@@ -682,7 +692,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
 
           {noteSections.length > 0 ? (
             <div className="grid grid-cols-1 gap-8">
-              {noteSections.map((section) => (
+              {noteSections.map((section, index) => (
                 <div key={section.id} className="space-y-4">
                   <div className="flex items-center justify-between group">
                     {editingSectionId === section.id ? (
@@ -702,11 +712,32 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                         <button onClick={() => setEditingSectionId(null)} className="text-slate-400 font-bold text-xs uppercase">Cancel</button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{section.title}</h4>
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md">{section.notes.length}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{section.title}</h4>
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md">{section.notes.length}</span>
+                        </div>
+                        
                         {!readOnly && (
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center mr-2 border-r border-slate-200 dark:border-slate-700 pr-2 gap-0.5">
+                              <button 
+                                onClick={() => handleMoveSection(index, 'up')}
+                                disabled={index === 0}
+                                className="p-1 text-slate-400 hover:text-indigo-500 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                                title="Move Up"
+                              >
+                                <ArrowUp size={12} />
+                              </button>
+                              <button 
+                                onClick={() => handleMoveSection(index, 'down')}
+                                disabled={index === noteSections.length - 1}
+                                className="p-1 text-slate-400 hover:text-indigo-500 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                                title="Move Down"
+                              >
+                                <ArrowDown size={12} />
+                              </button>
+                            </div>
                             <button 
                               onClick={() => {
                                 setEditingSectionId(section.id);

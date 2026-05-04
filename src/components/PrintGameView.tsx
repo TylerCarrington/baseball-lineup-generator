@@ -253,8 +253,36 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
               )}
             </div>
 
-            {/* Expected Players / Notes */}
+            {/* Groups */}
             <div className="space-y-8">
+              {game.numGroups && game.numGroups > 1 && game.scrimmageGroups && (
+                <div>
+                  <h2 className="text-sm font-black uppercase border-b border-black pb-1 mb-2 text-black tracking-widest">Groups</h2>
+                  <div className="space-y-3">
+                    {Array.from({ length: game.numGroups }).map((_, i) => {
+                      const groupPlayerIds = game.scrimmageGroups![i] || [];
+                      const groupPlayers = attendingPlayers.filter(p => groupPlayerIds.includes(p.id));
+                      
+                      if (groupPlayers.length === 0) return null;
+                      
+                      return (
+                        <div key={i}>
+                          <h3 className="text-[10px] font-black uppercase text-black opacity-70 mb-0.5">Group {i + 1}</h3>
+                          <p className="text-[11px] font-bold text-black leading-snug">
+                            {groupPlayers.map(p => {
+                              const isTentative = game.rsvps?.[p.id] === RSVPStatus.TENTATIVE;
+                              const jersey = p.jerseyNumber ? ` (#${p.jerseyNumber})` : '';
+                              const tentative = isTentative ? ' (?)' : '';
+                              return `${p.name}${jersey}${tentative}`;
+                            }).join(', ')}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {notAttendingPlayers.length > 0 && (
                 <div>
                   <h2 className="text-sm font-black uppercase border-b border-black pb-1 mb-2 text-black tracking-widest">Players Out</h2>

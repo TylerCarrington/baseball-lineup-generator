@@ -65,6 +65,7 @@ export interface Game {
   scrimmageGroups?: string[][];
   scrimmageStep?: number;
   practiceAgenda?: PracticeActivity[];
+  practiceNotes?: string[];
   numGroups?: number; // Configurable (1-4)
 }
 

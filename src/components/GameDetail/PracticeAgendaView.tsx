@@ -11,7 +11,8 @@ import {
   ClipboardList,
   GripVertical,
   X,
-  RotateCw
+  RotateCw,
+  Edit2
 } from 'lucide-react';
 import { 
   DndContext, 
@@ -149,6 +150,11 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
   const scheduledTime = processedAgenda.reduce((sum, a) => sum + a.duration, 0);
   const remainingTime = practiceDuration - scheduledTime;
 
+  const practiceNotes = game.practiceNotes || [];
+  const [newNote, setNewNote] = useState('');
+  const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState('');
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -267,6 +273,30 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
     setIsAddingActivity(false);
     setEditingActivityId(null);
     setActivityForm({ name: '', duration: 15, type: 'team', category: '', drillName: '', groupMap: { 0: '', 1: '', 2: '', 3: '' }, groupCategoryMap: { 0: '', 1: '', 2: '', 3: '' }, startTimeOffset: 0 });
+  };
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    const updatedNotes = [...practiceNotes, newNote.trim()];
+    await firebaseService.updateGame(game.id, { practiceNotes: updatedNotes });
+    setNewNote('');
+    toast.success("Note added");
+  };
+
+  const handleDeleteNote = async (index: number) => {
+    const updatedNotes = practiceNotes.filter((_, i) => i !== index);
+    await firebaseService.updateGame(game.id, { practiceNotes: updatedNotes });
+    toast.success("Note removed");
+  };
+
+  const handleUpdateNote = async () => {
+    if (editingNoteIndex === null || !editingNoteText.trim()) return;
+    const updatedNotes = [...practiceNotes];
+    updatedNotes[editingNoteIndex] = editingNoteText.trim();
+    await firebaseService.updateGame(game.id, { practiceNotes: updatedNotes });
+    setEditingNoteIndex(null);
+    setEditingNoteText('');
+    toast.success("Note updated");
   };
 
   const handleEditClick = (activity: PracticeActivity) => {
@@ -457,6 +487,99 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Notes Section */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Practice Notes</h3>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Free-form training focus & reminders</p>
+          </div>
+          <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center">
+            <ClipboardList size={20} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
+          {!readOnly && (
+            <Card className="p-4" hover={false}>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  placeholder="Add a new note..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+                  className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-0 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-sm"
+                />
+                <Button onClick={handleAddNote} icon={Plus}>Add Note</Button>
+              </div>
+            </Card>
+          )}
+
+          {practiceNotes.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {practiceNotes.map((note, index) => (
+                <Card key={index} className="p-4 bg-slate-50 dark:bg-slate-800/50 group" hover={false}>
+                  {editingNoteIndex === index ? (
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        autoFocus
+                        value={editingNoteText}
+                        onChange={(e) => setEditingNoteText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleUpdateNote();
+                          if (e.key === 'Escape') setEditingNoteIndex(null);
+                        }}
+                        className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-sm"
+                      />
+                      <div className="flex gap-1">
+                        <Button size="sm" onClick={handleUpdateNote}>Save</Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingNoteIndex(null)}>Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex gap-3 flex-1 min-w-0">
+                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300 break-words">{note}</p>
+                      </div>
+                      {!readOnly && (
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              setEditingNoteIndex(index);
+                              setEditingNoteText(note);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg transition-colors"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteNote(index)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400 mb-4">
+                <ClipboardList size={24} />
+              </div>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No practice notes yet</p>
+              {!readOnly && <p className="text-xs text-slate-500 mt-1">Add your first note to help organize your session</p>}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Modal and Helper Components */}
       {isAddingActivity && (

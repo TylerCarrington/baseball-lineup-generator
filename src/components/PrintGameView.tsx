@@ -166,6 +166,20 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
                   </li>
               ))}
             </ul>
+
+            {game.practiceNotes && game.practiceNotes.length > 0 && (
+              <div className="mt-12">
+                <h2 className="text-2xl font-bold uppercase border-b border-black pb-2 mb-6 text-black">Practice Notes</h2>
+                <ul className="space-y-4">
+                  {game.practiceNotes.map((note, index) => (
+                    <li key={index} className="flex gap-4 items-start">
+                      <div className="mt-2 w-2 h-2 rounded-full bg-black shrink-0" />
+                      <p className="text-lg font-bold text-black">{note}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         ) : (
           /* Multi-column Layout for Games */

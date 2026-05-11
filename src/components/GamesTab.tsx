@@ -166,7 +166,7 @@ export function GamesTab({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate group-hover:text-slate-900 dark:group-hover:text-emerald-400 transition-colors">{game.name}</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate group-hover:text-slate-900 dark:group-hover:text-emerald-400 transition-colors">{game.type === 'practice' ? 'Practice' : game.name}</h3>
                         {game.type === 'practice' && (
                           <Badge variant="warning">Practice</Badge>
                         )}
@@ -256,7 +256,7 @@ export function GamesTab({
                             type: 'game',
                             id: game.id,
                             title: `Delete ${game.type === 'practice' ? 'Practice' : 'Game'}`,
-                            message: `Are you sure you want to delete "${game.name}"? This action cannot be undone.`
+                            message: `Are you sure you want to delete "${game.type === 'practice' ? 'Practice' : game.name}"? This action cannot be undone.`
                           });
                         }}
                         icon={Trash2}

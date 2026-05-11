@@ -34,6 +34,8 @@ interface GameHeaderProps {
   setEditGameTime?: (val: string) => void;
   editIsHome?: boolean;
   setEditIsHome?: (val: boolean) => void;
+  editDuration?: number;
+  setEditDuration?: (val: number) => void;
   handleTogglePublish?: (gameId: string, currentStatus: boolean) => Promise<void>;
   handleUpdateGameDetails?: () => Promise<void>;
   resetEditState?: (game: Game) => void;
@@ -58,6 +60,8 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   setEditGameTime,
   editIsHome = true,
   setEditIsHome,
+  editDuration = 90,
+  setEditDuration,
   handleTogglePublish,
   handleUpdateGameDetails,
   resetEditState,
@@ -98,84 +102,133 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           <div className="flex-1 min-w-0">
             {isEditingRSVPs ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
-                {game.mode === 'standard' ? (
+                {game.type === 'practice' ? (
                   <>
                     <div className="space-y-1.5">
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Opponent</label>
-                      <input 
-                        type="text" 
-                        value={editOpponent}
-                        onChange={(e) => setEditOpponent?.(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
-                        placeholder="e.g. Vipers"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location</label>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location (Optional)</label>
                       <input 
                         type="text" 
                         value={editLocation}
                         onChange={(e) => setEditLocation?.(e.target.value)}
                         className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
-                        placeholder="e.g. Field 4"
+                        placeholder="e.g. Field 4 (Optional)"
                       />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Practice Date</label>
+                      <input 
+                        type="date" 
+                        value={editGameDate}
+                        onChange={(e) => setEditGameDate(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Practice Time (Optional)</label>
+                      <input 
+                        type="time" 
+                        value={editGameTime}
+                        onChange={(e) => setEditGameTime(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Practice Duration</label>
+                      <select
+                        value={editDuration}
+                        onChange={(e) => setEditDuration?.(parseInt(e.target.value))}
+                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold appearance-none"
+                      >
+                        <option value={60}>60 Minutes</option>
+                        <option value={75}>75 Minutes</option>
+                        <option value={90}>90 Minutes (Default)</option>
+                        <option value={105}>105 Minutes</option>
+                        <option value={120}>120 Minutes</option>
+                      </select>
                     </div>
                   </>
                 ) : (
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location (Optional)</label>
-                    <input 
-                      type="text" 
-                      value={editLocation}
-                      onChange={(e) => setEditLocation?.(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
-                      placeholder="e.g. Field 4 (Optional)"
-                    />
-                  </div>
-                )}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Game Date</label>
-                  <input 
-                    type="date" 
-                    value={editGameDate}
-                    onChange={(e) => setEditGameDate(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Game Time</label>
-                  <input 
-                    type="time" 
-                    value={editGameTime}
-                    onChange={(e) => setEditGameTime(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
-                  />
-                </div>
-                {game.mode !== 'scrimmage' && (
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Home / Away</label>
-                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-2xl border border-slate-200 dark:border-slate-600">
-                      <button
-                        onClick={() => setEditIsHome(true)}
-                        className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editIsHome ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
-                      >
-                        Home
-                      </button>
-                      <button
-                        onClick={() => setEditIsHome(false)}
-                        className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${!editIsHome ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
-                      >
-                        Away
-                      </button>
+                  <>
+                    {game.mode === 'standard' ? (
+                      <>
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Opponent</label>
+                          <input 
+                            type="text" 
+                            value={editOpponent}
+                            onChange={(e) => setEditOpponent?.(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                            placeholder="e.g. Vipers"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location</label>
+                          <input 
+                            type="text" 
+                            value={editLocation}
+                            onChange={(e) => setEditLocation?.(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                            placeholder="e.g. Field 4"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location (Optional)</label>
+                        <input 
+                          type="text" 
+                          value={editLocation}
+                          onChange={(e) => setEditLocation?.(e.target.value)}
+                          className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                          placeholder="e.g. Field 4 (Optional)"
+                        />
+                      </div>
+                    )}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Game Date</label>
+                      <input 
+                        type="date" 
+                        value={editGameDate}
+                        onChange={(e) => setEditGameDate(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                      />
                     </div>
-                  </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Game Time</label>
+                      <input 
+                        type="time" 
+                        value={editGameTime}
+                        onChange={(e) => setEditGameTime(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-white rounded-2xl focus:outline-none focus:border-emerald-500 shadow-sm transition-all font-bold"
+                      />
+                    </div>
+                    {game.mode !== 'scrimmage' && (
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Home / Away</label>
+                        <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-2xl border border-slate-200 dark:border-slate-600">
+                          <button
+                            onClick={() => setEditIsHome(true)}
+                            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editIsHome ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+                          >
+                            Home
+                          </button>
+                          <button
+                            onClick={() => setEditIsHome(false)}
+                            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${!editIsHome ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+                          >
+                            Away
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ) : (
               <>
                 <div className="mb-3">
                   <h2 className="text-3xl sm:text-5xl font-black tracking-tighter truncate leading-tight">
-                    {game.name}
+                    {game.type === 'practice' ? 'Practice' : game.name}
                   </h2>
                   <div className="flex items-center gap-3 mt-3">
                     {isLocked && (
@@ -188,7 +241,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                         Scrimmage
                       </span>
                     )}
-                    {game.mode !== 'scrimmage' && (
+                    {game.mode !== 'scrimmage' && game.type !== 'practice' && (
                       <span className={`px-2 py-0.5 ${game.isHome ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'} rounded text-[10px] font-black uppercase tracking-widest shadow-sm`}>
                         {game.isHome ? 'Home' : 'Away'}
                       </span>
@@ -200,7 +253,12 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                           const h = parseInt(hours);
                           const ampm = h >= 12 ? 'PM' : 'AM';
                           const h12 = h % 12 || 12;
-                          return `${h12}:${minutes} ${ampm}`;
+                          const timeStr = `${h12}:${minutes} ${ampm}`;
+                          
+                          if (game.type === 'practice' && game.duration) {
+                            return `${timeStr} (${game.duration} mins)`;
+                          }
+                          return timeStr;
                         })()}
                       </span>
                     )}

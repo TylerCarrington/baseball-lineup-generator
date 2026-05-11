@@ -148,7 +148,7 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
         <div className="border-b-2 border-black pb-3 mb-6 flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-extrabold uppercase tracking-tight leading-none mb-1">
-              {game.name}
+              {game.type === 'practice' ? 'Practice' : game.name}
             </h1>
             <div className="text-black flex items-center gap-4 text-sm font-bold">
               <span>{gameDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
@@ -158,7 +158,11 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
                     const h = parseInt(hours);
                     const ampm = h >= 12 ? 'PM' : 'AM';
                     const h12 = h % 12 || 12;
-                    return `${h12}:${minutes} ${ampm}`;
+                    const timeStr = `${h12}:${minutes} ${ampm}`;
+                    if (game.type === 'practice' && game.duration) {
+                      return `${timeStr} (${game.duration} mins)`;
+                    }
+                    return timeStr;
                   })()}</span>
               )}
               {game.location && <span>{game.location}</span>}

@@ -102,9 +102,10 @@ const DRILL_CATEGORIES: Record<string, string[]> = {
 interface PracticeAgendaViewProps {
   game: Game;
   readOnly?: boolean;
+  allowEditWhenLocked?: boolean;
 }
 
-export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaViewProps) {
+export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked = false }: PracticeAgendaViewProps) {
   const [isAddingActivity, setIsAddingActivity] = useState(false);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -246,6 +247,12 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
 
   const handleSaveActivity = async () => {
     // Validation
+    const finalDuration = parseInt(activityForm.duration as any);
+    if (isNaN(finalDuration) || finalDuration <= 0) {
+      toast.error("Please enter a valid duration");
+      return;
+    }
+
     if (activityForm.type === 'team') {
       if (!activityForm.category) {
         toast.error("Category is required for Whole Team activities");
@@ -278,7 +285,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
           ? { 
               ...a, 
               name: finalName!, 
-              duration: activityForm.duration || 10,
+              duration: finalDuration,
               type: activityForm.type as 'team' | 'groups' | 'rotating',
               category: activityForm.type === 'team' ? activityForm.category : undefined,
               drillName: activityForm.type === 'team' ? activityForm.drillName : undefined,
@@ -296,7 +303,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
       const activity: PracticeActivity = {
         id: crypto.randomUUID(),
         name: finalName!,
-        duration: activityForm.duration || 10,
+        duration: finalDuration,
         type: activityForm.type as 'team' | 'groups' | 'rotating',
         category: activityForm.type === 'team' ? activityForm.category : undefined,
         drillName: activityForm.type === 'team' ? activityForm.drillName : undefined,
@@ -464,7 +471,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
   };
 
   const handleEditClick = (activity: PracticeActivity) => {
-    if (readOnly) return;
+    if (readOnly && !allowEditWhenLocked) return;
     setEditingActivityId(activity.id);
     setActivityForm({
       name: activity.name,
@@ -486,41 +493,43 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
   return (
     <div className="space-y-8 pb-32">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 bg-slate-50 dark:bg-slate-800/50" hover={false}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center">
-              <Calendar size={20} />
+      {!readOnly && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="p-4 bg-slate-50 dark:bg-slate-800/50" hover={false}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center">
+                <Calendar size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Duration</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-white">{practiceDuration}m</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Duration</p>
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{practiceDuration}m</p>
+          </Card>
+          <Card className="p-4 bg-slate-50 dark:bg-slate-800/50" hover={false}>
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${scheduledTime > practiceDuration ? 'text-rose-600' : 'text-emerald-600'}`}>
+                <Clock size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Time</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-white">{scheduledTime}m</p>
+              </div>
             </div>
-          </div>
-        </Card>
-        <Card className="p-4 bg-slate-50 dark:bg-slate-800/50" hover={false}>
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${scheduledTime > practiceDuration ? 'text-rose-600' : 'text-emerald-600'}`}>
-              <Clock size={20} />
+          </Card>
+          <Card className="p-4 bg-slate-50 dark:bg-slate-800/50" hover={false}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center">
+                <Timer size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Remaining</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-white">{remainingTime}m</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Time</p>
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{scheduledTime}m</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4 bg-slate-50 dark:bg-slate-800/50" hover={false}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center">
-              <Timer size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Remaining</p>
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{remainingTime}m</p>
-            </div>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      )}
 
       {/* Calendar Header */}
       <div className="flex items-center justify-between print:hidden">
@@ -626,6 +635,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
                   key={activity.id} 
                   activity={activity} 
                   readOnly={readOnly}
+                  allowEditWhenLocked={allowEditWhenLocked}
                   onDelete={handleDeleteActivity}
                   onEdit={() => handleEditClick(activity)}
                   isOverlapping={processedAgenda.some(other => 
@@ -853,8 +863,8 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
       {/* Modal and Helper Components */}
       {isAddingActivity && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <Card className="w-full max-w-md p-6 sm:p-8 space-y-6 shadow-2xl" hover={false}>
-            <div className="flex items-center justify-between">
+          <Card className="w-full max-w-md p-0 flex flex-col max-h-[90vh] shadow-2xl" hover={false}>
+            <div className="flex items-center justify-between p-6 sm:p-8 pb-4 sm:pb-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
                 {editingActivityId ? 'Edit Block' : 'Add Block'}
               </h3>
@@ -869,168 +879,184 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
               </button>
             </div>
 
-            <div className="space-y-4">
-              {activityForm.type !== 'rotating' && (
-                <Input 
-                  label="Activity Name (Optional)"
-                  placeholder={activityForm.type === 'team' ? "Auto-fills from Category/Drill if blank" : "e.g. Infield Drill"}
-                  value={activityForm.name}
-                  onChange={(e) => setActivityForm({...activityForm, name: e.target.value})}
-                />
-              )}
-
-              {activityForm.type === 'team' && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category *</label>
-                    <select
-                      value={activityForm.category}
-                      onChange={(e) => setActivityForm({...activityForm, category: e.target.value, drillName: ''})}
-                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm"
-                    >
-                      <option value="">Select Category...</option>
-                      {Object.keys(DRILL_CATEGORIES).map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Drill (Optional)</label>
-                    <select
-                      value={activityForm.drillName}
-                      onChange={(e) => setActivityForm({...activityForm, drillName: e.target.value})}
-                      disabled={!activityForm.category}
-                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm disabled:opacity-50"
-                    >
-                      <option value="">Select Drill...</option>
-                      {(activityForm.category ? DRILL_CATEGORIES[activityForm.category] : []).map(drill => (
-                        <option key={drill} value={drill}>{drill}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Type</label>
-                  <select
-                    value={activityForm.type}
-                    onChange={(e) => setActivityForm({...activityForm, type: e.target.value as 'team' | 'groups' | 'rotating'})}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold appearance-none"
-                  >
-                    <option value="team">Whole Team</option>
-                    <option value="groups">Split Groups</option>
-                    <option value="rotating">Rotating Groups</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Start Time</label>
-                  <input 
-                    type="time"
-                    value={(() => {
-                      if (!game.time) return "00:00";
-                      const [h, m] = game.time.split(':').map(Number);
-                      const totalMins = h * 60 + m + (activityForm.startTimeOffset || 0);
-                      const outH = Math.floor(totalMins / 60) % 24;
-                      const outM = totalMins % 60;
-                      return `${String(outH).padStart(2, '0')}:${String(outM).padStart(2, '0')}`;
-                    })()}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
+              <div className="space-y-4">
+                {activityForm.type !== 'rotating' && (
+                  <Input 
+                    label="Activity Name (Optional)"
+                    placeholder={activityForm.type === 'team' ? "Auto-fills from Category/Drill if blank" : "e.g. Infield Drill"}
+                    value={activityForm.name}
                     onChange={(e) => {
-                      if (!game.time) return;
-                      const [baseH, baseM] = game.time.split(':').map(Number);
-                      const [h, m] = e.target.value.split(':').map(Number);
-                      const baseTotal = baseH * 60 + baseM;
-                      const newTotal = h * 60 + m;
+                      const newName = e.target.value;
+                      const updates: Partial<PracticeActivity> = { name: newName };
+                      const lowerName = newName.toLowerCase().trim();
                       
-                      let calculatedOffset = newTotal - baseTotal;
+                      if (activityForm.type === 'team' && !activityForm.category) {
+                        if (lowerName === 'warmups' || lowerName === 'warmup') {
+                          updates.category = 'Conditioning & Warm-Up';
+                        } else if (lowerName === 'game') {
+                          updates.category = 'Teamwork & Situational';
+                        }
+                      }
                       
-                      // Handle crossing midnight correctly for very late practices
-                      if (calculatedOffset < -12 * 60) calculatedOffset += 24 * 60;
-                      
-                      // Ensure it's not past the end of the practice by more than - 1 minute
-                      const maxAllowedOffset = Math.max(0, practiceDuration - 1);
-                      calculatedOffset = Math.min(calculatedOffset, maxAllowedOffset);
-                      calculatedOffset = Math.max(0, calculatedOffset); // Don't allow before practice starts
-                      
-                      setActivityForm({...activityForm, startTimeOffset: calculatedOffset});
+                      setActivityForm({ ...activityForm, ...updates });
                     }}
+                  />
+                )}
+
+                {activityForm.type === 'team' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category *</label>
+                      <select
+                        value={activityForm.category}
+                        onChange={(e) => setActivityForm({...activityForm, category: e.target.value, drillName: ''})}
+                        className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm"
+                      >
+                        <option value="">Select Category...</option>
+                        {Object.keys(DRILL_CATEGORIES).map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Drill (Optional)</label>
+                      <select
+                        value={activityForm.drillName}
+                        onChange={(e) => setActivityForm({...activityForm, drillName: e.target.value})}
+                        disabled={!activityForm.category}
+                        className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm disabled:opacity-50"
+                      >
+                        <option value="">Select Drill...</option>
+                        {(activityForm.category ? DRILL_CATEGORIES[activityForm.category] : []).map(drill => (
+                          <option key={drill} value={drill}>{drill}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Type</label>
+                    <select
+                      value={activityForm.type}
+                      onChange={(e) => setActivityForm({...activityForm, type: e.target.value as 'team' | 'groups' | 'rotating'})}
+                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold appearance-none"
+                    >
+                      <option value="team">Whole Team</option>
+                      <option value="groups">Split Groups</option>
+                      <option value="rotating">Rotating Groups</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Start Time</label>
+                    <input 
+                      type="time"
+                      value={(() => {
+                        if (!game.time) return "00:00";
+                        const [h, m] = game.time.split(':').map(Number);
+                        const totalMins = h * 60 + m + (activityForm.startTimeOffset || 0);
+                        const outH = Math.floor(totalMins / 60) % 24;
+                        const outM = totalMins % 60;
+                        return `${String(outH).padStart(2, '0')}:${String(outM).padStart(2, '0')}`;
+                      })()}
+                      onChange={(e) => {
+                        if (!game.time) return;
+                        const [baseH, baseM] = game.time.split(':').map(Number);
+                        const [h, m] = e.target.value.split(':').map(Number);
+                        const baseTotal = baseH * 60 + baseM;
+                        const newTotal = h * 60 + m;
+                        
+                        let calculatedOffset = newTotal - baseTotal;
+                        
+                        // Handle crossing midnight correctly for very late practices
+                        if (calculatedOffset < -12 * 60) calculatedOffset += 24 * 60;
+                        
+                        // Ensure it's not past the end of the practice by more than - 1 minute
+                        const maxAllowedOffset = Math.max(0, practiceDuration - 1);
+                        calculatedOffset = Math.min(calculatedOffset, maxAllowedOffset);
+                        calculatedOffset = Math.max(0, calculatedOffset); // Don't allow before practice starts
+                        
+                        setActivityForm({...activityForm, startTimeOffset: calculatedOffset});
+                      }}
+                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold dark:[color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Duration (m)</label>
+                  <input 
+                    type="number"
+                    step="5"
+                    min="5"
+                    value={activityForm.duration === '' as any ? '' : activityForm.duration}
+                    onChange={(e) => setActivityForm({...activityForm, duration: e.target.value === '' ? '' as any : parseInt(e.target.value)})}
                     className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold"
                   />
                 </div>
+
+                {activityForm.type !== 'team' && (
+                  <div className="space-y-3 pt-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                      {activityForm.type === 'rotating' ? `Required Drills (One per Group, total ${numGroups})` : 'Group Drill Settings'}
+                    </label>
+                    <div className="grid grid-cols-1 gap-3">
+                      {Array.from({ length: numGroups }).map((_, i) => (
+                        <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                          <span className="text-[10px] font-black text-slate-500 w-12 uppercase tracking-tighter shrink-0 pt-2 sm:pt-0">
+                            {activityForm.type === 'rotating' ? `Drill ${i + 1}` : `Grp ${i + 1}`}
+                          </span>
+                          <div className="flex-1 flex flex-col sm:flex-row gap-2 min-w-0">
+                            <select
+                              value={activityForm.groupCategoryMap?.[i] || ''}
+                              onChange={(e) => setActivityForm({
+                                ...activityForm, 
+                                groupCategoryMap: { ...activityForm.groupCategoryMap, [i]: e.target.value },
+                                groupMap: { ...activityForm.groupMap, [i]: '' } // Reset drill when category changes
+                              })}
+                              className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold"
+                            >
+                              <option value="">Select Category *</option>
+                              {Object.keys(DRILL_CATEGORIES).map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                              ))}
+                            </select>
+                            <select
+                              value={activityForm.groupMap?.[i] || ''}
+                              onChange={(e) => setActivityForm({
+                                ...activityForm, 
+                                groupMap: { ...activityForm.groupMap, [i]: e.target.value }
+                              })}
+                              disabled={!activityForm.groupCategoryMap?.[i]}
+                              className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold disabled:opacity-50"
+                            >
+                              <option value="">Select Drill (Optional)</option>
+                              {(activityForm.groupCategoryMap?.[i] ? DRILL_CATEGORIES[activityForm.groupCategoryMap[i]] : []).map(drill => (
+                                <option key={drill} value={drill}>{drill}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Duration (m)</label>
-                <input 
-                  type="number"
-                  step="5"
-                  min="5"
-                  value={activityForm.duration}
-                  onChange={(e) => setActivityForm({...activityForm, duration: Math.max(5, parseInt(e.target.value) || 5)})}
-                  className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold"
+              <div className="pt-2">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2">Activity Notes (Optional)</label>
+                <textarea
+                  value={activityForm.notes || ''}
+                  onChange={(e) => setActivityForm({...activityForm, notes: e.target.value})}
+                  placeholder="Add context to this activity (e.g., focus on throws to first)"
+                  className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold text-sm min-h-[80px] resize-y"
                 />
               </div>
-
-              {activityForm.type !== 'team' && (
-                <div className="space-y-3 pt-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
-                    {activityForm.type === 'rotating' ? `Required Drills (One per Group, total ${numGroups})` : 'Group Drill Settings'}
-                  </label>
-                  <div className="grid grid-cols-1 gap-3">
-                    {Array.from({ length: numGroups }).map((_, i) => (
-                      <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                        <span className="text-[10px] font-black text-slate-500 w-12 uppercase tracking-tighter shrink-0 pt-2 sm:pt-0">
-                          {activityForm.type === 'rotating' ? `Drill ${i + 1}` : `Grp ${i + 1}`}
-                        </span>
-                        <div className="flex-1 flex flex-col sm:flex-row gap-2 min-w-0">
-                          <select
-                            value={activityForm.groupCategoryMap?.[i] || ''}
-                            onChange={(e) => setActivityForm({
-                              ...activityForm, 
-                              groupCategoryMap: { ...activityForm.groupCategoryMap, [i]: e.target.value },
-                              groupMap: { ...activityForm.groupMap, [i]: '' } // Reset drill when category changes
-                            })}
-                            className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold"
-                          >
-                            <option value="">Select Category *</option>
-                            {Object.keys(DRILL_CATEGORIES).map(cat => (
-                              <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                          </select>
-                          <select
-                            value={activityForm.groupMap?.[i] || ''}
-                            onChange={(e) => setActivityForm({
-                              ...activityForm, 
-                              groupMap: { ...activityForm.groupMap, [i]: e.target.value }
-                            })}
-                            disabled={!activityForm.groupCategoryMap?.[i]}
-                            className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold disabled:opacity-50"
-                          >
-                            <option value="">Select Drill (Optional)</option>
-                            {(activityForm.groupCategoryMap?.[i] ? DRILL_CATEGORIES[activityForm.groupCategoryMap[i]] : []).map(drill => (
-                              <option key={drill} value={drill}>{drill}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
-            <div className="pt-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2">Activity Notes (Optional)</label>
-              <textarea
-                value={activityForm.notes || ''}
-                onChange={(e) => setActivityForm({...activityForm, notes: e.target.value})}
-                placeholder="Add context to this activity (e.g., focus on throws to first)"
-                className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all font-bold text-sm min-h-[80px] resize-y"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 p-6 sm:p-8 pt-4 sm:pt-4 border-t border-slate-100 dark:border-slate-800">
               <Button fullWidth onClick={handleSaveActivity}>{editingActivityId ? 'Update Block' : 'Add Block'}</Button>
               <Button fullWidth variant="outline" onClick={() => {
                 setIsAddingActivity(false);
@@ -1040,6 +1066,7 @@ export function PracticeAgendaView({ game, readOnly = false }: PracticeAgendaVie
           </Card>
         </div>
       )}
+
     </div>
   );
 }
@@ -1156,12 +1183,13 @@ interface DraggableActivityProps {
 function DraggableActivity({ 
   activity, 
   readOnly, 
+  allowEditWhenLocked,
   onDelete, 
   onEdit, 
   isOverlapping,
   numGroups,
   formatStartTime 
-}: DraggableActivityProps) {
+}: DraggableActivityProps & { allowEditWhenLocked?: boolean }) {
   const {
     attributes,
     listeners,
@@ -1198,6 +1226,7 @@ function DraggableActivity({
         attributes={attributes} 
         listeners={listeners}
         readOnly={readOnly}
+        allowEditWhenLocked={allowEditWhenLocked}
         onDelete={onDelete}
         onEdit={onEdit}
         isOverlapping={isOverlapping}
@@ -1214,6 +1243,7 @@ function ActivityItem({
   listeners, 
   isOverlay, 
   readOnly, 
+  allowEditWhenLocked,
   onDelete,
   onEdit,
   isOverlapping,
@@ -1225,6 +1255,7 @@ function ActivityItem({
   listeners?: any;
   isOverlay?: boolean;
   readOnly?: boolean;
+  allowEditWhenLocked?: boolean;
   onDelete?: (id: string) => void;
   onEdit?: () => void;
   isOverlapping?: boolean;
@@ -1237,7 +1268,7 @@ function ActivityItem({
     <div 
       onClick={(e) => {
         // Only trigger edit if it wasn't a delete click or drag handle click
-        if (onEdit && !readOnly) onEdit();
+        if (onEdit && (!readOnly || allowEditWhenLocked)) onEdit();
       }}
       className={`h-full w-full rounded-2xl border flex flex-col overflow-hidden transition-all duration-300 ${
         isOverlay 

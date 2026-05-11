@@ -72,8 +72,8 @@ export function CreateGameView({
         : `${isHome ? 'vs' : '@'} ${opponent.trim()}`;
 
     const initialAgenda: PracticeActivity[] = eventType === 'practice' ? [
-      { id: crypto.randomUUID(), name: 'Warmups', duration: 10, type: 'team', startTimeOffset: 0 },
-      { id: crypto.randomUUID(), name: 'Game', duration: 10, type: 'team', startTimeOffset: Math.max(0, duration - 10) }
+      { id: crypto.randomUUID(), name: 'Warmups', duration: 10, type: 'team', category: 'Conditioning & Warm-Up', startTimeOffset: 0 },
+      { id: crypto.randomUUID(), name: 'Game', duration: 10, type: 'team', category: 'Teamwork & Situational', startTimeOffset: Math.max(0, duration - 10) }
     ] : [];
 
     const docRef = await firebaseService.addGame({

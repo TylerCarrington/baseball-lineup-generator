@@ -405,7 +405,7 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-bold text-lg text-slate-900 dark:text-white truncate">{game.name}</h3>
+                                <h3 className="font-bold text-lg text-slate-900 dark:text-white truncate">{game.type === 'practice' ? 'Practice' : game.name}</h3>
                                 {game.type === 'practice' && (
                                   <Badge variant="warning">Practice</Badge>
                                 )}

@@ -54,6 +54,7 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
     editGameDate, setEditGameDate,
     editGameTime, setEditGameTime,
     editIsHome, setEditIsHome,
+    editDuration, setEditDuration,
     backupLineup, setBackupLineup,
     backupScrimmageGroups, setBackupScrimmageGroups,
     resetEditState
@@ -170,11 +171,16 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
         setEditGameTime={setEditGameTime}
         editIsHome={editIsHome}
         setEditIsHome={setEditIsHome}
+        editDuration={editDuration}
+        setEditDuration={setEditDuration}
         handleTogglePublish={handleTogglePublish}
         handleUpdateGameDetails={async () => {
-          const generatedName = game.mode === 'scrimmage' 
-            ? 'Scrimmage' 
-            : `${editIsHome ? 'vs' : '@'} ${editOpponent.trim()}`;
+          let generatedName = game.name;
+          if (game.type !== 'practice') {
+            generatedName = game.mode === 'scrimmage' 
+              ? 'Scrimmage' 
+              : `${editIsHome ? 'vs' : '@'} ${editOpponent.trim()}`;
+          }
           
           await handleUpdateGameDetails(game.id, {
             name: game.mode === 'standard' ? generatedName : editGameName,
@@ -182,7 +188,8 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
             location: editLocation,
             date: editGameDate,
             time: editGameTime,
-            isHome: editIsHome
+            isHome: editIsHome,
+            duration: editDuration
           });
           setIsEditingRSVPs(false);
         }}
@@ -219,7 +226,7 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
             ) : (gameViewTab === 'batting' || gameViewTab === 'groups' || gameViewTab === 'agenda') ? (
               game.type === 'practice' ? (
                 gameViewTab === 'agenda' ? (
-                  <PracticeAgendaView game={game} readOnly={isLocked} />
+                  <PracticeAgendaView game={game} readOnly={isLocked} allowEditWhenLocked={true} />
                 ) : (
                   <div className="space-y-12">
                     <GroupManagementView

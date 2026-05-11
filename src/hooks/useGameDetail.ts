@@ -16,6 +16,7 @@ export function useGameDetail(selectedGame: Game | null | undefined) {
   const [editGameDate, setEditGameDate] = useState('');
   const [editGameTime, setEditGameTime] = useState('');
   const [editIsHome, setEditIsHome] = useState(true);
+  const [editDuration, setEditDuration] = useState(60);
 
   // Scrimmage Backup State
   const [backupLineup, setBackupLineup] = useState<Record<string, Record<string, string>> | null>(null);
@@ -50,6 +51,7 @@ export function useGameDetail(selectedGame: Game | null | undefined) {
     setEditGameDate(dateStr);
     setEditGameTime(game.time || '');
     setEditIsHome(game.isHome !== false);
+    setEditDuration(game.duration || 60);
   };
 
   return {
@@ -73,6 +75,8 @@ export function useGameDetail(selectedGame: Game | null | undefined) {
     setEditGameTime,
     editIsHome,
     setEditIsHome,
+    editDuration,
+    setEditDuration,
     backupLineup,
     setBackupLineup,
     backupScrimmageGroups,

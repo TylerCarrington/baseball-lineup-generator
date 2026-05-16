@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { Game, Player, RSVPStatus } from '../types';
+import { getPositionAbbreviation } from '../lib/utils';
 
 interface PrintGameViewProps {
   game: Game;
@@ -66,6 +67,14 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
     }
     return [];
   }, [game.practiceNoteSections, game.practiceNotes]);
+
+  const firstInningPositionMap = useMemo(() => {
+    if (!game.lineup?.['1']) return {};
+    return Object.entries(game.lineup['1']).reduce((acc, [pos, pId]) => {
+      if (pId) acc[pId] = getPositionAbbreviation(pos);
+      return acc;
+    }, {} as Record<string, string>);
+  }, [game.lineup]);
 
   const renderDiamond = (inning: number) => {
     const inningStr = inning.toString();
@@ -328,7 +337,10 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
                     <li key={player.id} className="flex items-center gap-3 py-1 border-b border-black last:border-0 text-black">
                       <span className="w-5 text-sm font-black text-black">{(idx + 1).toString().padStart(2, '0')}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold truncate leading-tight">{player.name}</div>
+                        <div className="text-sm font-bold truncate leading-tight">
+                          {player.name}
+                          <span className="ml-1 opacity-60">({firstInningPositionMap[player.id] || 'EH'})</span>
+                        </div>
                         {player.jerseyNumber && <div className="text-[10px] text-black font-black leading-none">#{player.jerseyNumber}</div>}
                       </div>
                     </li>

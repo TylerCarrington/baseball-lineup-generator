@@ -80,6 +80,7 @@ export interface Game {
   practiceNotes?: string[];
   practiceNoteSections?: PracticeNoteSection[];
   numGroups?: number; // Configurable (1-4)
+  battingOrderChecks?: Record<string, boolean>; // PlayerId -> isChecked
 }
 
 /** 

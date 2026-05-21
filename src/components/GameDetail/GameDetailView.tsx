@@ -76,7 +76,8 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
     handleTogglePositionLock,
     handleToggleInningLock,
     handleTogglePublish,
-    handleUpdateNumGroups
+    handleUpdateNumGroups,
+    handleToggleBattingOrderCheck
   } = useGameActions(games, players, settings);
 
   const handleMovePlayerToPosition = async (playerId: string, newPositionIndex: number) => {
@@ -257,6 +258,7 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
                   handleUpdateGameRSVP={handleUpdateRSVP}
                   handleMovePlayer={handleMovePlayer}
                   previousGame={previousGame}
+                  handleToggleCheck={(gameId: string, playerId: string) => handleToggleBattingOrderCheck(gameId, playerId)}
                 />
               )
             ) : (

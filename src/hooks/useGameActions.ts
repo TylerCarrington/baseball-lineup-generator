@@ -206,9 +206,19 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
       }
     };
 
+    const newChecks = { ...(game.battingOrderChecks || {}) };
+    const previousPlayerId = game.lineup?.[inning]?.[position];
+    if (previousPlayerId && previousPlayerId !== playerId) {
+      newChecks[previousPlayerId] = false;
+    }
+    if (playerId) {
+      newChecks[playerId] = false;
+    }
+
     try {
       await updateDoc(doc(db, 'games', gameId), {
-        lineup: newLineup
+        lineup: newLineup,
+        battingOrderChecks: newChecks
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
@@ -222,7 +232,8 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
     try {
       const newLineup = generateLineup(game, players, settings);
       await updateDoc(doc(db, 'games', gameId), {
-        lineup: newLineup
+        lineup: newLineup,
+        battingOrderChecks: {} // Reset checks when generating lineup
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
@@ -237,7 +248,10 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
       const { newLineup, newGroups, fixedAny, skippedDueToLocks } = fixLineup(game, players);
       
       if (fixedAny) {
-        const updates: any = { lineup: newLineup };
+        const updates: any = { 
+          lineup: newLineup,
+          battingOrderChecks: {} // Reset checks when fixing lineup
+        };
         if (newGroups) {
           updates.scrimmageGroups = JSON.stringify(newGroups);
         }
@@ -331,6 +345,22 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
     }
   };
 
+  const handleToggleBattingOrderCheck = async (gameId: string, playerId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+    
+    const newChecks = { ...(game.battingOrderChecks || {}) };
+    newChecks[playerId] = !newChecks[playerId];
+    
+    try {
+      await updateDoc(doc(db, 'games', gameId), {
+        battingOrderChecks: newChecks
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+    }
+  };
+
   return {
     handleUpdateRSVP,
     handleUpdateGameDetails,
@@ -347,6 +377,7 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
     handleTogglePositionLock,
     handleToggleInningLock,
     handleTogglePublish,
-    handleUpdateNumGroups
+    handleUpdateNumGroups,
+    handleToggleBattingOrderCheck
   };
 }

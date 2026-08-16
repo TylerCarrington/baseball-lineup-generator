@@ -65,14 +65,16 @@ export function useSharedData(ownerId: string | undefined) {
       const gamesData: Game[] = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.scrimmageGroups && typeof data.scrimmageGroups === 'string') {
-          try {
-            data.scrimmageGroups = JSON.parse(data.scrimmageGroups);
-          } catch (e) {
-            console.error("Error parsing scrimmageGroups:", e);
+        if ((data.seasonId || 'legacy') === (settings.activeSeasonId || 'legacy')) {
+          if (data.scrimmageGroups && typeof data.scrimmageGroups === 'string') {
+            try {
+              data.scrimmageGroups = JSON.parse(data.scrimmageGroups);
+            } catch (e) {
+              console.error("Error parsing scrimmageGroups:", e);
+            }
           }
+          gamesData.push({ id: doc.id, ...data } as Game);
         }
-        gamesData.push({ id: doc.id, ...data } as Game);
       });
       setGames(gamesData);
       setLoading(false);
@@ -89,7 +91,10 @@ export function useSharedData(ownerId: string | undefined) {
     const unsubPlayers = onSnapshot(playersQuery, (snapshot) => {
       const playersData: Player[] = [];
       snapshot.forEach((doc) => {
-        playersData.push({ id: doc.id, ...doc.data() } as Player);
+        const data = doc.data() as Player;
+        if ((data.seasonId || 'legacy') === (settings.activeSeasonId || 'legacy')) {
+          playersData.push({ id: doc.id, ...data });
+        }
       });
       setPlayers(playersData);
     });

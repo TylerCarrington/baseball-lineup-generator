@@ -11,6 +11,7 @@ import { useAuth } from './hooks/useAuth';
 import { usePlayers } from './hooks/usePlayers';
 import { useGames } from './hooks/useGames';
 import { useSettings } from './hooks/useSettings';
+import { useSeasons } from './hooks/useSeasons';
 import { RosterTab } from './components/RosterTab';
 import { SettingsTab } from './components/SettingsTab';
 import { GamesTab } from './components/GamesTab';
@@ -51,9 +52,12 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   const selectedGameId = ((pathParts[1] === 'games' && pathParts[2] && pathParts[2] !== 'new') ? pathParts[2] : (isPrintMode && pathParts[2] ? pathParts[2] : null));
   const currentTab = pathParts[1] || 'games';
 
-  const { players } = usePlayers(user, isAuthReady);
-  const { games, selectedGame, setGames } = useGames(user, isAuthReady, selectedGameId);
   const { settings } = useSettings(user, isAuthReady);
+  const activeSeasonId = settings?.activeSeasonId || 'legacy';
+  const { seasons } = useSeasons(user, isAuthReady);
+
+  const { players } = usePlayers(user, isAuthReady, activeSeasonId);
+  const { games, selectedGame, setGames } = useGames(user, isAuthReady, selectedGameId, activeSeasonId);
 
   const handleLogout = async () => {
     await logout();
@@ -91,15 +95,15 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-      <Navigation user={user} currentTab={currentTab} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} handleTabChange={(t) => { navigate(`/${t}`); setIsMobileMenuOpen(false); }} handleLogout={handleLogout} />
+      <Navigation user={user} currentTab={currentTab} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} handleTabChange={(t) => { navigate(`/${t}`); setIsMobileMenuOpen(false); }} handleLogout={handleLogout} seasons={seasons} activeSeasonId={activeSeasonId} onSeasonChange={(id) => firebaseService.updateSettings(user.uid, { activeSeasonId: id })} />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <Routes>
           <Route path="/" element={<Navigate to="/games" replace />} />
           <Route path="/games" element={<GamesTab games={games} players={players} user={user} settings={settings} showPastGames={showPastGames} setShowPastGames={setShowPastGames} handleCopyLink={handleCopyLink} handleTabChange={(t) => navigate(`/${t}`)} copySuccess={copySuccess} startCreateLineup={() => navigate('/games/new')} handleViewGame={(id) => navigate(`/games/${id}`)} setDeleteConfirmation={setDeleteConfirmation} />} />
-          <Route path="/games/new" element={<CreateGameView players={players} user={user} />} />
+          <Route path="/games/new" element={<CreateGameView players={players} user={user} activeSeasonId={activeSeasonId} />} />
           <Route path="/games/:id" element={selectedGame ? <GameDetailView game={selectedGame} players={players} games={games} user={user} isAuthReady={isAuthReady} darkMode={darkMode} setShowClearLineupConfirm={setShowClearLineupConfirm} onBack={() => navigate('/games')} setGames={setGames} /> : <div className="text-center py-12 text-slate-500">Loading game...</div>} />
-          <Route path="/roster" element={<RosterTab players={players} user={user} startCreateLineup={() => navigate('/games/new')} setDeleteConfirmation={setDeleteConfirmation} />} />
-          <Route path="/settings" element={<SettingsTab settings={settings} handleUpdateSettings={(u) => firebaseService.updateSettings(user.uid, u)} darkMode={darkMode} setDarkMode={setDarkMode} user={user} handleCopyLink={handleCopyLink} copySuccess={copySuccess} />} />
+          <Route path="/roster" element={<RosterTab players={players} user={user} startCreateLineup={() => navigate('/games/new')} setDeleteConfirmation={setDeleteConfirmation} activeSeasonId={activeSeasonId} />} />
+          <Route path="/settings" element={<SettingsTab settings={settings} handleUpdateSettings={(u) => firebaseService.updateSettings(user.uid, u)} darkMode={darkMode} setDarkMode={setDarkMode} user={user} handleCopyLink={handleCopyLink} copySuccess={copySuccess} seasons={seasons} activeSeasonId={activeSeasonId} players={players} />} />
         </Routes>
       </main>
       <ConfirmationModal isOpen={deleteConfirmation.isOpen} title={deleteConfirmation.title} message={deleteConfirmation.message} onConfirm={confirmDelete} onClose={() => setDeleteConfirmation(prev => ({ ...prev, isOpen: false }))} variant="danger" />

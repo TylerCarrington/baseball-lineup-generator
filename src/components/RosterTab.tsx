@@ -23,6 +23,7 @@ interface RosterTabProps {
   user: User | null;
   startCreateLineup: () => void;
   setDeleteConfirmation: React.Dispatch<React.SetStateAction<any>>;
+  activeSeasonId: string;
 }
 
 interface RosterPlayerCardProps {
@@ -181,7 +182,8 @@ export function RosterTab({
   players,
   user,
   startCreateLineup,
-  setDeleteConfirmation
+  setDeleteConfirmation,
+  activeSeasonId
 }: RosterTabProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -221,6 +223,7 @@ export function RosterTab({
       jerseyNumber: newJerseyNumber.trim(),
       positions: newPositions,
       uid: user.uid,
+      seasonId: activeSeasonId,
       createdAt: new Date(),
     });
 

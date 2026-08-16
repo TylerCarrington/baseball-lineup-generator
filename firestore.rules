@@ -40,11 +40,18 @@ service cloud.firestore {
     // Validation Helpers
     // ===============================================================
 
+    function isValidSeason(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.uid is string && (data.uid == request.auth.uid || isAdmin()) &&
+             data.createdAt is timestamp;
+    }
+
     function isValidPlayer(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              data.positions is list && data.positions.size() <= 10 &&
              data.uid is string && (data.uid == request.auth.uid || isAdmin()) &&
              data.createdAt is timestamp &&
+             (!('seasonId' in data) || data.seasonId is string || data.seasonId == null) &&
              (!('jerseyNumber' in data) || data.jerseyNumber is string || data.jerseyNumber == null);
     }
 
@@ -61,11 +68,13 @@ service cloud.firestore {
              (!('duration' in data) || data.duration is int || data.duration == null) &&
              (!('battingOrder' in data) || data.battingOrder is list) &&
              (!('practiceAgenda' in data) || data.practiceAgenda is list) &&
+             (!('seasonId' in data) || data.seasonId is string || data.seasonId == null) &&
              (!('isLocked' in data) || data.isLocked is bool);
     }
 
     function isValidSettings(data) {
       return (data.uid == request.auth.uid || isAdmin()) &&
+             (!('activeSeasonId' in data) || data.activeSeasonId is string || data.activeSeasonId == null) &&
              (!('publicSchedule' in data) || data.publicSchedule is bool);
     }
 
@@ -81,6 +90,20 @@ service cloud.firestore {
     // Default deny
     match /{document=**} {
       allow read, write: if false;
+    }
+
+    match /seasons/{seasonId} {
+      allow read: if isDocOwner() || isPublicSchedule(resource.data.uid) || isAdmin();
+      
+      allow create: if isAuthenticated() && 
+                      isValidSeason(incoming()) && 
+                      incoming().uid == request.auth.uid;
+      
+      allow update: if (isDocOwner() || isAdmin()) && 
+                      isValidSeason(incoming()) && 
+                      incoming().uid == existing().uid;
+      
+      allow delete: if isDocOwner() || isAdmin();
     }
 
     match /players/{playerId} {

@@ -59,6 +59,30 @@ export const firebaseService = {
     }
   },
 
+  async updateSeason(seasonId: string, data: any) {
+    try {
+      await updateDoc(doc(db, 'seasons', seasonId), stripUndefined(data));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `seasons/${seasonId}`);
+    }
+  },
+
+  async deleteSeason(seasonId: string) {
+    try {
+      await deleteDoc(doc(db, 'seasons', seasonId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `seasons/${seasonId}`);
+    }
+  },
+
+  async addSeason(data: any) {
+    try {
+      return await addDoc(collection(db, 'seasons'), stripUndefined(data));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'seasons');
+    }
+  },
+
   async updatePlayer(playerId: string, data: any) {
     try {
       await updateDoc(doc(db, 'players', playerId), stripUndefined(data));

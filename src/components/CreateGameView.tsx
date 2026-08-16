@@ -11,11 +11,13 @@ import { toast } from 'sonner';
 interface CreateGameViewProps {
   players: Player[];
   user: User | null;
+  activeSeasonId: string;
 }
 
 export function CreateGameView({
   players,
-  user
+  user,
+  activeSeasonId
 }: CreateGameViewProps) {
   const navigate = useNavigate();
   
@@ -91,6 +93,7 @@ export function CreateGameView({
       practiceAgenda: initialAgenda,
       numGroups: (eventType === 'practice' || gameMode === 'scrimmage') ? numGroups : null,
       uid: user.uid,
+      seasonId: activeSeasonId,
       createdAt: serverTimestamp()
     });
 

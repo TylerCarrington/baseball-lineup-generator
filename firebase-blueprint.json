@@ -1,5 +1,26 @@
 {
   "entities": {
+    "Season": {
+      "title": "Season",
+      "description": "A season or team grouping.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the season (e.g. Fall 2026)."
+        },
+        "uid": {
+          "type": "string",
+          "description": "The ID of the user who owns this season."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the season was created."
+        }
+      },
+      "required": ["name", "uid", "createdAt"]
+    },
     "Player": {
       "title": "Player",
       "description": "A baseball player in the lineup.",
@@ -19,6 +40,10 @@
         "battingOrder": {
           "type": "integer",
           "description": "The player's position in the batting lineup."
+        },
+        "seasonId": {
+          "type": "string",
+          "description": "The ID of the season this player belongs to."
         },
         "uid": {
           "type": "string",
@@ -53,6 +78,10 @@
           "type": "boolean",
           "description": "Whether to allow public access to the game schedule."
         },
+        "activeSeasonId": {
+          "type": "string",
+          "description": "The ID of the season the user is currently viewing."
+        },
         "uid": {
           "type": "string",
           "description": "The ID of the user who owns these settings."
@@ -73,6 +102,10 @@
           "type": "string",
           "format": "date-time",
           "description": "The date and time of the game."
+        },
+        "seasonId": {
+          "type": "string",
+          "description": "The ID of the season this game belongs to."
         },
         "rsvps": {
           "type": "object",
@@ -107,6 +140,10 @@
     }
   },
   "firestore": {
+    "seasons/{seasonId}": {
+      "schema": "Season",
+      "description": "Collection of seasons or teams."
+    },
     "players/{playerId}": {
       "schema": "Player",
       "description": "Collection of baseball players."

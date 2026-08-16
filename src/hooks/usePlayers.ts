@@ -11,12 +11,12 @@ import { db } from '../firebase';
 import { Player, OperationType } from '../types';
 import { handleFirestoreError } from '../lib/utils';
 
-export function usePlayers(user: User | null, isAuthReady: boolean) {
-  const [players, setPlayers] = useState<Player[]>([]);
+export function usePlayers(user: User | null, isAuthReady: boolean, activeSeasonId?: string) {
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
     if (!isAuthReady || !user) {
-      setPlayers([]);
+      setAllPlayers([]);
       return;
     }
 
@@ -31,13 +31,17 @@ export function usePlayers(user: User | null, isAuthReady: boolean) {
       snapshot.forEach((doc) => {
         playersData.push({ id: doc.id, ...doc.data() } as Player);
       });
-      setPlayers(playersData);
+      setAllPlayers(playersData);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'players');
     });
 
     return () => unsubscribe();
   }, [isAuthReady, user]);
+
+  const players = useMemo(() => {
+    return allPlayers.filter(p => (p.seasonId || 'legacy') === (activeSeasonId || 'legacy'));
+  }, [allPlayers, activeSeasonId]);
 
   const playersMap = useMemo(() => {
     const map: Record<string, Player> = {};
@@ -50,6 +54,6 @@ export function usePlayers(user: User | null, isAuthReady: boolean) {
   return {
     players,
     playersMap,
-    setPlayers
+    setPlayers: setAllPlayers
   };
 }

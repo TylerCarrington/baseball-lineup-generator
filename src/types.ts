@@ -13,12 +13,20 @@ export enum OperationType {
   WRITE = 'write',
 }
 
+export interface Season {
+  id: string;
+  name: string;
+  uid: string;
+  createdAt: any;
+}
+
 export interface Player {
   id: string;
   name: string;
   positions: string[];
   battingOrder?: number;
   jerseyNumber?: string;
+  seasonId?: string;
   uid: string;
   createdAt: any;
 }
@@ -28,6 +36,7 @@ export interface TeamSettings {
   allowDesignatedHitter: boolean;
   allowOutfieldTwiceInRow: boolean;
   publicSchedule?: boolean;
+  activeSeasonId?: string;
   uid: string;
 }
 
@@ -64,6 +73,7 @@ export interface Game {
   time?: string;
   duration?: number; // In minutes
   isHome?: boolean;
+  seasonId?: string;
   rsvps: Record<string, RSVPStatus>;
   battingOrder?: string[];
   lineup?: Record<string, Record<string, string>>; // Inning -> Position -> PlayerId

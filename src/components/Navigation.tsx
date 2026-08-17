@@ -102,7 +102,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             </button>
             <button 
               onClick={() => handleTabChange('drills')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTab === 'drills' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTab === 'drills' || currentTab === 'tools' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
               Drills
             </button>
@@ -160,7 +160,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             </button>
             <button 
               onClick={() => handleTabChange('drills')}
-              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${currentTab === 'drills' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${currentTab === 'drills' || currentTab === 'tools' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
               Drills
             </button>

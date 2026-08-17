@@ -29,6 +29,7 @@ import { DrillDetailView } from './components/DrillDetailView';
 import { CreateDrillView } from './components/CreateDrillView';
 import { GuidesTab } from './components/Guides/GuidesTab';
 import { PublicGuidesView } from './components/Guides/PublicGuidesView';
+import { ToolsMainView } from './components/Tools/ToolsMainView';
 
 // --- Connection Test ---
 async function testConnection() {
@@ -122,6 +123,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
           <Route path="/drills" element={<DrillLibraryView drills={drills} isAdmin={isAdmin} onDeleteDrill={deleteDrill} darkMode={darkMode} />} />
           <Route path="/drills/new" element={<CreateDrillView onAddDrill={addDrill} darkMode={darkMode} />} />
           <Route path="/drills/:id" element={<DrillDetailView drills={drills} isAdmin={isAdmin} onUpdateDrill={updateDrill} onDeleteDrill={deleteDrill} darkMode={darkMode} />} />
+          <Route path="/tools/*" element={<ToolsMainView user={user} players={players} darkMode={darkMode} />} />
           <Route path="/guides/*" element={<GuidesTab user={user} activeSeason={activeSeason} seasons={seasons} drills={drills} isAdmin={isAdmin} darkMode={darkMode} />} />
         </Routes>
       </main>

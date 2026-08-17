@@ -155,6 +155,20 @@ service cloud.firestore {
              (!('uid' in data) || data.uid is string || data.uid == null);
     }
 
+    function isValidPitchCountSession(data) {
+      return (!('uid' in data) || data.uid is string || data.uid == null) &&
+             (!('balls' in data) || data.balls is int || data.balls is number) &&
+             (!('strikes' in data) || data.strikes is int || data.strikes is number) &&
+             (!('inPlay' in data) || data.inPlay is int || data.inPlay is number || data.inPlay == null) &&
+             (!('totalPitches' in data) || data.totalPitches is int || data.totalPitches is number) &&
+             (!('strikePercentage' in data) || data.strikePercentage is int || data.strikePercentage is number || data.strikePercentage == null) &&
+             (!('playerId' in data) || data.playerId is string || data.playerId == null) &&
+             (!('playerName' in data) || data.playerName is string || data.playerName == null) &&
+             (!('seasonId' in data) || data.seasonId is string || data.seasonId == null) &&
+             (!('notes' in data) || data.notes is string || data.notes == null) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string || data.createdAt == null);
+    }
+
     function isPublicSchedule(userId) {
       return userId != null && 
              exists(/databases/$(database)/documents/settings/$(userId)) && 
@@ -230,6 +244,13 @@ service cloud.firestore {
       allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
       allow create: if isAuthenticated() && isValidGuideProgress(incoming());
       allow update: if isAuthenticated() && isValidGuideProgress(incoming());
+      allow delete: if isAuthenticated() || isAdmin();
+    }
+
+    match /pitchCountSessions/{sessionId} {
+      allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
+      allow create: if isAuthenticated() && isValidPitchCountSession(incoming());
+      allow update: if isAuthenticated() && isValidPitchCountSession(incoming());
       allow delete: if isAuthenticated() || isAdmin();
     }
   }

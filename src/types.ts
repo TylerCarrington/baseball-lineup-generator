@@ -223,3 +223,18 @@ export interface GuideProgress {
   uid: string;
 }
 
+export interface PitchCountSession {
+  id: string;
+  uid: string;
+  playerId?: string;
+  playerName?: string;
+  balls: number;
+  strikes: number;
+  inPlay: number;
+  totalPitches: number;
+  strikePercentage: number;
+  notes?: string;
+  seasonId?: string;
+  createdAt: any;
+}
+

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Drill } from '../types';
-import { Search, Plus, Trash2, PlayCircle, BookOpen, ChevronRight } from 'lucide-react';
+import { Search, Plus, Trash2, PlayCircle, BookOpen, ChevronRight, Wrench } from 'lucide-react';
 import { CATEGORIES, getCategoryTheme } from '../lib/drillCategories';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 
@@ -41,8 +41,16 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
           <p className="text-slate-500 dark:text-slate-400 font-medium">Master database of practice drills and activities</p>
         </div>
 
-        {isAdmin && (
-          <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <button 
+            onClick={() => navigate('/tools')}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-all shadow-md shadow-emerald-600/20"
+          >
+            <Wrench size={18} />
+            Tools
+          </button>
+
+          {isAdmin && (
             <button 
               onClick={() => navigate('/drills/new')}
               className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-md shadow-indigo-600/20"
@@ -50,8 +58,8 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
               <Plus size={18} />
               Add Drill
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Filters & Search */}

@@ -1,6 +1,6 @@
-import { doc, updateDoc, deleteDoc, addDoc, setDoc, collection, getDocs, query, serverTimestamp } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, addDoc, setDoc, collection, getDocs, query, where, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
-import { OperationType } from "../types";
+import { OperationType, PitchCountSession } from "../types";
 import { handleFirestoreError } from "../lib/utils";
 import { STARTER_GUIDE_SECTIONS } from "../lib/starterGuides";
 
@@ -75,6 +75,36 @@ export const firebaseService = {
       await deleteDoc(doc(db, 'drills', drillId));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `drills/${drillId}`);
+    }
+  },
+
+  // Pitch Count Sessions
+  async getPitchCountSessions(uid: string): Promise<PitchCountSession[]> {
+    try {
+      const snapshot = await getDocs(query(collection(db, 'pitchCountSessions'), where('uid', '==', uid)));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PitchCountSession[];
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, 'pitchCountSessions');
+      return [];
+    }
+  },
+
+  async addPitchCountSession(data: any) {
+    try {
+      return await addDoc(collection(db, 'pitchCountSessions'), stripUndefined({
+        ...data,
+        createdAt: serverTimestamp()
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'pitchCountSessions');
+    }
+  },
+
+  async deletePitchCountSession(sessionId: string) {
+    try {
+      await deleteDoc(doc(db, 'pitchCountSessions', sessionId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `pitchCountSessions/${sessionId}`);
     }
   },
 

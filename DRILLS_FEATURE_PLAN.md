@@ -108,4 +108,32 @@ Instead of seeding for every user individually, there is now only ONE global mas
    }
    ```
 4. In the `DrillsLibrary` component, run a check: If the global drills array is empty AND the logged-in user is `tylercarringtonwa@gmail.com`, render a "Seed Database" button that triggers this script.
-5. Finally, remove the hardcoded `DRILL_CATEGORIES` object from `PracticeAgendaView.tsx` and replace it with a dynamically generated category map derived directly from the global Firestore drills collection.
+---
+
+## 6. Tools Feature Plan
+
+### A. Navigation & Entry Point
+- **"Tools" Button**: Positioned directly adjacent to the **"Add Drill"** button on the Drills Library header/toolbar.
+- **Tools Page View**: Clicking "Tools" navigates to a clean, grid-based Baseball Coaching Tools landing page listing all available tools with quick launch cards.
+
+---
+
+### B. Core Tools Specification
+
+#### 1. Pitch Counter Tool
+- **Live Pitching Tracker**:
+  - Direct touch buttons for **Balls**, **Strikes** (Swinging/Called), and **In-Play / Fouls**.
+  - **Live Pitch Calculator**: Automatically updates total pitches count (`Total = Balls + Strikes + In-Play`).
+  - **Strike Percentage**: Displays real-time strike % (`(Strikes + In-Play) / Total`).
+- **Roster Integration**:
+  - Optional dropdown selector to link the active pitch count session to a specific player from the team roster.
+- **Session Saving & History**:
+  - "Save Pitch Count Session" button saves data to Firestore under `pitchCountSessions` collection (fields: `id`, `date`, `playerId`, `playerName`, `balls`, `strikes`, `totalPitches`, `strikePercentage`, `notes`).
+  - **History Log**: Scrollable timeline/table showing past saved pitch count sessions with filtering by player or date.
+
+#### 2. Stopwatch Tool
+- **Precision Timer**: Large high-contrast digital display showing minutes, seconds, and hundredths of a second (`00:00.00`).
+- **Standard Controls**: **Start / Pause**, **Lap / Split**, and **Reset**.
+- **Lap/Split History**: Displays a scrollable list of recorded split times (ideal for timing multiple base runners or rep splits).
+- **Optional Player Tagging**: Ability to tag a recorded split time with a player's name from the roster.
+

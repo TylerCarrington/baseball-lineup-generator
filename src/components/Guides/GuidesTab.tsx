@@ -116,7 +116,7 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({
   };
 
   const handleShareGuides = () => {
-    const url = `${window.location.origin}/shared/guides/${user.uid}`;
+    const url = `${window.location.origin}${window.location.pathname}#/shared/guides/${user.uid}`;
     navigator.clipboard.writeText(url);
     setCopiedShareLink(true);
     setTimeout(() => setCopiedShareLink(false), 3000);

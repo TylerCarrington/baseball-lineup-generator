@@ -206,14 +206,14 @@ service cloud.firestore {
     }
 
     match /guideSections/{sectionId} {
-      allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
+      allow read: if true;
       allow create: if isAuthenticated() && isValidGuideSection(incoming());
       allow update: if isAuthenticated() && isValidGuideSection(incoming());
       allow delete: if isAuthenticated() || isAdmin();
     }
 
     match /guideArticles/{articleId} {
-      allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
+      allow read: if true;
       allow create: if isAuthenticated() && isValidGuideArticle(incoming());
       allow update: if isAuthenticated() && isValidGuideArticle(incoming());
       allow delete: if isAuthenticated() || isAdmin();

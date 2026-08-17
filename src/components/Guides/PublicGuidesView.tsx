@@ -1,14 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { GuideSection, GuideArticle, GuideChecklistItem, TeamSettings, Season } from '../../types';
-import { BookOpen, Youtube, Dumbbell, ArrowLeft, Sparkles, Folder, CheckCircle, ExternalLink } from 'lucide-react';
+import { GuideSection, GuideArticle, TeamSettings } from '../../types';
+import { BookOpen, Youtube, ArrowLeft, Folder, ExternalLink } from 'lucide-react';
 import { MarkdownContent } from './MarkdownContent';
 import { extractYoutubeId } from '../../lib/youtube';
 
+const SECTION_ORDER_MAP: Record<string, number> = {
+  'batting': 1, 'hitting': 1,
+  'pitching': 2,
+  'catching': 3,
+  'fielding': 4,
+  'base running': 5, 'baserunning': 5, 'running': 5,
+};
+
+function getSectionSortOrder(sec: GuideSection): number {
+  const nameKey = (sec.name || '').toLowerCase().trim();
+  const idKey = (sec.id || '').toLowerCase().trim();
+  if (SECTION_ORDER_MAP[nameKey] !== undefined) return SECTION_ORDER_MAP[nameKey];
+  if (SECTION_ORDER_MAP[idKey] !== undefined) return SECTION_ORDER_MAP[idKey];
+  return sec.order ?? 999;
+}
+
 export const PublicGuidesView: React.FC = () => {
-  const { uid } = useParams<{ uid: string }>();
+  const { uid: paramUid } = useParams<{ uid: string }>();
+  const location = useLocation();
+
+  // Extract UID from URL path (e.g. /shared/guides/:uid)
+  const pathParts = location.pathname.split('/');
+  const guidesIdx = pathParts.indexOf('guides');
+  const uid = paramUid || (guidesIdx !== -1 && pathParts[guidesIdx + 1] ? pathParts[guidesIdx + 1] : undefined);
+
   const [sections, setSections] = useState<GuideSection[]>([]);
   const [articles, setArticles] = useState<GuideArticle[]>([]);
   const [activeSectionId, setActiveSectionId] = useState<string>('');
@@ -19,19 +42,36 @@ export const PublicGuidesView: React.FC = () => {
 
   useEffect(() => {
     async function loadPublicGuides() {
-      if (!uid) return;
+      if (!uid) {
+        setError('Invalid guide link.');
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
-        // 1. Fetch settings to check public permissions
-        const settingsSnap = await getDoc(doc(db, 'settings', uid));
-        if (settingsSnap.exists()) {
-          setTeamSettings(settingsSnap.data() as TeamSettings);
+        setError(null);
+
+        // 1. Fetch settings if available (non-blocking)
+        try {
+          const settingsSnap = await getDoc(doc(db, 'settings', uid));
+          if (settingsSnap.exists()) {
+            setTeamSettings(settingsSnap.data() as TeamSettings);
+          }
+        } catch (e) {
+          console.warn('Could not fetch settings for public guide view', e);
         }
 
         // 2. Fetch sections
         const secSnap = await getDocs(query(collection(db, 'guideSections'), where('uid', '==', uid)));
         const secList = secSnap.docs.map(d => ({ id: d.id, ...d.data() })) as GuideSection[];
-        secList.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+        
+        secList.sort((a, b) => {
+          const orderA = getSectionSortOrder(a);
+          const orderB = getSectionSortOrder(b);
+          if (orderA !== orderB) return orderA - orderB;
+          return (a.order ?? 999) - (b.order ?? 999);
+        });
+
         setSections(secList);
         if (secList.length > 0) {
           setActiveSectionId(secList[0].id);
@@ -47,6 +87,7 @@ export const PublicGuidesView: React.FC = () => {
         artList.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
         setArticles(artList);
       } catch (err: any) {
+        console.error('Error loading shared coaching guides:', err);
         setError('Unable to load shared coaching guides.');
       } finally {
         setLoading(false);

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { useSharedData } from '../hooks/useSharedData';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { Player, TeamSettings } from '../types';
 import { PitchCounterView } from './Tools/PitchCounterView';
 import { StopwatchView } from './Tools/StopwatchView';
 import { 
@@ -22,8 +24,53 @@ export const PublicToolsView: React.FC = () => {
   const toolsIdx = pathParts.indexOf('tools');
   const ownerId = paramUid || (toolsIdx !== -1 && pathParts[toolsIdx + 1] ? pathParts[toolsIdx + 1] : undefined);
 
-  // We reuse useSharedData to fetch settings and players for this shared coach!
-  const { players, loading, error } = useSharedData(ownerId);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadPublicToolsData() {
+      if (!ownerId) {
+        setError('Invalid sharing link.');
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1. Fetch settings if available (optional/non-blocking)
+        let activeSeasonId = undefined;
+        try {
+          const settingsSnap = await getDoc(doc(db, 'settings', ownerId));
+          if (settingsSnap.exists()) {
+            const settingsData = settingsSnap.data() as TeamSettings;
+            activeSeasonId = settingsData.activeSeasonId;
+          }
+        } catch (e) {
+          console.warn('Could not fetch settings for public tools view:', e);
+        }
+
+        // 2. Fetch players for this coach
+        const playersSnap = await getDocs(query(collection(db, 'players'), where('uid', '==', ownerId)));
+        const playersData = playersSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Player[];
+
+        // Filter players for the active season if we have one
+        const filteredPlayers = activeSeasonId 
+          ? playersData.filter(p => p.seasonId === activeSeasonId)
+          : playersData;
+
+        setPlayers(filteredPlayers);
+      } catch (err: any) {
+        console.error('Error loading public tools data:', err);
+        setError('Unable to load shared coaching tools.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadPublicToolsData();
+  }, [ownerId]);
 
   // Check which sub-tool is active from sub-path, e.g. /shared/tools/:uid/pitch-counter
   const isPitchCounter = location.pathname.endsWith('/pitch-counter');

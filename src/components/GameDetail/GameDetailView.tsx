@@ -55,6 +55,7 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
     editGameTime, setEditGameTime,
     editIsHome, setEditIsHome,
     editDuration, setEditDuration,
+    editApplyToFollowingEvents, setEditApplyToFollowingEvents,
     backupLineup, setBackupLineup,
     backupScrimmageGroups, setBackupScrimmageGroups,
     resetEditState
@@ -174,9 +175,11 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
         setEditIsHome={setEditIsHome}
         editDuration={editDuration}
         setEditDuration={setEditDuration}
+        editApplyToFollowingEvents={editApplyToFollowingEvents}
+        setEditApplyToFollowingEvents={setEditApplyToFollowingEvents}
         handleTogglePublish={handleTogglePublish}
         handleUpdateGameDetails={async () => {
-          let generatedName = game.name;
+          let generatedName = game.name || '';
           if (game.type !== 'practice') {
             generatedName = game.mode === 'scrimmage' 
               ? 'Scrimmage' 
@@ -191,7 +194,7 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
             time: editGameTime,
             isHome: editIsHome,
             duration: editDuration
-          });
+          }, editApplyToFollowingEvents);
           setIsEditingRSVPs(false);
         }}
         resetEditState={resetEditState}

@@ -95,6 +95,7 @@ export function CreateGameView({
     }
 
     let firstDocRef = null;
+    const seriesId = isRecurring && eventsToCreate.length > 1 ? crypto.randomUUID() : null;
 
     try {
       for (const event of eventsToCreate) {
@@ -116,6 +117,7 @@ export function CreateGameView({
           battingOrder: initialBattingOrder,
           mode: eventType === 'practice' ? 'standard' : gameMode,
           type: eventType,
+          seriesId: seriesId,
           practiceAgenda: eventAgenda,
           numGroups: (eventType === 'practice' || gameMode === 'scrimmage') ? numGroups : null,
           uid: user.uid,

@@ -8,7 +8,7 @@ interface NavigationProps {
   currentTab: string;
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (open: boolean) => void;
-  handleTabChange: (tab: 'roster' | 'games' | 'settings') => void;
+  handleTabChange: (tab: 'roster' | 'games' | 'settings' | 'drills') => void;
   handleLogout: () => void;
   seasons: Season[];
   activeSeasonId: string;
@@ -101,6 +101,12 @@ export const Navigation: React.FC<NavigationProps> = ({
               Events
             </button>
             <button 
+              onClick={() => handleTabChange('drills')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTab === 'drills' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+            >
+              Drills
+            </button>
+            <button 
               onClick={() => handleTabChange('settings')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTab === 'settings' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
@@ -145,6 +151,12 @@ export const Navigation: React.FC<NavigationProps> = ({
               className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${currentTab === 'games' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
               Events
+            </button>
+            <button 
+              onClick={() => handleTabChange('drills')}
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${currentTab === 'drills' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+            >
+              Drills
             </button>
             <button 
               onClick={() => handleTabChange('settings')}

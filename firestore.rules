@@ -20,12 +20,10 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && 
-             request.auth.token.email.lower() == "tylercarringtonwa@gmail.com" && 
+             (request.auth.token.email == "tylercarringtonwa@gmail.com" || 
+              request.auth.token.email == "TylerCarringtonWA@gmail.com" ||
+              request.auth.token.email.matches('(?i)^tylercarringtonwa@gmail[.]com$')) && 
              request.auth.token.email_verified == true;
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
     function incoming() {
@@ -52,30 +50,57 @@ service cloud.firestore {
              data.uid is string && (data.uid == request.auth.uid || isAdmin()) &&
              data.createdAt is timestamp &&
              (!('seasonId' in data) || data.seasonId is string || data.seasonId == null) &&
-             (!('jerseyNumber' in data) || data.jerseyNumber is string || data.jerseyNumber == null);
+             (!('jerseyNumber' in data) || data.jerseyNumber is string || data.jerseyNumber == null) &&
+             (!('battingOrder' in data) || data.battingOrder is int || data.battingOrder is number || data.battingOrder == null);
     }
 
     function isValidGame(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.date is timestamp &&
+      return data.date is timestamp &&
              data.rsvps is map &&
              data.uid is string && (data.uid == request.auth.uid || isAdmin()) &&
              data.createdAt is timestamp &&
+             (!('name' in data) || data.name is string || data.name == null) &&
              (!('type' in data) || data.type in ['practice', 'game']) &&
              (!('mode' in data) || data.mode in ['standard', 'scrimmage']) &&
              (!('location' in data) || data.location is string || data.location == null) &&
              (!('opponent' in data) || data.opponent is string || data.opponent == null) &&
-             (!('duration' in data) || data.duration is int || data.duration == null) &&
+             (!('time' in data) || data.time is string || data.time == null) &&
+             (!('duration' in data) || data.duration is int || data.duration is number || data.duration == null) &&
+             (!('isHome' in data) || data.isHome is bool) &&
              (!('battingOrder' in data) || data.battingOrder is list) &&
+             (!('lineup' in data) || data.lineup is map) &&
              (!('practiceAgenda' in data) || data.practiceAgenda is list) &&
+             (!('practiceNotes' in data) || data.practiceNotes is list) &&
+             (!('practiceNoteSections' in data) || data.practiceNoteSections is list) &&
+             (!('numGroups' in data) || data.numGroups is int || data.numGroups is number || data.numGroups == null) &&
+             (!('battingOrderChecks' in data) || data.battingOrderChecks is map) &&
+             (!('scrimmageGroups' in data) || data.scrimmageGroups is list) &&
+             (!('scrimmageStep' in data) || data.scrimmageStep is int || data.scrimmageStep is number) &&
+             (!('lockedInnings' in data) || data.lockedInnings is list) &&
+             (!('lockedPositions' in data) || data.lockedPositions is list) &&
+             (!('seriesId' in data) || data.seriesId is string || data.seriesId == null) &&
              (!('seasonId' in data) || data.seasonId is string || data.seasonId == null) &&
              (!('isLocked' in data) || data.isLocked is bool);
     }
 
+    function isValidDrill(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.createdAt is timestamp &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 100)) &&
+             (!('summary' in data) || (data.summary is string && data.summary.size() <= 500)) &&
+             (!('setup' in data) || (data.setup is string && data.setup.size() <= 10000)) &&
+             (!('steps' in data) || (data.steps is string && data.steps.size() <= 20000)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 10000)) &&
+             (!('youtubeUrl' in data) || (data.youtubeUrl is string && data.youtubeUrl.size() <= 1000)) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
     function isValidSettings(data) {
-      return (data.uid == request.auth.uid || isAdmin()) &&
+      return data.uid is string && (data.uid == request.auth.uid || isAdmin()) &&
              (!('activeSeasonId' in data) || data.activeSeasonId is string || data.activeSeasonId == null) &&
-             (!('publicSchedule' in data) || data.publicSchedule is bool);
+             (!('publicSchedule' in data) || data.publicSchedule is bool) &&
+             (!('allowDesignatedHitter' in data) || data.allowDesignatedHitter is bool) &&
+             (!('allowOutfieldTwiceInRow' in data) || data.allowOutfieldTwiceInRow is bool);
     }
 
     function isPublicSchedule(userId) {
@@ -124,6 +149,13 @@ service cloud.firestore {
       allow read: if isOwner(userId) || (resource != null && resource.data.publicSchedule == true) || isAdmin();
       allow create: if isOwner(userId) && isValidSettings(incoming());
       allow update: if (isOwner(userId) || isAdmin()) && isValidSettings(incoming());
+    }
+
+    match /drills/{drillId} {
+      allow read: if isAuthenticated();
+      allow create: if (isAdmin() || isAuthenticated()) && isValidDrill(incoming());
+      allow update: if (isAdmin() || isAuthenticated()) && isValidDrill(incoming());
+      allow delete: if isAdmin() || isAuthenticated();
     }
 
     match /games/{gameId} {

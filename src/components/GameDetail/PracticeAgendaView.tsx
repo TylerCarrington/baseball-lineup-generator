@@ -43,61 +43,19 @@ import {
   arrayMove, 
   useSortable 
 } from '@dnd-kit/sortable';
-import { Game, PracticeActivity, PracticeNote, PracticeNoteSection } from '../../types';
+import { Game, PracticeActivity, PracticeNote, PracticeNoteSection, Drill } from '../../types';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Input } from '../ui/Input';
 import { firebaseService } from '../../services/firebaseService';
+import { useAuth } from '../../hooks/useAuth';
+import { useDrills } from '../../hooks/useDrills';
 import { toast } from 'sonner';
 
 const MINUTES_PER_SLOT = 5;
 const PIXELS_PER_MINUTE = 6; // 1 minute = 6px, 5 mins = 30px, 90 mins = 540px
 
-const DRILL_CATEGORIES: Record<string, string[]> = {
-  "Hitting & Offense": [
-    "Batting practice",
-    "Tee work",
-    "Soft toss drills",
-    "Bunting practice",
-    "Live at-bats"
-  ],
-  "Fielding & Defense": [
-    "Ground ball drills",
-    "Fly ball shagging",
-    "Double play practice",
-    "Infield/outfield drills",
-    "First step reactions"
-  ],
-  "Throwing & Pitching": [
-    "Long toss",
-    "Bullpen sessions",
-    "Pitcher's warm-up",
-    "Pick-off move practice",
-    "Catching bullpens"
-  ],
-  "Base Running": [
-    "Baserunning drills",
-    "Leadoff practice",
-    "Stealing bases",
-    "Sliding practice",
-    "Home-to-first sprints"
-  ],
-  "Conditioning & Warm-Up": [
-    "Dynamic stretching",
-    "Running poles",
-    "Agility ladder drills",
-    "Arm circles",
-    "Sprints"
-  ],
-  "Teamwork & Situational": [
-    "Rundown practice",
-    "Cutoff/relay drills",
-    "Bunt coverage",
-    "First and third defense",
-    "Situational scrimmage"
-  ]
-};
 
 interface PracticeAgendaViewProps {
   game: Game;
@@ -106,6 +64,19 @@ interface PracticeAgendaViewProps {
 }
 
 export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked = false }: PracticeAgendaViewProps) {
+  const { user } = useAuth();
+  const { drills } = useDrills(user);
+
+  const dynamicDrillCategories = useMemo(() => {
+    const categories: Record<string, Drill[]> = {};
+    drills.forEach(drill => {
+      const cat = drill.category || 'Uncategorized';
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(drill);
+    });
+    return categories;
+  }, [drills]);
+
   const [isAddingActivity, setIsAddingActivity] = useState(false);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -914,7 +885,7 @@ export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked
                         className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm"
                       >
                         <option value="">Select Category...</option>
-                        {Object.keys(DRILL_CATEGORIES).map(cat => (
+                        {Object.keys(dynamicDrillCategories).map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
@@ -922,14 +893,25 @@ export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked
                     <div className="space-y-2">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Drill (Optional)</label>
                       <select
-                        value={activityForm.drillName}
-                        onChange={(e) => setActivityForm({...activityForm, drillName: e.target.value})}
+                        value={activityForm.drillName || ''}
+                        onChange={(e) => {
+                          const drillName = e.target.value;
+                          const drill = dynamicDrillCategories[activityForm.category || '']?.find(d => d.title === drillName);
+                          setActivityForm({
+                            ...activityForm, 
+                            drillName,
+                            drillId: drill?.id,
+                            drillSetup: drill?.setup,
+                            drillSteps: drill?.steps,
+                            drillYoutubeUrl: drill?.youtubeUrl
+                          });
+                        }}
                         disabled={!activityForm.category}
                         className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm disabled:opacity-50"
                       >
                         <option value="">Select Drill...</option>
-                        {(activityForm.category ? DRILL_CATEGORIES[activityForm.category] : []).map(drill => (
-                          <option key={drill} value={drill}>{drill}</option>
+                        {(activityForm.category ? dynamicDrillCategories[activityForm.category] || [] : []).map(drill => (
+                          <option key={drill.id} value={drill.title}>{drill.title}</option>
                         ))}
                       </select>
                     </div>
@@ -1019,22 +1001,25 @@ export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked
                               className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold"
                             >
                               <option value="">Select Category *</option>
-                              {Object.keys(DRILL_CATEGORIES).map(cat => (
+                              {Object.keys(dynamicDrillCategories).map(cat => (
                                 <option key={cat} value={cat}>{cat}</option>
                               ))}
                             </select>
                             <select
                               value={activityForm.groupMap?.[i] || ''}
-                              onChange={(e) => setActivityForm({
-                                ...activityForm, 
-                                groupMap: { ...activityForm.groupMap, [i]: e.target.value }
-                              })}
+                              onChange={(e) => {
+                                const drillName = e.target.value;
+                                setActivityForm({
+                                  ...activityForm, 
+                                  groupMap: { ...activityForm.groupMap, [i]: drillName }
+                                })
+                              }}
                               disabled={!activityForm.groupCategoryMap?.[i]}
                               className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold disabled:opacity-50"
                             >
                               <option value="">Select Drill (Optional)</option>
-                              {(activityForm.groupCategoryMap?.[i] ? DRILL_CATEGORIES[activityForm.groupCategoryMap[i]] : []).map(drill => (
-                                <option key={drill} value={drill}>{drill}</option>
+                              {(activityForm.groupCategoryMap?.[i] ? dynamicDrillCategories[activityForm.groupCategoryMap[i]] || [] : []).map(drill => (
+                                <option key={drill.id} value={drill.title}>{drill.title}</option>
                               ))}
                             </select>
                           </div>

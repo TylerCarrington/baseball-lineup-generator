@@ -12,6 +12,7 @@ import { usePlayers } from './hooks/usePlayers';
 import { useGames } from './hooks/useGames';
 import { useSettings } from './hooks/useSettings';
 import { useSeasons } from './hooks/useSeasons';
+import { useDrills } from './hooks/useDrills';
 import { RosterTab } from './components/RosterTab';
 import { SettingsTab } from './components/SettingsTab';
 import { GamesTab } from './components/GamesTab';
@@ -23,6 +24,9 @@ import { Navigation } from './components/Navigation';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { ConfirmationModal } from './components/ui/ConfirmationModal';
 import { Button } from './components/ui/Button';
+import { DrillLibraryView } from './components/DrillLibraryView';
+import { DrillDetailView } from './components/DrillDetailView';
+import { CreateDrillView } from './components/CreateDrillView';
 
 // --- Connection Test ---
 async function testConnection() {
@@ -58,6 +62,9 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
   const { players } = usePlayers(user, isAuthReady, activeSeasonId);
   const { games, selectedGame, setGames } = useGames(user, isAuthReady, selectedGameId, activeSeasonId);
+  const { drills, addDrill, updateDrill, deleteDrill } = useDrills(user);
+  
+  const isAdmin = user?.email === 'tylercarringtonwa@gmail.com';
 
   const handleLogout = async () => {
     await logout();
@@ -104,6 +111,9 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
           <Route path="/games/:id" element={selectedGame ? <GameDetailView game={selectedGame} players={players} games={games} user={user} isAuthReady={isAuthReady} darkMode={darkMode} setShowClearLineupConfirm={setShowClearLineupConfirm} onBack={() => navigate('/games')} setGames={setGames} /> : <div className="text-center py-12 text-slate-500">Loading game...</div>} />
           <Route path="/roster" element={<RosterTab players={players} user={user} startCreateLineup={() => navigate('/games/new')} setDeleteConfirmation={setDeleteConfirmation} activeSeasonId={activeSeasonId} />} />
           <Route path="/settings" element={<SettingsTab settings={settings} handleUpdateSettings={(u) => firebaseService.updateSettings(user.uid, u)} darkMode={darkMode} setDarkMode={setDarkMode} user={user} handleCopyLink={handleCopyLink} copySuccess={copySuccess} seasons={seasons} activeSeasonId={activeSeasonId} players={players} />} />
+          <Route path="/drills" element={<DrillLibraryView drills={drills} isAdmin={isAdmin} onDeleteDrill={deleteDrill} darkMode={darkMode} />} />
+          <Route path="/drills/new" element={<CreateDrillView onAddDrill={addDrill} darkMode={darkMode} />} />
+          <Route path="/drills/:id" element={<DrillDetailView drills={drills} isAdmin={isAdmin} onUpdateDrill={updateDrill} onDeleteDrill={deleteDrill} darkMode={darkMode} />} />
         </Routes>
       </main>
       <ConfirmationModal isOpen={deleteConfirmation.isOpen} title={deleteConfirmation.title} message={deleteConfirmation.message} onConfirm={confirmDelete} onClose={() => setDeleteConfirmation(prev => ({ ...prev, isOpen: false }))} variant="danger" />

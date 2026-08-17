@@ -36,6 +36,8 @@ interface GameHeaderProps {
   setEditIsHome?: (val: boolean) => void;
   editDuration?: number;
   setEditDuration?: (val: number) => void;
+  editApplyToFollowingEvents?: boolean;
+  setEditApplyToFollowingEvents?: (val: boolean) => void;
   handleTogglePublish?: (gameId: string, currentStatus: boolean) => Promise<void>;
   handleUpdateGameDetails?: () => Promise<void>;
   resetEditState?: (game: Game) => void;
@@ -62,6 +64,8 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   setEditIsHome,
   editDuration = 90,
   setEditDuration,
+  editApplyToFollowingEvents = false,
+  setEditApplyToFollowingEvents,
   handleTogglePublish,
   handleUpdateGameDetails,
   resetEditState,
@@ -101,7 +105,8 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
           <div className="flex-1 min-w-0">
             {isEditingRSVPs ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
                 {game.type === 'practice' ? (
                   <>
                     <div className="space-y-1.5">
@@ -224,6 +229,22 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                   </>
                 )}
               </div>
+              
+              {game.seriesId && (
+                <div className="mt-6 flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                  <label className="text-xs sm:text-sm font-bold text-white">Update following events in this series?</label>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer"
+                      checked={editApplyToFollowingEvents}
+                      onChange={(e) => setEditApplyToFollowingEvents?.(e.target.checked)}
+                    />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                  </label>
+                </div>
+              )}
+              </>
             ) : (
               <>
                 <div className="mb-3">

@@ -1,4 +1,4 @@
-import { doc, updateDoc, deleteDoc, addDoc, collection } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, addDoc, collection, getDocs, query, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { OperationType } from "../types";
 import { handleFirestoreError } from "../lib/utils";
@@ -35,6 +35,48 @@ function stripUndefined(obj: any): any {
 }
 
 export const firebaseService = {
+  // Drills
+  async getDrills() {
+    try {
+      const snapshot = await getDocs(query(collection(db, 'drills')));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, 'drills');
+      return [];
+    }
+  },
+  
+  async addDrill(data: any) {
+    try {
+      return await addDoc(collection(db, 'drills'), stripUndefined({
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'drills');
+    }
+  },
+
+  async updateDrill(drillId: string, data: any) {
+    try {
+      await updateDoc(doc(db, 'drills', drillId), stripUndefined({
+        ...data,
+        updatedAt: serverTimestamp()
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `drills/${drillId}`);
+    }
+  },
+
+  async deleteDrill(drillId: string) {
+    try {
+      await deleteDoc(doc(db, 'drills', drillId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `drills/${drillId}`);
+    }
+  },
+
   async updateGame(gameId: string, data: any) {
     try {
       await updateDoc(doc(db, 'games', gameId), stripUndefined(data));

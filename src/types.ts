@@ -47,10 +47,27 @@ export interface PracticeActivity {
   type: 'team' | 'groups' | 'rotating';
   category?: string;
   drillName?: string;
+  drillId?: string;
+  drillSetup?: string;
+  drillSteps?: string;
+  drillYoutubeUrl?: string;
   groupMap?: Record<number, string>; // GroupIndex (0-3) -> Drill Name
   groupCategoryMap?: Record<number, string>; // GroupIndex (0-3) -> Category Name
   startTimeOffset?: number; // Minutes from practice start. If undefined, follows previous activity.
   notes?: string;
+}
+
+export interface Drill {
+  id: string;
+  title: string;
+  category?: string;
+  summary?: string;
+  setup?: string;
+  steps?: string;
+  notes?: string;
+  youtubeUrl?: string;
+  createdAt: any;
+  updatedAt: any;
 }
 
 export interface PracticeNote {
@@ -84,6 +101,7 @@ export interface Game {
   createdAt: any;
   mode?: 'standard' | 'scrimmage';
   type?: 'game' | 'practice'; // Defaults to 'game'
+  seriesId?: string;
   scrimmageGroups?: string[][];
   scrimmageStep?: number;
   practiceAgenda?: PracticeActivity[];

@@ -82,16 +82,56 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
     await firebaseService.updateGame(gameId, updates);
   };
 
-  const handleUpdateGameDetails = async (gameId: string, updates: { name: string; opponent?: string | null; location?: string | null; date: string; time?: string | null; isHome: boolean | null; duration?: number }) => {
+  const handleUpdateGameDetails = async (gameId: string, updates: { name: string; opponent?: string | null; location?: string | null; date: string; time?: string | null; isHome: boolean | null; duration?: number }, applyToFollowingEvents: boolean = false) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    const newDate = new Date(updates.date + 'T12:00:00');
+    
+    // Update the targeted game
     await firebaseService.updateGame(gameId, {
       name: updates.name.trim(),
       opponent: updates.opponent?.trim() ?? null,
       location: updates.location?.trim() ?? null,
-      date: new Date(updates.date + 'T12:00:00'),
+      date: newDate,
       time: updates.time || null,
       isHome: updates.isHome,
       duration: updates.duration
     });
+
+    // If part of a series and user wants to update following events
+    if (applyToFollowingEvents && game.seriesId) {
+      // Calculate date shift in days
+      const oldDate = game.date?.toDate ? game.date.toDate() : new Date(game.date);
+      // Reset hours to avoid daylight saving issues during diff
+      oldDate.setHours(12, 0, 0, 0);
+      newDate.setHours(12, 0, 0, 0);
+      const diffTime = newDate.getTime() - oldDate.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+      // Find all following games in the series
+      const followingGames = games.filter(g => 
+        g.seriesId === game.seriesId && 
+        g.id !== game.id &&
+        (g.date?.toDate ? g.date.toDate().getTime() : new Date(g.date).getTime()) > oldDate.getTime()
+      );
+
+      // Update them
+      for (const fGame of followingGames) {
+        const currentFDate = fGame.date?.toDate ? fGame.date.toDate() : new Date(fGame.date);
+        const newFDate = new Date(currentFDate);
+        if (diffDays !== 0) {
+          newFDate.setDate(newFDate.getDate() + diffDays);
+        }
+
+        await firebaseService.updateGame(fGame.id, {
+          location: updates.location?.trim() ?? null,
+          date: newFDate,
+          time: updates.time || null,
+          duration: updates.duration
+        });
+      }
+    }
   };
 
   const handleReshuffleLineup = async (gameId: string) => {

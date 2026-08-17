@@ -200,7 +200,10 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({
             {/* Print Section */}
             {currentSection && (
               <button
-                onClick={() => setIsPrintMode(true)}
+                onClick={() => {
+                  const printUrl = `${window.location.origin}${window.location.pathname}#/print/guides/section/${currentSection.id}`;
+                  window.open(printUrl, '_blank');
+                }}
                 className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors"
                 title="Print Coaching Binder Sheet"
               >

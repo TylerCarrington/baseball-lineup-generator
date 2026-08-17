@@ -33,7 +33,7 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-200 max-w-4xl mx-auto pb-16">
       {/* Top Header Actions */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center justify-between gap-3 flex-wrap print:hidden">
         <button
           onClick={onBack}
           className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
@@ -44,7 +44,10 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => window.print()}
+            onClick={() => {
+              const printUrl = `${window.location.origin}${window.location.pathname}#/print/guides/article/${article.id}`;
+              window.open(printUrl, '_blank');
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors shadow-2xs"
           >
             <Printer size={13} />
@@ -117,9 +120,9 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({
         </div>
       </div>
 
-      {/* YouTube Video Section (if attached) */}
+      {/* YouTube Video Section (Hidden in Print) */}
       {primaryYoutubeUrl && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xs">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xs print:hidden">
           <div className="flex items-center justify-between mb-3.5">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center">

@@ -7,25 +7,80 @@
 @variant dark (&:where(.dark, .dark *));
 
 @media print {
-  html, body {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    background-color: white !important;
-    color: black !important;
+  /* Force clean white background and solid black text everywhere */
+  html, body, #root, main, div, article, section, header, nav, footer, p, h1, h2, h3, h4, h5, h6, span, li, ul, ol, table, tr, td, th {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    color-scheme: light !important;
   }
-  
-  header, nav, .print\:hidden {
+
+  /* Override dark mode dark fills for ink efficiency */
+  .dark, .dark *, [class*="dark:bg-"], [class*="bg-slate-"] {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #d1d5db !important;
+  }
+
+  /* Lighten card borders and remove dark background fills */
+  [class*="border-"] {
+    border-color: #e5e7eb !important;
+  }
+
+  .border-black, .border-slate-800, .border-slate-700 {
+    border-color: #000000 !important;
+  }
+
+  /* Images remain in full original color */
+  img, picture, canvas {
+    background-color: transparent !important;
+    background: transparent !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+    max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Hide interactive / non-printable UI elements */
+  iframe, 
+  video, 
+  button, 
+  nav, 
+  header, 
+  footer, 
+  .print\:hidden,
+  [role="dialog"] button,
+  .no-print {
     display: none !important;
   }
-  
+
+  /* Ensure main content takes full printable width without side padding shift */
   main {
     margin: 0 !important;
     padding: 0 !important;
     max-width: 100% !important;
+    width: 100% !important;
   }
 
-  .dark {
-    /* override tailwind dark mode globals */
-    color-scheme: light !important;
+  /* Prevent awkward page cuts through headings and article blocks */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  article, .printable-card, blockquote {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  @page {
+    margin: 0.5in;
+    size: auto;
   }
 }
+

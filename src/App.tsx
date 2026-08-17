@@ -29,6 +29,7 @@ import { DrillDetailView } from './components/DrillDetailView';
 import { CreateDrillView } from './components/CreateDrillView';
 import { GuidesTab } from './components/Guides/GuidesTab';
 import { PublicGuidesView } from './components/Guides/PublicGuidesView';
+import { PrintGuideWrapper } from './components/Guides/PrintGuideWrapper';
 import { ToolsMainView } from './components/Tools/ToolsMainView';
 
 // --- Connection Test ---
@@ -92,6 +93,11 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   if (location.pathname.startsWith('/shared/')) return <SharedView darkMode={darkMode} setDarkMode={setDarkMode} />;
 
   if (isPrintMode) {
+    const isGuidePrint = location.pathname.includes('/guides/') || location.pathname.includes('/article/') || location.pathname.includes('/section/');
+    if (isGuidePrint) {
+      const activeSeasonForPrint = seasons.find(s => s.id === activeSeasonId) || null;
+      return <PrintGuideWrapper user={user} activeSeasonId={activeSeasonId} activeSeason={activeSeasonForPrint} drills={drills} />;
+    }
     if (!selectedGame || loading) return <div className="text-center py-12">Loading game for print...</div>;
     return <PrintGameView game={selectedGame} players={players} games={games} user={user} isAuthReady={isAuthReady} setGames={setGames} />;
   }

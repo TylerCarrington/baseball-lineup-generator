@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Player, PitchCountSession } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
+import { ConfirmationModal } from '../ui/ConfirmationModal';
 import { 
   Activity, 
   RotateCcw, 
@@ -37,6 +38,7 @@ export const PitchCounterView: React.FC<PitchCounterViewProps> = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [savedSessions, setSavedSessions] = useState<PitchCountSession[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
+  const [showResetModal, setShowResetModal] = useState<boolean>(false);
 
   const totalPitches = balls + strikes + inPlay;
   const strikeCountWithInPlay = strikes + inPlay;
@@ -67,15 +69,19 @@ export const PitchCounterView: React.FC<PitchCounterViewProps> = ({
     }
   };
 
-  const handleReset = () => {
-    if (totalPitches > 0) {
-      if (window.confirm('Reset current pitch count numbers?')) {
-        setBalls(0);
-        setStrikes(0);
-        setInPlay(0);
-        setNotes('');
-      }
+  const handleResetRequest = () => {
+    if (totalPitches > 0 || notes) {
+      setShowResetModal(true);
     }
+  };
+
+  const handleConfirmReset = () => {
+    setBalls(0);
+    setStrikes(0);
+    setInPlay(0);
+    setNotes('');
+    setShowResetModal(false);
+    toast.info('Pitch count reset.');
   };
 
   const handleSaveSession = async () => {
@@ -145,9 +151,9 @@ export const PitchCounterView: React.FC<PitchCounterViewProps> = ({
           Back to Tools
         </button>
         <button
-          onClick={handleReset}
-          disabled={totalPitches === 0}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 disabled:opacity-40 transition-all"
+          onClick={handleResetRequest}
+          disabled={totalPitches === 0 && !notes}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 disabled:opacity-40 transition-all text-slate-700 dark:text-slate-200"
         >
           <RotateCcw size={14} />
           Reset Counter
@@ -308,16 +314,39 @@ export const PitchCounterView: React.FC<PitchCounterViewProps> = ({
             />
           </div>
 
-          <button
-            onClick={handleSaveSession}
-            disabled={totalPitches === 0 || isSaving}
-            className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 shrink-0"
-          >
-            <Save size={18} />
-            {isSaving ? 'Saving...' : 'Save Session'}
-          </button>
+          <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={handleResetRequest}
+              disabled={totalPitches === 0 && !notes}
+              className="w-full sm:w-auto px-5 py-3 border border-slate-200 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 disabled:opacity-40 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+            >
+              <RotateCcw size={16} />
+              Reset Without Saving
+            </button>
+            <button
+              onClick={handleSaveSession}
+              disabled={totalPitches === 0 || isSaving}
+              className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 shrink-0"
+            >
+              <Save size={18} />
+              {isSaving ? 'Saving...' : 'Save Session'}
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Confirmation Modal for Resetting */}
+      <ConfirmationModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={handleConfirmReset}
+        title="Reset Pitch Counter?"
+        message="Are you sure you want to reset the current pitch count without saving? All balls, strikes, and notes for this live session will be cleared."
+        confirmText="Reset Count"
+        cancelText="Cancel"
+        variant="warning"
+      />
 
       {/* Saved Pitch Count Sessions History */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">

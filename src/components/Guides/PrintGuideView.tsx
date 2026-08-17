@@ -35,25 +35,6 @@ export const PrintGuideView: React.FC<PrintGuideViewProps> = ({
 
   return (
     <div className="min-h-screen bg-white text-black p-6 sm:p-10 print:p-0">
-      {/* On-screen controls (hidden in print) */}
-      <div className="print:hidden max-w-3xl mx-auto mb-8 p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl"
-        >
-          <ArrowLeft size={14} />
-          <span>Back to App</span>
-        </button>
-
-        <button
-          onClick={() => window.print()}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md"
-        >
-          <Printer size={16} />
-          <span>Print / Save as PDF</span>
-        </button>
-      </div>
-
       {/* Printable Sheet */}
       <div className="max-w-3xl mx-auto flex flex-col gap-8 font-sans">
         {/* Header */}
@@ -117,42 +98,8 @@ export const PrintGuideView: React.FC<PrintGuideViewProps> = ({
               <div className="prose prose-sm max-w-none text-xs leading-relaxed text-black">
                 <Markdown>{art.content}</Markdown>
               </div>
-
-              {/* Reference Photos inside Print Binder */}
-              {art.photos && art.photos.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-gray-300">
-                  <h4 className="text-xs font-bold uppercase mb-2 text-black">
-                    Reference Photos ({art.photos.length})
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {art.photos.map((photo, pIdx) => {
-                      const photoSrc = normalizeImageUrl(photo.url);
-                      return (
-                        <div key={pIdx} className="border border-gray-300 rounded overflow-hidden p-1 bg-white">
-                          <img
-                            src={photoSrc}
-                            alt={photo.caption || `Diagram ${pIdx + 1}`}
-                            referrerPolicy="no-referrer"
-                            className="w-full h-36 object-cover rounded"
-                          />
-                          {photo.caption && (
-                            <p className="text-[10px] text-gray-700 italic mt-1 text-center">{photo.caption}</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           ))}
-        </div>
-
-        {/* Dugout Notes Area */}
-        <div className="border border-black p-4 rounded mt-4 bg-white">
-          <h4 className="text-xs font-bold uppercase mb-2 text-black">Coach Practice Notes & Observations</h4>
-          <div className="h-20 border-b border-dashed border-gray-400 mb-4" />
-          <div className="h-20 border-b border-dashed border-gray-400" />
         </div>
       </div>
     </div>

@@ -5,6 +5,30 @@ import { GuideSection, GuideArticle, GuideChecklistItem, GuideProgress, Operatio
 import { handleFirestoreError } from '../lib/utils';
 import { firebaseService } from '../services/firebaseService';
 
+const SECTION_ORDER_MAP: Record<string, number> = {
+  'batting': 1,
+  'hitting': 1,
+  'pitching': 2,
+  'catching': 3,
+  'fielding': 4,
+  'base running': 5,
+  'baserunning': 5,
+  'running': 5,
+};
+
+function getSectionSortOrder(sec: GuideSection): number {
+  const nameKey = (sec.name || '').toLowerCase().trim();
+  const idKey = (sec.id || '').toLowerCase().trim();
+
+  if (SECTION_ORDER_MAP[nameKey] !== undefined) {
+    return SECTION_ORDER_MAP[nameKey];
+  }
+  if (SECTION_ORDER_MAP[idKey] !== undefined) {
+    return SECTION_ORDER_MAP[idKey];
+  }
+  return sec.order ?? 999;
+}
+
 export function useGuides(user: any, activeSeasonId?: string) {
   const [sections, setSections] = useState<GuideSection[]>([]);
   const [articles, setArticles] = useState<GuideArticle[]>([]);
@@ -31,8 +55,13 @@ export function useGuides(user: any, activeSeasonId?: string) {
         ...doc.data()
       })) as GuideSection[];
       
-      // Sort by order ascending, then by name
-      docs.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+      // Sort by section priority, then order
+      docs.sort((a, b) => {
+        const orderA = getSectionSortOrder(a);
+        const orderB = getSectionSortOrder(b);
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.order ?? 999) - (b.order ?? 999);
+      });
       setSections(docs);
       setLoading(false);
     }, (error) => {

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GuideArticle, GuideSection, Drill } from '../../types';
 import { extractYoutubeId } from '../../lib/youtube';
-import { X, Youtube, Dumbbell, Image as ImageIcon, Sparkles, Check, Heading3, List, Bold, Minus, Eye, Edit3 } from 'lucide-react';
+import { normalizeImageUrl, isImgurAlbumUrl } from '../../lib/imageUtils';
+import { X, Youtube, Dumbbell, Image as ImageIcon, Sparkles, Check, Heading3, List, Bold, Minus, Eye, Edit3, Plus, ImagePlus } from 'lucide-react';
 import { MarkdownContent } from './MarkdownContent';
 
 interface ArticleEditorModalProps {
@@ -44,6 +45,9 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
   const [photos, setPhotos] = useState<{ url: string; caption?: string }[]>([]);
   const [previewTab, setPreviewTab] = useState<'edit' | 'preview'>('edit');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [insertedPhotoIdx, setInsertedPhotoIdx] = useState<number | null>(null);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Load existing article on edit
   useEffect(() => {
@@ -68,14 +72,58 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
     }
   }, [articleToEdit, defaultSectionId, sections, isOpen]);
 
-  // Insert markdown helpers
+  // Insert markdown helpers (at cursor position if available)
   const insertMarkdown = (syntax: string) => {
-    setContent(prev => prev + syntax);
+    setPreviewTab('edit');
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+      const before = text.substring(0, start);
+      const after = text.substring(end);
+      const newText = before + syntax + after;
+      setContent(newText);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + syntax.length, start + syntax.length);
+      }, 0);
+    } else {
+      setContent(prev => prev + syntax);
+    }
+  };
+
+  // Helper to insert a photo markdown embed directly into article body
+  const insertPhotoIntoArticle = (url: string, caption?: string, index?: number) => {
+    const normalized = normalizeImageUrl(url);
+    const altText = caption?.trim() || 'Reference Diagram';
+    const embedSyntax = `\n![${altText}](${normalized})\n`;
+    
+    insertMarkdown(embedSyntax);
+
+    if (index !== undefined) {
+      setInsertedPhotoIdx(index);
+      setTimeout(() => setInsertedPhotoIdx(null), 2000);
+    }
   };
 
   const handleAddPhoto = () => {
     if (!photoUrl.trim()) return;
-    setPhotos(prev => [...prev, { url: photoUrl.trim(), caption: photoCaption.trim() || undefined }]);
+    const normalized = normalizeImageUrl(photoUrl.trim());
+    setPhotos(prev => [...prev, { url: normalized, caption: photoCaption.trim() || undefined }]);
+    setPhotoUrl('');
+    setPhotoCaption('');
+  };
+
+  const handleAddAndInsertPhoto = () => {
+    if (!photoUrl.trim()) return;
+    const normalized = normalizeImageUrl(photoUrl.trim());
+    const caption = photoCaption.trim() || undefined;
+    const newPhoto = { url: normalized, caption };
+    
+    setPhotos(prev => [...prev, newPhoto]);
+    insertPhotoIntoArticle(normalized, caption);
+    
     setPhotoUrl('');
     setPhotoCaption('');
   };
@@ -296,7 +344,7 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
 
             {/* Quick Markdown Toolbar */}
             {previewTab === 'edit' && (
-              <div className="flex items-center gap-1 p-2 bg-slate-100 dark:bg-slate-800/80 rounded-t-xl border border-b-0 border-slate-200 dark:border-slate-700 text-xs">
+              <div className="flex flex-wrap items-center gap-1 p-2 bg-slate-100 dark:bg-slate-800/80 rounded-t-xl border border-b-0 border-slate-200 dark:border-slate-700 text-xs">
                 <button
                   type="button"
                   onClick={() => insertMarkdown('\n### Step Title\n')}
@@ -329,11 +377,49 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
                 >
                   <Minus size={12} /> Divider
                 </button>
+
+                {photos.length > 0 && (
+                  <div className="relative group ml-auto">
+                    <button
+                      type="button"
+                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md font-bold flex items-center gap-1 text-xs shadow-2xs transition-colors"
+                      title="Insert reference photo at cursor position"
+                    >
+                      <ImageIcon size={12} />
+                      <span>Insert Photo ({photos.length})</span>
+                    </button>
+                    <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-30 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl p-2 w-64 max-h-52 overflow-y-auto">
+                      <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-1 border-b border-slate-100 dark:border-slate-800 mb-1">
+                        Click photo to insert at cursor:
+                      </div>
+                      {photos.map((p, idx) => {
+                        const normalizedSrc = normalizeImageUrl(p.url);
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => insertPhotoIntoArticle(p.url, p.caption, idx)}
+                            className="w-full text-left px-2 py-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg text-xs flex items-center gap-2 transition-colors truncate group/item"
+                          >
+                            <img src={normalizedSrc} alt="" className="w-7 h-7 object-cover rounded-md shrink-0 border border-slate-200 dark:border-slate-700" />
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-bold text-slate-700 dark:text-slate-200 text-[11px]">
+                                {p.caption || `Photo ${idx + 1}`}
+                              </div>
+                              <div className="text-[9px] text-emerald-600 dark:text-emerald-400">Click to embed</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {previewTab === 'edit' ? (
               <textarea
+                ref={textareaRef}
                 rows={12}
                 required
                 placeholder="Write step-by-step cues, positioning checkpoints, common flaws, and corrections..."
@@ -390,14 +476,19 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
 
           {/* Photo Attachments */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-              Reference Photos ({photos.length})
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Reference Photos ({photos.length})
+              </label>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                Tip: Click <strong>"Insert into Article"</strong> on any photo below to embed it into your text
+              </span>
+            </div>
             
             <div className="flex flex-col sm:flex-row gap-2 mb-3">
               <input
                 type="url"
-                placeholder="Image URL (https://...)"
+                placeholder="Image URL (e.g., https://i.imgur.com/xxx.jpg or Imgur link)"
                 value={photoUrl}
                 onChange={(e) => setPhotoUrl(e.target.value)}
                 className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -409,35 +500,77 @@ export const ArticleEditorModal: React.FC<ArticleEditorModalProps> = ({
                 onChange={(e) => setPhotoCaption(e.target.value)}
                 className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              <button
-                type="button"
-                onClick={handleAddPhoto}
-                disabled={!photoUrl.trim()}
-                className="px-4 py-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-colors"
-              >
-                Add Photo
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleAddPhoto}
+                  disabled={!photoUrl.trim()}
+                  className="px-3 py-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-colors"
+                  title="Add to reference photos gallery"
+                >
+                  Add Photo
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddAndInsertPhoto}
+                  disabled={!photoUrl.trim()}
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-colors flex items-center gap-1 shadow-xs"
+                  title="Add to gallery AND embed directly into article text"
+                >
+                  <ImagePlus size={14} />
+                  <span>Add & Insert</span>
+                </button>
+              </div>
             </div>
 
             {photos.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {photos.map((p, idx) => (
-                  <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 aspect-video">
-                    <img src={p.url} alt={p.caption || 'Reference'} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => handleRemovePhoto(idx)}
-                      className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-lg text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      ✕
-                    </button>
-                    {p.caption && (
-                      <div className="absolute inset-x-0 bottom-0 p-1 bg-black/70 text-[10px] text-white truncate px-2">
-                        {p.caption}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {photos.map((p, idx) => {
+                  const normalizedSrc = normalizeImageUrl(p.url);
+                  const isJustInserted = insertedPhotoIdx === idx;
+                  return (
+                    <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 flex flex-col shadow-2xs">
+                      <div className="relative aspect-video w-full overflow-hidden bg-slate-200 dark:bg-slate-900">
+                        <img src={normalizedSrc} alt={p.caption || 'Reference'} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(idx)}
+                          className="absolute top-1.5 right-1.5 p-1 bg-red-600/90 hover:bg-red-600 text-white rounded-lg text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                          title="Remove photo"
+                        >
+                          ✕
+                        </button>
+                        {p.caption && (
+                          <div className="absolute inset-x-0 bottom-0 p-1 bg-black/75 text-[10px] text-white truncate px-2 font-medium">
+                            {p.caption}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                      
+                      <button
+                        type="button"
+                        onClick={() => insertPhotoIntoArticle(p.url, p.caption, idx)}
+                        className={`w-full py-2 px-2 text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                          isJustInserted
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                        }`}
+                      >
+                        {isJustInserted ? (
+                          <>
+                            <Check size={13} />
+                            <span>Inserted into Article!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus size={13} />
+                            <span>Insert into Article</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

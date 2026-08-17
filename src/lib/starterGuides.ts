@@ -25,70 +25,11 @@ export interface StarterSectionData {
 
 export const STARTER_GUIDE_SECTIONS: StarterSectionData[] = [
   {
-    id: 'fielding',
-    name: 'Fielding',
-    description: 'Infield and outfield positional discipline, footwork, backups, cutoffs, and glove work.',
-    color: 'emerald',
-    order: 1,
-    articles: [
-      {
-        id: 'fielding-fundamentals',
-        title: 'Fielding Fundamentals & Team Defense',
-        summary: 'Core defensive stance, two-hand receiving, glove presentation, and full-field backup discipline.',
-        status: 'published',
-        order: 1,
-        content: `### Defensive Stance & Ready Position
-1. **Athletic Stance**: Feet wider than shoulder-width, knees bent, chest tilted slightly forward, weight balanced on the balls of the feet.
-2. **Creep Step / Hop Timing**: As the pitcher reaches release point, take a light split-step or creep step so you are moving on every single pitch.
-3. **Glove Presentation**: Keep fingers down and open, wrist relaxed in front of the body. Never hide the glove behind your knees.
-
----
-
-### Infield Ground Ball Mechanics
-- **Alligator Hands**: Field the ball out in front with the glove hand on the ground and the throwing hand hovering just above the glove to secure the ball immediately upon impact.
-- **Charging the Ball**: On softly hit grounders, attack aggressively with controlled momentum rather than letting the ball dictate the hop.
-- **First Base Extension**: First basemen must stretch toward the throw, keeping the heel on the inside edge of the bag without crossing over the baseline.
-- **Force Outs vs. Tag Plays**: At bases on force plays, receive with two hands while keeping a foot anchored to the bag. On tag plays, straddle the bag and drop the glove directly in front of the base letting the runner slide into the tag.
-
----
-
-### Pop Flies & Outfield Communication
-- **"I Got It!" Protocol**: Call the ball loudly and repeatedly ("I got it! I got it! I got it!"). The fielder calling it has absolute priority; all other fielders peel away and yell "Take it! Take it!".
-- **Tagging Up Awareness**: On fly balls with runners on base, outfielders must catch the ball with forward momentum toward home plate or third base to prepare for the throw.
-- **Cut-Off Alignment**: Middle infielders align themselves directly between the outfielder's arm and the target base, raising their hands as a high visual target and yelling "Relay!" or listening for "Cut 2 / Cut 3 / Cut 4 / Let it go!".
-
----
-
-### Full Team Backup Responsibilities
-Never stand still on a batted ball. Every fielder moves on every play:
-- **Throws to 1st Base**: Right fielder sprints to backup overthrows behind first base.
-- **Throws to 3rd Base**: Left fielder sprints behind 3rd base along the foul line.
-- **Throws to 2nd Base**: Pitcher or center fielder backs up throws to second from behind the bag.`
-      }
-    ],
-    checklists: [
-      { id: 'fld-1', title: 'Backups: First – Right field', category: 'Backups', order: 1, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-2', title: 'Backups: Third – Left field', category: 'Backups', order: 2, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-3', title: 'Backups: Pitcher – 2nd and Short', category: 'Backups', order: 3, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-4', title: 'Pop Flies: "I got it" Communication', category: 'Pop Flies', order: 4, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-5', title: 'Pop Flies: Tagging up & momentum', category: 'Pop Flies', order: 5, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-6', title: 'Cut Off & Relay positioning', category: 'General Fielding', order: 6, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-7', title: 'Ready Position & Pre-pitch hop', category: 'General Fielding', order: 7, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-8', title: 'Force out vs Tag plays distinction', category: 'General Fielding', order: 8, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-9', title: 'Alligator hands receiving', category: 'General Fielding', order: 9, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-10', title: 'Athletic stance & balance', category: 'General Fielding', order: 10, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-11', title: 'Charging the ball on slow rollers', category: 'General Fielding', order: 11, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-12', title: 'Moving on every single play', category: 'General Fielding', order: 12, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-13', title: 'First base extension & footwork', category: 'General Fielding', order: 13, linkedArticleId: 'fielding-fundamentals' },
-      { id: 'fld-14', title: 'Bunting defense & coverage', category: 'General Fielding', order: 14, linkedArticleId: 'fielding-fundamentals' }
-    ]
-  },
-  {
     id: 'batting',
     name: 'Batting',
     description: 'Swing mechanics, launch sequence, trigger steps, barrel path, and pitch recognition.',
     color: 'amber',
-    order: 2,
+    order: 1,
     articles: [
       {
         id: 'batting-fundamentals',
@@ -146,54 +87,11 @@ Never stand still on a batted ball. Every fielder moves on every play:
     ]
   },
   {
-    id: 'base-running',
-    name: 'Base Running',
-    description: 'Aggressive instincts, rounding turns, secondary leads, stealing timing, and safe sliding.',
-    color: 'indigo',
-    order: 3,
-    articles: [
-      {
-        id: 'baserunning-fundamentals',
-        title: 'Base Running Fundamentals & Instincts',
-        summary: 'Running through first base, banana turn angles, secondary leads, and reading the dirt ball.',
-        status: 'published',
-        order: 1,
-        content: `### 1. Running Through First Base
-- **Sprint Through the Bag**: Never decelerate before touching first base. Run at 100% speed through the front edge of the bag.
-- **Touch the Front Edge**: Hit the front corner of the base with the ball of your foot.
-- **Look Right & Break Down**: After crossing the bag, break down your steps with feet wide and glance to the right foul territory to check for overthrows.
-
----
-
-### 2. Rounding Bases & Banana Cuts
-- When an extra-base hit occurs, peel 3–5 feet into foul territory before 1st base (banana path) to create a straight-line vector into 2nd base.
-- Hit the inside corner of each bag with your foot and push off toward the next base.
-
----
-
-### 3. Secondary Leads & Dirt Ball Reads
-- **Secondary Lead Timing**: As the pitcher's arm delivers the ball, take 2–3 aggressive shuffle steps toward the next base so your weight lands on the balls of your feet right as the ball enters the hitting zone.
-- **Dirt Ball Read**: If the pitch hits the dirt, take off instantly without waiting for a coach to tell you.
-
----
-
-### 4. Sliding Safely
-- **Figure-Four Slide**: Tuck one leg under with the knee bent outwards, hands held up in the air (never braced on the dirt), and chin tucked into the chest to protect the head.`
-      }
-    ],
-    checklists: [
-      { id: 'br-1', title: 'Stealing jumps & pitcher cadence', category: 'Running', order: 1, linkedArticleId: 'baserunning-fundamentals' },
-      { id: 'br-2', title: 'Run through first base & break down', category: 'Running', order: 2, linkedArticleId: 'baserunning-fundamentals' },
-      { id: 'br-3', title: 'Figure-four sliding technique', category: 'Running', order: 3, linkedArticleId: 'baserunning-fundamentals' },
-      { id: 'br-4', title: 'Secondary lead & dirt ball reaction', category: 'Running', order: 4, linkedArticleId: 'baserunning-fundamentals' }
-    ]
-  },
-  {
     id: 'pitching',
     name: 'Pitching',
     description: 'Arm care, lower-half power generation, kinematic sequencing, release consistency, and pitch control.',
     color: 'sky',
-    order: 4,
+    order: 2,
     articles: [
       {
         id: 'pitching-fundamentals',
@@ -271,7 +169,7 @@ Never stand still on a batted ball. Every fielder moves on every play:
     name: 'Catching',
     description: 'Receiving, framing, secondary stance, ball blocking in the dirt, throwing down to bases, and plate protection.',
     color: 'rose',
-    order: 5,
+    order: 3,
     articles: [
       {
         id: 'catching-fundamentals',
@@ -309,6 +207,108 @@ Never stand still on a batted ball. Every fielder moves on every play:
       { id: 'cat-4', title: 'Ball in front recovery & barehand scoop', category: 'Catching', order: 4, linkedArticleId: 'catching-fundamentals' },
       { id: 'cat-5', title: 'Stealing home & plate tag awareness', category: 'Catching', order: 5, linkedArticleId: 'catching-fundamentals' },
       { id: 'cat-6', title: 'Giving a solid target & pitch receiving', category: 'Catching', order: 6, linkedArticleId: 'catching-fundamentals' }
+    ]
+  },
+  {
+    id: 'fielding',
+    name: 'Fielding',
+    description: 'Infield and outfield positional discipline, footwork, backups, cutoffs, and glove work.',
+    color: 'emerald',
+    order: 4,
+    articles: [
+      {
+        id: 'fielding-fundamentals',
+        title: 'Fielding Fundamentals & Team Defense',
+        summary: 'Core defensive stance, two-hand receiving, glove presentation, and full-field backup discipline.',
+        status: 'published',
+        order: 1,
+        content: `### Defensive Stance & Ready Position
+1. **Athletic Stance**: Feet wider than shoulder-width, knees bent, chest tilted slightly forward, weight balanced on the balls of the feet.
+2. **Creep Step / Hop Timing**: As the pitcher reaches release point, take a light split-step or creep step so you are moving on every single pitch.
+3. **Glove Presentation**: Keep fingers down and open, wrist relaxed in front of the body. Never hide the glove behind your knees.
+
+---
+
+### Infield Ground Ball Mechanics
+- **Alligator Hands**: Field the ball out in front with the glove hand on the ground and the throwing hand hovering just above the glove to secure the ball immediately upon impact.
+- **Charging the Ball**: On softly hit grounders, attack aggressively with controlled momentum rather than letting the ball dictate the hop.
+- **First Base Extension**: First basemen must stretch toward the throw, keeping the heel on the inside edge of the bag without crossing over the baseline.
+- **Force Outs vs. Tag Plays**: At bases on force plays, receive with two hands while keeping a foot anchored to the bag. On tag plays, straddle the bag and drop the glove directly in front of the base letting the runner slide into the tag.
+
+---
+
+### Pop Flies & Outfield Communication
+- **"I Got It!" Protocol**: Call the ball loudly and repeatedly ("I got it! I got it! I got it!"). The fielder calling it has absolute priority; all other fielders peel away and yell "Take it! Take it!".
+- **Tagging Up Awareness**: On fly balls with runners on base, outfielders must catch the ball with forward momentum toward home plate or third base to prepare for the throw.
+- **Cut-Off Alignment**: Middle infielders align themselves directly between the outfielder's arm and the target base, raising their hands as a high visual target and yelling "Relay!" or listening for "Cut 2 / Cut 3 / Cut 4 / Let it go!".
+
+---
+
+### Full Team Backup Responsibilities
+Never stand still on a batted ball. Every fielder moves on every play:
+- **Throws to 1st Base**: Right fielder sprints to backup overthrows behind first base.
+- **Throws to 3rd Base**: Left fielder sprints behind 3rd base along the foul line.
+- **Throws to 2nd Base**: Pitcher or center fielder backs up throws to second from behind the bag.`
+      }
+    ],
+    checklists: [
+      { id: 'fld-1', title: 'Backups: First – Right field', category: 'Backups', order: 1, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-2', title: 'Backups: Third – Left field', category: 'Backups', order: 2, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-3', title: 'Backups: Pitcher – 2nd and Short', category: 'Backups', order: 3, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-4', title: 'Pop Flies: "I got it" Communication', category: 'Pop Flies', order: 4, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-5', title: 'Pop Flies: Tagging up & momentum', category: 'Pop Flies', order: 5, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-6', title: 'Cut Off & Relay positioning', category: 'General Fielding', order: 6, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-7', title: 'Ready Position & Pre-pitch hop', category: 'General Fielding', order: 7, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-8', title: 'Force out vs Tag plays distinction', category: 'General Fielding', order: 8, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-9', title: 'Alligator hands receiving', category: 'General Fielding', order: 9, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-10', title: 'Athletic stance & balance', category: 'General Fielding', order: 10, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-11', title: 'Charging the ball on slow rollers', category: 'General Fielding', order: 11, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-12', title: 'Moving on every single play', category: 'General Fielding', order: 12, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-13', title: 'First base extension & footwork', category: 'General Fielding', order: 13, linkedArticleId: 'fielding-fundamentals' },
+      { id: 'fld-14', title: 'Bunting defense & coverage', category: 'General Fielding', order: 14, linkedArticleId: 'fielding-fundamentals' }
+    ]
+  },
+  {
+    id: 'base-running',
+    name: 'Base Running',
+    description: 'Aggressive instincts, rounding turns, secondary leads, stealing timing, and safe sliding.',
+    color: 'indigo',
+    order: 5,
+    articles: [
+      {
+        id: 'baserunning-fundamentals',
+        title: 'Base Running Fundamentals & Instincts',
+        summary: 'Running through first base, banana turn angles, secondary leads, and reading the dirt ball.',
+        status: 'published',
+        order: 1,
+        content: `### 1. Running Through First Base
+- **Sprint Through the Bag**: Never decelerate before touching first base. Run at 100% speed through the front edge of the bag.
+- **Touch the Front Edge**: Hit the front corner of the base with the ball of your foot.
+- **Look Right & Break Down**: After crossing the bag, break down your steps with feet wide and glance to the right foul territory to check for overthrows.
+
+---
+
+### 2. Rounding Bases & Banana Cuts
+- When an extra-base hit occurs, peel 3–5 feet into foul territory before 1st base (banana path) to create a straight-line vector into 2nd base.
+- Hit the inside corner of each bag with your foot and push off toward the next base.
+
+---
+
+### 3. Secondary Leads & Dirt Ball Reads
+- **Secondary Lead Timing**: As the pitcher's arm delivers the ball, take 2–3 aggressive shuffle steps toward the next base so your weight lands on the balls of your feet right as the ball enters the hitting zone.
+- **Dirt Ball Read**: If the pitch hits the dirt, take off instantly without waiting for a coach to tell you.
+
+---
+
+### 4. Sliding Safely
+- **Figure-Four Slide**: Tuck one leg under with the knee bent outwards, hands held up in the air (never braced on the dirt), and chin tucked into the chest to protect the head.`
+      }
+    ],
+    checklists: [
+      { id: 'br-1', title: 'Stealing jumps & pitcher cadence', category: 'Running', order: 1, linkedArticleId: 'baserunning-fundamentals' },
+      { id: 'br-2', title: 'Run through first base & break down', category: 'Running', order: 2, linkedArticleId: 'baserunning-fundamentals' },
+      { id: 'br-3', title: 'Figure-four sliding technique', category: 'Running', order: 3, linkedArticleId: 'baserunning-fundamentals' },
+      { id: 'br-4', title: 'Secondary lead & dirt ball reaction', category: 'Running', order: 4, linkedArticleId: 'baserunning-fundamentals' }
     ]
   }
 ];

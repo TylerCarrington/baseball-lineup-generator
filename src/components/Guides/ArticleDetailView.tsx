@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { GuideArticle, GuideSection, Drill } from '../../types';
 import { extractYoutubeId } from '../../lib/youtube';
 import { MarkdownContent } from './MarkdownContent';
+import { normalizeImageUrl } from '../../lib/imageUtils';
 import { ArrowLeft, Edit3, Youtube, Dumbbell, ExternalLink, Printer, CheckCircle, Clock, User, Sparkles } from 'lucide-react';
 
 interface ArticleDetailViewProps {
@@ -182,25 +183,28 @@ export const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({
             Reference Photos ({article.photos.length})
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {article.photos.map((photo, idx) => (
-              <div
-                key={idx}
-                onClick={() => setSelectedPhoto(photo.url)}
-                className="group relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 cursor-pointer aspect-4/3 bg-slate-100 dark:bg-slate-800"
-              >
-                <img
-                  src={photo.url}
-                  alt={photo.caption || `Photo ${idx + 1}`}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                {photo.caption && (
-                  <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent text-[11px] text-white font-medium">
-                    {photo.caption}
-                  </div>
-                )}
-              </div>
-            ))}
+            {article.photos.map((photo, idx) => {
+              const photoSrc = normalizeImageUrl(photo.url);
+              return (
+                <div
+                  key={idx}
+                  onClick={() => setSelectedPhoto(photoSrc)}
+                  className="group relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 cursor-pointer aspect-4/3 bg-slate-100 dark:bg-slate-800"
+                >
+                  <img
+                    src={photoSrc}
+                    alt={photo.caption || `Photo ${idx + 1}`}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  {photo.caption && (
+                    <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent text-[11px] text-white font-medium">
+                      {photo.caption}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

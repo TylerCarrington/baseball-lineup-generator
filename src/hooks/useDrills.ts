@@ -34,7 +34,10 @@ export function useDrills(user: any) {
   }, [user]);
 
   const addDrill = async (data: Omit<Drill, 'id' | 'createdAt' | 'updatedAt'>) => {
-    return await firebaseService.addDrill(data);
+    return await firebaseService.addDrill({
+      ...data,
+      uid: user?.uid
+    });
   };
 
   const updateDrill = async (drillId: string, data: Partial<Drill>) => {

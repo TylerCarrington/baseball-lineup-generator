@@ -1,28 +1,41 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Drill } from '../types';
-import { Search, Plus, Trash2, PlayCircle, BookOpen, ChevronRight, Wrench } from 'lucide-react';
+import { Search, Plus, Trash2, PlayCircle, BookOpen, ChevronRight, Wrench, Share2 } from 'lucide-react';
 import { CATEGORIES, getCategoryTheme } from '../lib/drillCategories';
 import { ConfirmationModal } from './ui/ConfirmationModal';
+import { toast } from 'sonner';
 
 interface DrillLibraryViewProps {
   drills: Drill[];
   isAdmin: boolean;
   onDeleteDrill: (id: string) => Promise<void>;
   darkMode: boolean;
+  user: any;
 }
 
 export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
   drills,
   isAdmin,
   onDeleteDrill,
-  darkMode
+  darkMode,
+  user
 }) => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [drillToDelete, setDrillToDelete] = useState<Drill | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleShareDrills = () => {
+    if (!user) {
+      toast.error('You must be signed in to share your library.');
+      return;
+    }
+    const url = `${window.location.origin}${window.location.pathname}#/shared/drills/${user.uid}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Public drills library share link copied to clipboard!');
+  };
 
   const filteredDrills = drills.filter(drill => {
     const matchesSearch = drill.title.toLowerCase().includes(search.toLowerCase()) || 
@@ -41,7 +54,16 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
           <p className="text-slate-500 dark:text-slate-400 font-medium">Master database of practice drills and activities</p>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+          <button 
+            onClick={handleShareDrills}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl font-bold transition-all shadow-sm"
+            title="Share Drills Library"
+          >
+            <Share2 size={18} className="text-indigo-600 dark:text-indigo-400" />
+            Share Library
+          </button>
+
           <button 
             onClick={() => navigate('/tools')}
             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-all shadow-md shadow-emerald-600/20"

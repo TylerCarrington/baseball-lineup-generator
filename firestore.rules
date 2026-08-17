@@ -91,6 +91,7 @@ service cloud.firestore {
              (!('steps' in data) || (data.steps is string && data.steps.size() <= 20000) || data.steps == null) &&
              (!('notes' in data) || (data.notes is string && data.notes.size() <= 10000) || data.notes == null) &&
              (!('youtubeUrl' in data) || (data.youtubeUrl is string && data.youtubeUrl.size() <= 1000) || data.youtubeUrl == null) &&
+             (!('uid' in data) || data.uid is string || data.uid == null) &&
              (!('updatedAt' in data) || data.updatedAt is timestamp || data.updatedAt is string || data.updatedAt == null);
     }
 
@@ -206,7 +207,7 @@ service cloud.firestore {
     }
 
     match /drills/{drillId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create: if isAuthenticated() && isValidDrill(incoming());
       allow update: if isAuthenticated() && isValidDrill(incoming());
       allow delete: if isAuthenticated() || isAdmin();
@@ -248,7 +249,7 @@ service cloud.firestore {
     }
 
     match /pitchCountSessions/{sessionId} {
-      allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
+      allow read: if true;
       allow create: if isAuthenticated() && isValidPitchCountSession(incoming());
       allow update: if isAuthenticated() && isValidPitchCountSession(incoming());
       allow delete: if isAuthenticated() || isAdmin();

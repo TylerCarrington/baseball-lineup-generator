@@ -8,8 +8,10 @@ import {
   Timer, 
   ChevronRight, 
   Wrench, 
-  ArrowLeft 
+  ArrowLeft,
+  Share2
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ToolsMainViewProps {
   user: any;
@@ -24,6 +26,16 @@ export const ToolsMainView: React.FC<ToolsMainViewProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const handleShareTools = () => {
+    if (!user) {
+      toast.error('You must be signed in to share coaching tools.');
+      return;
+    }
+    const url = `${window.location.origin}${window.location.pathname}#/shared/tools/${user.uid}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Public coaching tools share link copied to clipboard!');
+  };
 
   // Route path handling e.g. /tools, /tools/pitch-counter, /tools/stopwatch
   const pathParts = location.pathname.split('/');
@@ -66,6 +78,15 @@ export const ToolsMainView: React.FC<ToolsMainViewProps> = ({
                 Baseball utilities for live game tracking, timing drills, and roster analytics
               </p>
             </div>
+
+            <button 
+              onClick={handleShareTools}
+              className="flex items-center justify-center gap-2 px-5 py-3 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl font-bold transition-all shadow-sm w-full md:w-auto shrink-0"
+              title="Share Coaching Tools Dashboard"
+            >
+              <Share2 size={18} className="text-emerald-600 dark:text-emerald-400" />
+              Share Tools
+            </button>
           </div>
 
           {/* Tools Grid */}

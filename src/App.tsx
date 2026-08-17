@@ -29,6 +29,8 @@ import { DrillDetailView } from './components/DrillDetailView';
 import { CreateDrillView } from './components/CreateDrillView';
 import { GuidesTab } from './components/Guides/GuidesTab';
 import { PublicGuidesView } from './components/Guides/PublicGuidesView';
+import { PublicDrillsView } from './components/PublicDrillsView';
+import { PublicToolsView } from './components/PublicToolsView';
 import { PrintGuideWrapper } from './components/Guides/PrintGuideWrapper';
 import { ToolsMainView } from './components/Tools/ToolsMainView';
 
@@ -90,6 +92,14 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     return <PublicGuidesView />;
   }
 
+  if (location.pathname.startsWith('/shared/drills/')) {
+    return <PublicDrillsView />;
+  }
+
+  if (location.pathname.startsWith('/shared/tools/')) {
+    return <PublicToolsView />;
+  }
+
   if (location.pathname.startsWith('/shared/')) return <SharedView darkMode={darkMode} setDarkMode={setDarkMode} />;
 
   if (isPrintMode) {
@@ -126,7 +136,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
           <Route path="/games/:id" element={selectedGame ? <GameDetailView game={selectedGame} players={players} games={games} user={user} isAuthReady={isAuthReady} darkMode={darkMode} setShowClearLineupConfirm={setShowClearLineupConfirm} onBack={() => navigate('/games')} setGames={setGames} /> : <div className="text-center py-12 text-slate-500">Loading game...</div>} />
           <Route path="/roster" element={<RosterTab players={players} user={user} startCreateLineup={() => navigate('/games/new')} setDeleteConfirmation={setDeleteConfirmation} activeSeasonId={activeSeasonId} />} />
           <Route path="/settings" element={<SettingsTab settings={settings} handleUpdateSettings={(u) => firebaseService.updateSettings(user.uid, u)} darkMode={darkMode} setDarkMode={setDarkMode} user={user} handleCopyLink={handleCopyLink} copySuccess={copySuccess} seasons={seasons} activeSeasonId={activeSeasonId} players={players} />} />
-          <Route path="/drills" element={<DrillLibraryView drills={drills} isAdmin={isAdmin} onDeleteDrill={deleteDrill} darkMode={darkMode} />} />
+          <Route path="/drills" element={<DrillLibraryView drills={drills} isAdmin={isAdmin} onDeleteDrill={deleteDrill} darkMode={darkMode} user={user} />} />
           <Route path="/drills/new" element={<CreateDrillView onAddDrill={addDrill} darkMode={darkMode} />} />
           <Route path="/drills/:id" element={<DrillDetailView drills={drills} isAdmin={isAdmin} onUpdateDrill={updateDrill} onDeleteDrill={deleteDrill} darkMode={darkMode} />} />
           <Route path="/tools/*" element={<ToolsMainView user={user} players={players} darkMode={darkMode} />} />

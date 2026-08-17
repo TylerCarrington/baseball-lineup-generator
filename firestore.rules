@@ -48,7 +48,7 @@ service cloud.firestore {
 
     function isValidPlayer(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.positions is list && data.positions.size() <= 10 &&
+             data.positions is list && data.positions.size() <= 15 &&
              data.uid is string && (data.uid == request.auth.uid || isAdmin()) &&
              data.createdAt is timestamp &&
              (!('seasonId' in data) || data.seasonId is string || data.seasonId == null) &&

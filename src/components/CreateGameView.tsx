@@ -35,6 +35,13 @@ export function CreateGameView({
   const [gameMode, setGameMode] = useState<'standard' | 'scrimmage'>('standard');
   const [playerRSVPs, setPlayerRSVPs] = useState<Record<string, RSVPStatus>>({});
 
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return getLocalDateString(d);
+  });
+
   // Initialize RSVPs to YES by default for all players
   useEffect(() => {
     const initialRSVPs: Record<string, RSVPStatus> = {};
@@ -73,32 +80,59 @@ export function CreateGameView({
         ? 'Scrimmage' 
         : `${isHome ? 'vs' : '@'} ${opponent.trim()}`;
 
-    const initialAgenda: PracticeActivity[] = eventType === 'practice' ? [
-      { id: crypto.randomUUID(), name: 'Warmups', duration: 10, type: 'team', category: 'Conditioning & Warm-Up', startTimeOffset: 0 },
-      { id: crypto.randomUUID(), name: 'Game', duration: 10, type: 'team', category: 'Teamwork & Situational', startTimeOffset: Math.max(0, duration - 10) }
-    ] : [];
+    const eventsToCreate: { date: Date }[] = [];
+    const baseDate = new Date(gameDate + 'T12:00:00');
+    
+    if (isRecurring && eventType === 'practice') {
+      const endDate = new Date(recurrenceEndDate + 'T23:59:59');
+      let current = new Date(baseDate);
+      while (current <= endDate) {
+        eventsToCreate.push({ date: new Date(current) });
+        current.setDate(current.getDate() + 7);
+      }
+    } else {
+      eventsToCreate.push({ date: baseDate });
+    }
 
-    const docRef = await firebaseService.addGame({
-      name: generatedName,
-      opponent: eventType === 'practice' ? null : (opponent.trim() || null),
-      location: location.trim() || null,
-      date: new Date(gameDate + 'T12:00:00'),
-      time: gameTime || null,
-      duration: eventType === 'practice' ? duration : null,
-      isHome: (eventType === 'practice' || gameMode === 'scrimmage') ? null : isHome,
-      rsvps: playerRSVPs,
-      battingOrder: initialBattingOrder,
-      mode: eventType === 'practice' ? 'standard' : gameMode,
-      type: eventType,
-      practiceAgenda: initialAgenda,
-      numGroups: (eventType === 'practice' || gameMode === 'scrimmage') ? numGroups : null,
-      uid: user.uid,
-      seasonId: activeSeasonId,
-      createdAt: serverTimestamp()
-    });
+    let firstDocRef = null;
 
-    if (docRef) {
-      toast.success(`${eventType === 'practice' ? 'Practice' : 'Game'} created successfully!`);
+    try {
+      for (const event of eventsToCreate) {
+        // Generate new UUIDs for each event's agenda so they don't share identical IDs if cloned
+        const eventAgenda: PracticeActivity[] = eventType === 'practice' ? [
+          { id: crypto.randomUUID(), name: 'Warmups', duration: 10, type: 'team', category: 'Conditioning & Warm-Up', startTimeOffset: 0 },
+          { id: crypto.randomUUID(), name: 'Game', duration: 10, type: 'team', category: 'Teamwork & Situational', startTimeOffset: Math.max(0, duration - 10) }
+        ] : [];
+
+        const docRef = await firebaseService.addGame({
+          name: generatedName,
+          opponent: eventType === 'practice' ? null : (opponent.trim() || null),
+          location: location.trim() || null,
+          date: event.date,
+          time: gameTime || null,
+          duration: eventType === 'practice' ? duration : null,
+          isHome: (eventType === 'practice' || gameMode === 'scrimmage') ? null : isHome,
+          rsvps: playerRSVPs,
+          battingOrder: initialBattingOrder,
+          mode: eventType === 'practice' ? 'standard' : gameMode,
+          type: eventType,
+          practiceAgenda: eventAgenda,
+          numGroups: (eventType === 'practice' || gameMode === 'scrimmage') ? numGroups : null,
+          uid: user.uid,
+          seasonId: activeSeasonId,
+          createdAt: serverTimestamp()
+        });
+        
+        if (!firstDocRef) firstDocRef = docRef;
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to create all events.");
+      return;
+    }
+
+    if (firstDocRef) {
+      toast.success(`${eventsToCreate.length} ${eventType === 'practice' ? 'Practice' : 'Game'}${eventsToCreate.length > 1 ? 's' : ''} created successfully!`);
       navigate('/games');
     }
   };
@@ -259,19 +293,53 @@ export function CreateGameView({
               />
             </div>
             {eventType === 'practice' && (
-              <div className="space-y-2">
-                <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Practice Duration</label>
-                <select
-                  value={duration}
-                  onChange={(e) => setDuration(parseInt(e.target.value))}
-                  className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all text-base sm:text-lg font-medium text-slate-900 dark:text-white appearance-none"
-                >
-                  <option value={60}>60 Minutes</option>
-                  <option value={75}>75 Minutes</option>
-                  <option value={90}>90 Minutes (Default)</option>
-                  <option value={105}>105 Minutes</option>
-                  <option value={120}>120 Minutes</option>
-                </select>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Practice Duration</label>
+                  <select
+                    value={duration}
+                    onChange={(e) => setDuration(parseInt(e.target.value))}
+                    className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 focus:border-slate-900 dark:focus:border-indigo-500 transition-all text-base sm:text-lg font-medium text-slate-900 dark:text-white appearance-none"
+                  >
+                    <option value={60}>60 Minutes</option>
+                    <option value={75}>75 Minutes</option>
+                    <option value={90}>90 Minutes (Default)</option>
+                    <option value={105}>105 Minutes</option>
+                    <option value={120}>120 Minutes</option>
+                  </select>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-bold text-slate-900 dark:text-white">Repeat Weekly?</label>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer"
+                        checked={isRecurring}
+                        onChange={(e) => setIsRecurring(e.target.checked)}
+                      />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+                  
+                  {isRecurring && (
+                    <div className="space-y-2 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">
+                        Repeat Until
+                      </label>
+                      <input 
+                        type="date" 
+                        value={recurrenceEndDate}
+                        onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                        className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm font-medium text-slate-900 dark:text-white"
+                      />
+                      <p className="text-xs text-slate-500 mt-2">
+                        This creates a separate practice for every week on the same day. You can customize the activities for each individual practice later.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             {(eventType === 'practice' || (eventType === 'game' && gameMode === 'scrimmage')) && (

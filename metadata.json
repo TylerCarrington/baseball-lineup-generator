@@ -1,5 +1,8 @@
 {
   "name": "Lineup+",
-  "description": "The ultimate baseball lineup manager. Organize your roster, manage batting orders, and track RSVPs with ease.",
-  "requestFramePermissions": []
+  "description": "The ultimate baseball lineup manager. Organize your roster, manage batting orders, coaching guides, drill library, and track RSVPs with ease.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

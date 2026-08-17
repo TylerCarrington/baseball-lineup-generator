@@ -142,8 +142,84 @@ export interface EditingCell {
 
 export interface DeleteConfirmation {
   isOpen: boolean;
-  type: 'player' | 'game' | null;
+  type: 'player' | 'game' | 'guideSection' | 'guideArticle' | 'guideChecklist' | null;
   id: string | null;
   title: string;
   message: string;
 }
+
+export interface GuideSection {
+  id: string;
+  name: string;
+  description?: string;
+  order?: number;
+  isArchived?: boolean;
+  color?: string;
+  uid: string;
+  createdAt: any;
+  updatedAt?: any;
+}
+
+export interface GuidePhoto {
+  url: string;
+  caption?: string;
+}
+
+export interface GuideArticleHistory {
+  timestamp: any;
+  editorName: string;
+  summary: string;
+}
+
+export interface GuideArticle {
+  id: string;
+  sectionId: string;
+  title: string;
+  summary?: string;
+  content: string;
+  status: 'draft' | 'published';
+  order?: number;
+  photos?: GuidePhoto[];
+  youtubeUrls?: string[];
+  drillIds?: string[];
+  isArchived?: boolean;
+  lastEditedBy?: {
+    uid: string;
+    displayName: string;
+    timestamp: any;
+  };
+  history?: GuideArticleHistory[];
+  uid: string;
+  createdAt: any;
+  updatedAt?: any;
+}
+
+export interface GuideChecklistItem {
+  id: string;
+  sectionId: string;
+  title: string;
+  description?: string;
+  category?: string;
+  order?: number;
+  linkedArticleId?: string;
+  linkedDrillId?: string;
+  isArchived?: boolean;
+  uid: string;
+  createdAt: any;
+}
+
+export interface GuideProgress {
+  id: string; // `${seasonId}_${checklistId}`
+  checklistId: string;
+  sectionId: string;
+  seasonId: string;
+  isCompleted: boolean;
+  completedAt?: any;
+  completedBy?: {
+    uid: string;
+    displayName: string;
+  };
+  notes?: string;
+  uid: string;
+}
+

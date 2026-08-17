@@ -254,6 +254,211 @@
         }
       },
       "required": ["title", "createdAt"]
+    },
+    "GuideSection": {
+      "title": "GuideSection",
+      "description": "A section/category in the coaching guides library.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The title of the guide section."
+        },
+        "description": {
+          "type": "string",
+          "description": "Short summary of the section."
+        },
+        "order": {
+          "type": "integer",
+          "description": "Display order index."
+        },
+        "isArchived": {
+          "type": "boolean",
+          "description": "Whether this section is archived."
+        },
+        "color": {
+          "type": "string",
+          "description": "Color theme identifier."
+        },
+        "uid": {
+          "type": "string",
+          "description": "The ID of the coach who owns this section."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the section was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the section was last updated."
+        }
+      },
+      "required": ["name", "uid", "createdAt"]
+    },
+    "GuideArticle": {
+      "title": "GuideArticle",
+      "description": "A deep-dive coaching guide article.",
+      "type": "object",
+      "properties": {
+        "sectionId": {
+          "type": "string",
+          "description": "Parent section ID."
+        },
+        "title": {
+          "type": "string",
+          "description": "Article title."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Quick coaching overview."
+        },
+        "content": {
+          "type": "string",
+          "description": "Full written markdown content."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "published"],
+          "description": "Draft or published state."
+        },
+        "order": {
+          "type": "integer",
+          "description": "Display order."
+        },
+        "photos": {
+          "type": "array",
+          "description": "Attached photos."
+        },
+        "youtubeUrls": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Embedded YouTube URLs."
+        },
+        "drillIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Cross-linked Drill Library IDs."
+        },
+        "isArchived": {
+          "type": "boolean",
+          "description": "Whether this article is archived."
+        },
+        "lastEditedBy": {
+          "type": "object",
+          "description": "Information on the last editor."
+        },
+        "history": {
+          "type": "array",
+          "description": "Edit history snapshots."
+        },
+        "uid": {
+          "type": "string",
+          "description": "The ID of the user who owns this article."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the article was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the article was updated."
+        }
+      },
+      "required": ["sectionId", "title", "content", "uid", "createdAt"]
+    },
+    "GuideChecklist": {
+      "title": "GuideChecklist",
+      "description": "A coaching skill checkpoint item within a section.",
+      "type": "object",
+      "properties": {
+        "sectionId": {
+          "type": "string",
+          "description": "Parent section ID."
+        },
+        "title": {
+          "type": "string",
+          "description": "The skill item title."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional details/cues."
+        },
+        "category": {
+          "type": "string",
+          "description": "Sub-category group name."
+        },
+        "order": {
+          "type": "integer",
+          "description": "Display order."
+        },
+        "linkedArticleId": {
+          "type": "string",
+          "description": "Optional linked article ID."
+        },
+        "linkedDrillId": {
+          "type": "string",
+          "description": "Optional linked drill ID."
+        },
+        "isArchived": {
+          "type": "boolean",
+          "description": "Whether the item is archived."
+        },
+        "uid": {
+          "type": "string",
+          "description": "Owner user ID."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When created."
+        }
+      },
+      "required": ["sectionId", "title", "uid", "createdAt"]
+    },
+    "GuideProgress": {
+      "title": "GuideProgress",
+      "description": "Seasonal completion tracking for a checklist item.",
+      "type": "object",
+      "properties": {
+        "checklistId": {
+          "type": "string",
+          "description": "Target checklist item ID."
+        },
+        "sectionId": {
+          "type": "string",
+          "description": "Parent section ID."
+        },
+        "seasonId": {
+          "type": "string",
+          "description": "Active season ID."
+        },
+        "isCompleted": {
+          "type": "boolean",
+          "description": "Whether this skill has been covered in this season."
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When marked completed."
+        },
+        "completedBy": {
+          "type": "object",
+          "description": "Who marked it completed."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional practice notes on this skill."
+        },
+        "uid": {
+          "type": "string",
+          "description": "Owner user ID."
+        }
+      },
+      "required": ["checklistId", "sectionId", "seasonId", "isCompleted", "uid"]
     }
   },
   "firestore": {
@@ -276,6 +481,22 @@
     "drills/{drillId}": {
       "schema": "Drill",
       "description": "Collection of shared team practice drills."
+    },
+    "guideSections/{sectionId}": {
+      "schema": "GuideSection",
+      "description": "Collection of coaching guide sections."
+    },
+    "guideArticles/{articleId}": {
+      "schema": "GuideArticle",
+      "description": "Collection of coaching guide articles."
+    },
+    "guideChecklists/{checklistId}": {
+      "schema": "GuideChecklist",
+      "description": "Collection of coaching guide checklist skill items."
+    },
+    "guideProgress/{progressId}": {
+      "schema": "GuideProgress",
+      "description": "Collection of season-specific checklist progress states."
     }
   }
 }

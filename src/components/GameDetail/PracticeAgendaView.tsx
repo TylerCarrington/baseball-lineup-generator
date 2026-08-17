@@ -14,7 +14,10 @@ import {
   ArrowDown,
   ArrowUp,
   RotateCw,
-  Edit2
+  Edit2,
+  BookOpen,
+  Eye,
+  Info
 } from 'lucide-react';
 import { 
   DndContext, 
@@ -48,6 +51,7 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Input } from '../ui/Input';
+import { DrillDetailModal } from '../ui/DrillDetailModal';
 import { firebaseService } from '../../services/firebaseService';
 import { useAuth } from '../../hooks/useAuth';
 import { useDrills } from '../../hooks/useDrills';
@@ -80,6 +84,27 @@ export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked
   const [isAddingActivity, setIsAddingActivity] = useState(false);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [viewingDrill, setViewingDrill] = useState<{
+    drill?: Drill | null;
+    fallbackTitle?: string;
+    fallbackCategory?: string;
+  } | null>(null);
+
+  const handleOpenDrillDetails = (drillTitle?: string, categoryName?: string, drillId?: string) => {
+    if (!drillTitle && !drillId) return;
+
+    let match = drills.find(d => drillId && d.id === drillId);
+    if (!match && drillTitle) {
+      match = drills.find(d => d.title.trim().toLowerCase() === drillTitle.trim().toLowerCase());
+    }
+
+    setViewingDrill({
+      drill: match || null,
+      fallbackTitle: drillTitle || match?.title,
+      fallbackCategory: categoryName || match?.category
+    });
+  };
+
   const [activityForm, setActivityForm] = useState<Partial<PracticeActivity>>({
     name: '',
     duration: 15,
@@ -609,6 +634,7 @@ export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked
                   allowEditWhenLocked={allowEditWhenLocked}
                   onDelete={handleDeleteActivity}
                   onEdit={() => handleEditClick(activity)}
+                  onViewDrill={handleOpenDrillDetails}
                   isOverlapping={processedAgenda.some(other => 
                     other.id !== activity.id && 
                     activity.calculatedStart < other.calculatedEnd && 
@@ -629,6 +655,7 @@ export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked
               isOverlay 
               numGroups={numGroups}
               formatStartTime={formatStartTime}
+              onViewDrill={handleOpenDrillDetails}
             />
           ) : null}
         </DragOverlay>
@@ -876,45 +903,82 @@ export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked
                 )}
 
                 {activityForm.type === 'team' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category *</label>
-                      <select
-                        value={activityForm.category}
-                        onChange={(e) => setActivityForm({...activityForm, category: e.target.value, drillName: ''})}
-                        className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm"
-                      >
-                        <option value="">Select Category...</option>
-                        {Object.keys(dynamicDrillCategories).map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category *</label>
+                        <select
+                          value={activityForm.category}
+                          onChange={(e) => setActivityForm({...activityForm, category: e.target.value, drillName: '', drillId: undefined, drillSetup: undefined, drillSteps: undefined, drillYoutubeUrl: undefined})}
+                          className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm"
+                        >
+                          <option value="">Select Category...</option>
+                          {Object.keys(dynamicDrillCategories).map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between ml-1">
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Drill (Optional)</label>
+                          {activityForm.drillName && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDrillDetails(activityForm.drillName, activityForm.category, activityForm.drillId)}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                            >
+                              <BookOpen size={12} />
+                              <span>See Details</span>
+                            </button>
+                          )}
+                        </div>
+                        <select
+                          value={activityForm.drillName || ''}
+                          onChange={(e) => {
+                            const drillName = e.target.value;
+                            const drill = dynamicDrillCategories[activityForm.category || '']?.find(d => d.title === drillName);
+                            setActivityForm({
+                              ...activityForm, 
+                              drillName,
+                              drillId: drill?.id,
+                              drillSetup: drill?.setup,
+                              drillSteps: drill?.steps,
+                              drillYoutubeUrl: drill?.youtubeUrl
+                            });
+                          }}
+                          disabled={!activityForm.category}
+                          className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm disabled:opacity-50"
+                        >
+                          <option value="">Select Drill...</option>
+                          {(activityForm.category ? dynamicDrillCategories[activityForm.category] || [] : []).map(drill => (
+                            <option key={drill.id} value={drill.title}>{drill.title}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Drill (Optional)</label>
-                      <select
-                        value={activityForm.drillName || ''}
-                        onChange={(e) => {
-                          const drillName = e.target.value;
-                          const drill = dynamicDrillCategories[activityForm.category || '']?.find(d => d.title === drillName);
-                          setActivityForm({
-                            ...activityForm, 
-                            drillName,
-                            drillId: drill?.id,
-                            drillSetup: drill?.setup,
-                            drillSteps: drill?.steps,
-                            drillYoutubeUrl: drill?.youtubeUrl
-                          });
-                        }}
-                        disabled={!activityForm.category}
-                        className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 dark:focus:ring-indigo-500/10 transition-all font-bold text-sm disabled:opacity-50"
-                      >
-                        <option value="">Select Drill...</option>
-                        {(activityForm.category ? dynamicDrillCategories[activityForm.category] || [] : []).map(drill => (
-                          <option key={drill.id} value={drill.title}>{drill.title}</option>
-                        ))}
-                      </select>
-                    </div>
+
+                    {/* Quick Drill Preview & Details button */}
+                    {activityForm.drillName && (
+                      <div className="flex items-center justify-between p-3.5 bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/60 rounded-2xl animate-fade-in">
+                        <div className="flex items-center gap-3 min-w-0 pr-2">
+                          <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                            <BookOpen size={16} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-wider">Attached Drill</p>
+                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{activityForm.drillName}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDrillDetails(activityForm.drillName, activityForm.category, activityForm.drillId)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 rounded-xl text-xs font-bold transition-all shadow-sm shrink-0 cursor-pointer"
+                        >
+                          <Eye size={14} />
+                          <span>See Drill Details</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -985,46 +1049,64 @@ export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked
                       {activityForm.type === 'rotating' ? `Required Drills (One per Group, total ${numGroups})` : 'Group Drill Settings'}
                     </label>
                     <div className="grid grid-cols-1 gap-3">
-                      {Array.from({ length: numGroups }).map((_, i) => (
-                        <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                          <span className="text-[10px] font-black text-slate-500 w-12 uppercase tracking-tighter shrink-0 pt-2 sm:pt-0">
-                            {activityForm.type === 'rotating' ? `Drill ${i + 1}` : `Grp ${i + 1}`}
-                          </span>
-                          <div className="flex-1 flex flex-col sm:flex-row gap-2 min-w-0">
-                            <select
-                              value={activityForm.groupCategoryMap?.[i] || ''}
-                              onChange={(e) => setActivityForm({
-                                ...activityForm, 
-                                groupCategoryMap: { ...activityForm.groupCategoryMap, [i]: e.target.value },
-                                groupMap: { ...activityForm.groupMap, [i]: '' } // Reset drill when category changes
-                              })}
-                              className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold"
-                            >
-                              <option value="">Select Category *</option>
-                              {Object.keys(dynamicDrillCategories).map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                              ))}
-                            </select>
-                            <select
-                              value={activityForm.groupMap?.[i] || ''}
-                              onChange={(e) => {
-                                const drillName = e.target.value;
-                                setActivityForm({
+                      {Array.from({ length: numGroups }).map((_, i) => {
+                        const selectedDrill = activityForm.groupMap?.[i];
+                        const selectedCategory = activityForm.groupCategoryMap?.[i];
+
+                        return (
+                          <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                            <span className="text-[10px] font-black text-slate-500 w-12 uppercase tracking-tighter shrink-0 pt-2 sm:pt-0">
+                              {activityForm.type === 'rotating' ? `Drill ${i + 1}` : `Grp ${i + 1}`}
+                            </span>
+                            <div className="flex-1 flex flex-col sm:flex-row gap-2 min-w-0">
+                              <select
+                                value={selectedCategory || ''}
+                                onChange={(e) => setActivityForm({
                                   ...activityForm, 
-                                  groupMap: { ...activityForm.groupMap, [i]: drillName }
-                                })
-                              }}
-                              disabled={!activityForm.groupCategoryMap?.[i]}
-                              className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold disabled:opacity-50"
-                            >
-                              <option value="">Select Drill (Optional)</option>
-                              {(activityForm.groupCategoryMap?.[i] ? dynamicDrillCategories[activityForm.groupCategoryMap[i]] || [] : []).map(drill => (
-                                <option key={drill.id} value={drill.title}>{drill.title}</option>
-                              ))}
-                            </select>
+                                  groupCategoryMap: { ...activityForm.groupCategoryMap, [i]: e.target.value },
+                                  groupMap: { ...activityForm.groupMap, [i]: '' } // Reset drill when category changes
+                                })}
+                                className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold"
+                              >
+                                <option value="">Select Category *</option>
+                                {Object.keys(dynamicDrillCategories).map(cat => (
+                                  <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                              </select>
+                              <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                                <select
+                                  value={selectedDrill || ''}
+                                  onChange={(e) => {
+                                    const drillName = e.target.value;
+                                    setActivityForm({
+                                      ...activityForm, 
+                                      groupMap: { ...activityForm.groupMap, [i]: drillName }
+                                    })
+                                  }}
+                                  disabled={!selectedCategory}
+                                  className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 transition-all text-xs font-bold disabled:opacity-50"
+                                >
+                                  <option value="">Select Drill (Optional)</option>
+                                  {(selectedCategory ? dynamicDrillCategories[selectedCategory] || [] : []).map(drill => (
+                                    <option key={drill.id} value={drill.title}>{drill.title}</option>
+                                  ))}
+                                </select>
+                                {selectedDrill && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenDrillDetails(selectedDrill, selectedCategory)}
+                                    title={`See drill details for ${selectedDrill}`}
+                                    className="px-2.5 py-2.5 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 shadow-sm cursor-pointer"
+                                  >
+                                    <BookOpen size={13} />
+                                    <span className="hidden sm:inline text-[11px]">Details</span>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1051,6 +1133,15 @@ export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked
           </Card>
         </div>
       )}
+
+      {/* Drill Details Modal */}
+      <DrillDetailModal 
+        isOpen={Boolean(viewingDrill)}
+        onClose={() => setViewingDrill(null)}
+        drill={viewingDrill?.drill}
+        fallbackTitle={viewingDrill?.fallbackTitle}
+        fallbackCategory={viewingDrill?.fallbackCategory}
+      />
 
     </div>
   );
@@ -1160,6 +1251,7 @@ interface DraggableActivityProps {
   readOnly: boolean;
   onDelete: (id: string) => void;
   onEdit: () => void;
+  onViewDrill?: (drillTitle?: string, categoryName?: string, drillId?: string) => void;
   isOverlapping: boolean;
   numGroups: number;
   formatStartTime: (m: number) => string;
@@ -1171,6 +1263,7 @@ function DraggableActivity({
   allowEditWhenLocked,
   onDelete, 
   onEdit, 
+  onViewDrill,
   isOverlapping,
   numGroups,
   formatStartTime 
@@ -1214,6 +1307,7 @@ function DraggableActivity({
         allowEditWhenLocked={allowEditWhenLocked}
         onDelete={onDelete}
         onEdit={onEdit}
+        onViewDrill={onViewDrill}
         isOverlapping={isOverlapping}
         numGroups={numGroups}
         formatStartTime={formatStartTime}
@@ -1231,6 +1325,7 @@ function ActivityItem({
   allowEditWhenLocked,
   onDelete,
   onEdit,
+  onViewDrill,
   isOverlapping,
   numGroups,
   formatStartTime 
@@ -1243,6 +1338,7 @@ function ActivityItem({
   allowEditWhenLocked?: boolean;
   onDelete?: (id: string) => void;
   onEdit?: () => void;
+  onViewDrill?: (drillTitle?: string, categoryName?: string, drillId?: string) => void;
   isOverlapping?: boolean;
   numGroups: number;
   formatStartTime: (m: number) => string;
@@ -1323,10 +1419,19 @@ function ActivityItem({
                       const drillIndex = (g + r) % numGroups;
                       const drill = activity.groupMap?.[drillIndex] || activity.groupCategoryMap?.[drillIndex];
                       return drill && (
-                        <span key={g} className="text-[7px] font-black text-slate-600 dark:text-slate-400 flex items-center gap-0.5 max-w-[60px] truncate">
-                          <span className="w-1 h-1 rounded-full bg-indigo-400"></span>
-                          G{g + 1}: {drill}
-                        </span>
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onViewDrill) onViewDrill(drill);
+                          }}
+                          className="text-[7px] font-black text-slate-600 dark:text-slate-400 flex items-center gap-0.5 max-w-[70px] truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                          title={`See drill details for ${drill}`}
+                        >
+                          <span className="w-1 h-1 rounded-full bg-indigo-400 shrink-0"></span>
+                          <span className="truncate">G{g + 1}: {drill}</span>
+                        </button>
                       );
                     })}
                   </div>
@@ -1339,12 +1444,36 @@ function ActivityItem({
                 const arrIndex = parseInt(gi);
                 const drillLabel = activity.groupMap?.[arrIndex] || activity.groupCategoryMap?.[arrIndex];
                 return drillLabel && (
-                  <span key={gi} className="text-[8px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-tighter flex items-center gap-1 truncate max-w-[80px]">
-                    <span className="w-1 h-1 rounded-full bg-amber-400"></span>
-                    G{arrIndex + 1}: {drillLabel as string}
-                  </span>
-                )
+                  <button
+                    key={gi}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onViewDrill) onViewDrill(drillLabel as string);
+                    }}
+                    className="text-[8px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-tighter flex items-center gap-1 truncate max-w-[90px] hover:text-amber-700 dark:hover:text-amber-400 transition-colors cursor-pointer"
+                    title={`See drill details for ${drillLabel}`}
+                  >
+                    <span className="w-1 h-1 rounded-full bg-amber-400 shrink-0"></span>
+                    <span className="truncate">G{arrIndex + 1}: {drillLabel as string}</span>
+                  </button>
+                );
               })}
+            </div>
+          ) : activity.drillName ? (
+            <div className="mt-1 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onViewDrill) onViewDrill(activity.drillName, activity.category, activity.drillId);
+                }}
+                className="inline-flex items-center gap-1 text-[8px] font-black text-indigo-600 dark:text-indigo-400 bg-white/70 dark:bg-slate-900/60 px-1.5 py-0.5 rounded-md border border-indigo-200/60 dark:border-indigo-800/40 hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-2xs cursor-pointer"
+                title="See drill details"
+              >
+                <BookOpen size={9} />
+                <span className="truncate max-w-[110px]">{activity.drillName}</span>
+              </button>
             </div>
           ) : (
             <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1 truncate">

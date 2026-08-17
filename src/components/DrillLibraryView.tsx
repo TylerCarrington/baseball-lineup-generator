@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Drill } from '../types';
 import { Search, Plus, Trash2, PlayCircle, BookOpen, ChevronRight } from 'lucide-react';
 import { CATEGORIES, getCategoryTheme } from '../lib/drillCategories';
+import { ConfirmationModal } from './ui/ConfirmationModal';
 
 interface DrillLibraryViewProps {
   drills: Drill[];
@@ -20,6 +21,8 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [drillToDelete, setDrillToDelete] = useState<Drill | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const filteredDrills = drills.filter(drill => {
     const matchesSearch = drill.title.toLowerCase().includes(search.toLowerCase()) || 
@@ -134,12 +137,15 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   {isAdmin && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this drill?')) {
-                          onDeleteDrill(drill.id);
-                        }
-                      }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Drill">
+                    <div className="flex items-center gap-1 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDrillToDelete(drill);
+                        }} 
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" 
+                        title="Delete Drill"
+                      >
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -151,6 +157,27 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
           })}
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={!!drillToDelete}
+        title="Delete Drill"
+        message={`Are you sure you want to delete "${drillToDelete?.title}"? This action cannot be undone.`}
+        confirmText={isDeleting ? "Deleting..." : "Delete Drill"}
+        variant="danger"
+        onClose={() => !isDeleting && setDrillToDelete(null)}
+        onConfirm={async () => {
+          if (!drillToDelete) return;
+          try {
+            setIsDeleting(true);
+            await onDeleteDrill(drillToDelete.id);
+            setDrillToDelete(null);
+          } catch (error) {
+            console.error('Failed to delete drill:', error);
+          } finally {
+            setIsDeleting(false);
+          }
+        }}
+      />
     </div>
   );
 };

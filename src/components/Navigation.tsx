@@ -8,7 +8,7 @@ interface NavigationProps {
   currentTab: string;
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (open: boolean) => void;
-  handleTabChange: (tab: 'roster' | 'games' | 'settings' | 'drills') => void;
+  handleTabChange: (tab: 'roster' | 'games' | 'settings' | 'drills' | 'guides') => void;
   handleLogout: () => void;
   seasons: Season[];
   activeSeasonId: string;
@@ -107,6 +107,12 @@ export const Navigation: React.FC<NavigationProps> = ({
               Drills
             </button>
             <button 
+              onClick={() => handleTabChange('guides')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTab === 'guides' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+            >
+              Guides
+            </button>
+            <button 
               onClick={() => handleTabChange('settings')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentTab === 'settings' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
@@ -157,6 +163,12 @@ export const Navigation: React.FC<NavigationProps> = ({
               className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${currentTab === 'drills' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
               Drills
+            </button>
+            <button 
+              onClick={() => handleTabChange('guides')}
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${currentTab === 'guides' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+            >
+              Guides
             </button>
             <button 
               onClick={() => handleTabChange('settings')}

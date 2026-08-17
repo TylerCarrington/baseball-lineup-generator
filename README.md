@@ -2,19 +2,30 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# Lineup+
 
-This contains everything you need to run your app locally.
+**Lineup+** is a baseball and softball team management platform designed for youth and amateur coaches to streamline game preparation, in-game management, and practice planning.
 
-View your app in AI Studio: https://ai.studio/apps/c8a3fb75-3631-4719-8101-6d7a22259be0
+---
+
+## Key Capabilities
+
+- **Roster & Availability**: Manage player profiles, jersey numbers, positions, and track attendance/RSVPs per event.
+- **Batting Orders & Field Positions**: Design balanced batting lineups and inning-by-inning defensive positions with fair-play rotation tracking.
+- **Practice Agendas & Drill Library**: Create timeline-based practice plans with whole-team, split-group, and rotating drills, backed by an integrated drill repository.
+- **Live Game Management & Dugout Sheets**: Track games in real time and generate print-friendly dugout cards and lineup charts.
+
+---
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js (v18+)
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```

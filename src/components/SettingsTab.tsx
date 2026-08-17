@@ -3,6 +3,7 @@ import { Sun, Moon, Check, Copy, ExternalLink, Plus, Trash2 } from 'lucide-react
 import { User } from 'firebase/auth';
 import { TeamSettings, Season, Player } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { ConfirmationModal } from './ui/ConfirmationModal';
 
 interface SettingsTabProps {
   settings: TeamSettings | null;
@@ -34,6 +35,8 @@ export function SettingsTab({
   const [isCreatingSeason, setIsCreatingSeason] = useState(false);
   const [newSeasonName, setNewSeasonName] = useState('');
   const [copyPlayers, setCopyPlayers] = useState(true);
+  const [seasonToDelete, setSeasonToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeletingSeason, setIsDeletingSeason] = useState(false);
 
   const handleCreateSeason = async () => {
     if (!newSeasonName.trim() || !user) return;
@@ -97,14 +100,7 @@ export function SettingsTab({
                     )}
                     {season.id !== 'legacy' && (
                       <button
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this season? This action cannot be undone. You will also need to delete the players and games manually or they will be orphaned.')) {
-                            firebaseService.deleteSeason(season.id);
-                            if (activeSeasonId === season.id) {
-                              handleUpdateSettings({ activeSeasonId: 'legacy' });
-                            }
-                          }
-                        }}
+                        onClick={() => setSeasonToDelete(season)}
                         className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
                         title="Delete Season"
                       >
@@ -241,6 +237,30 @@ export function SettingsTab({
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!seasonToDelete}
+        title="Delete Season"
+        message={`Are you sure you want to delete "${seasonToDelete?.name}"? This action cannot be undone. You will also need to delete any remaining players and games manually or they will be orphaned.`}
+        confirmText={isDeletingSeason ? "Deleting..." : "Delete Season"}
+        variant="danger"
+        onClose={() => !isDeletingSeason && setSeasonToDelete(null)}
+        onConfirm={async () => {
+          if (!seasonToDelete) return;
+          try {
+            setIsDeletingSeason(true);
+            await firebaseService.deleteSeason(seasonToDelete.id);
+            if (activeSeasonId === seasonToDelete.id) {
+              handleUpdateSettings({ activeSeasonId: 'legacy' });
+            }
+            setSeasonToDelete(null);
+          } catch (error) {
+            console.error('Failed to delete season:', error);
+          } finally {
+            setIsDeletingSeason(false);
+          }
+        }}
+      />
     </div>
   );
 }

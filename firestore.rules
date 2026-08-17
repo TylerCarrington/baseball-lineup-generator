@@ -15,15 +15,14 @@ service cloud.firestore {
     }
 
     function isDocOwner() {
-      return isAuthenticated() && request.auth.uid == resource.data.uid;
+      return isAuthenticated() && ('uid' in resource.data) && request.auth.uid == resource.data.uid;
     }
     
     function isAdmin() {
       return isAuthenticated() && 
              (request.auth.token.email == "tylercarringtonwa@gmail.com" || 
               request.auth.token.email == "TylerCarringtonWA@gmail.com" ||
-              request.auth.token.email.matches('(?i)^tylercarringtonwa@gmail[.]com$')) && 
-             request.auth.token.email_verified == true;
+              (request.auth.token.email != null && request.auth.token.email.matches('(?i)^tylercarringtonwa@gmail[.]com$')));
     }
 
     function incoming() {
@@ -39,72 +38,126 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidSeason(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.uid is string && (data.uid == request.auth.uid || isAdmin()) &&
-             data.createdAt is timestamp;
+      return (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() <= 100)) &&
+             (!('uid' in data) || data.uid is string || data.uid == null) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string);
     }
 
     function isValidPlayer(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.positions is list && data.positions.size() <= 15 &&
-             data.uid is string && (data.uid == request.auth.uid || isAdmin()) &&
-             data.createdAt is timestamp &&
+      return (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() <= 100)) &&
+             (!('positions' in data) || data.positions is list) &&
+             (!('uid' in data) || data.uid is string || data.uid == null) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string) &&
              (!('seasonId' in data) || data.seasonId is string || data.seasonId == null) &&
              (!('jerseyNumber' in data) || data.jerseyNumber is string || data.jerseyNumber == null) &&
              (!('battingOrder' in data) || data.battingOrder is int || data.battingOrder is number || data.battingOrder == null);
     }
 
     function isValidGame(data) {
-      return data.date is timestamp &&
-             data.rsvps is map &&
-             data.uid is string && (data.uid == request.auth.uid || isAdmin()) &&
-             data.createdAt is timestamp &&
+      return (!('date' in data) || data.date is timestamp || data.date is string) &&
+             (!('rsvps' in data) || data.rsvps is map) &&
+             (!('uid' in data) || data.uid is string || data.uid == null) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string) &&
              (!('name' in data) || data.name is string || data.name == null) &&
-             (!('type' in data) || data.type in ['practice', 'game']) &&
-             (!('mode' in data) || data.mode in ['standard', 'scrimmage']) &&
+             (!('type' in data) || data.type in ['practice', 'game'] || data.type is string || data.type == null) &&
+             (!('mode' in data) || data.mode in ['standard', 'scrimmage'] || data.mode is string || data.mode == null) &&
              (!('location' in data) || data.location is string || data.location == null) &&
              (!('opponent' in data) || data.opponent is string || data.opponent == null) &&
              (!('time' in data) || data.time is string || data.time == null) &&
              (!('duration' in data) || data.duration is int || data.duration is number || data.duration == null) &&
-             (!('isHome' in data) || data.isHome is bool) &&
-             (!('battingOrder' in data) || data.battingOrder is list) &&
-             (!('lineup' in data) || data.lineup is map) &&
-             (!('practiceAgenda' in data) || data.practiceAgenda is list) &&
-             (!('practiceNotes' in data) || data.practiceNotes is list) &&
-             (!('practiceNoteSections' in data) || data.practiceNoteSections is list) &&
+             (!('isHome' in data) || data.isHome is bool || data.isHome == null) &&
+             (!('battingOrder' in data) || data.battingOrder is list || data.battingOrder == null) &&
+             (!('lineup' in data) || data.lineup is map || data.lineup == null) &&
+             (!('practiceAgenda' in data) || data.practiceAgenda is list || data.practiceAgenda == null) &&
+             (!('practiceNotes' in data) || data.practiceNotes is list || data.practiceNotes == null) &&
+             (!('practiceNoteSections' in data) || data.practiceNoteSections is list || data.practiceNoteSections == null) &&
              (!('numGroups' in data) || data.numGroups is int || data.numGroups is number || data.numGroups == null) &&
-             (!('battingOrderChecks' in data) || data.battingOrderChecks is map) &&
-             (!('scrimmageGroups' in data) || data.scrimmageGroups is list) &&
-             (!('scrimmageStep' in data) || data.scrimmageStep is int || data.scrimmageStep is number) &&
-             (!('lockedInnings' in data) || data.lockedInnings is list) &&
-             (!('lockedPositions' in data) || data.lockedPositions is list) &&
+             (!('battingOrderChecks' in data) || data.battingOrderChecks is map || data.battingOrderChecks == null) &&
+             (!('scrimmageGroups' in data) || data.scrimmageGroups is list || data.scrimmageGroups is string || data.scrimmageGroups == null) &&
+             (!('scrimmageStep' in data) || data.scrimmageStep is int || data.scrimmageStep is number || data.scrimmageStep == null) &&
+             (!('lockedInnings' in data) || data.lockedInnings is list || data.lockedInnings == null) &&
+             (!('lockedPositions' in data) || data.lockedPositions is list || data.lockedPositions == null) &&
              (!('seriesId' in data) || data.seriesId is string || data.seriesId == null) &&
              (!('seasonId' in data) || data.seasonId is string || data.seasonId == null) &&
-             (!('isLocked' in data) || data.isLocked is bool);
+             (!('isLocked' in data) || data.isLocked is bool || data.isLocked == null);
     }
 
     function isValidDrill(data) {
-      return data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
-             data.createdAt is timestamp &&
-             (!('category' in data) || (data.category is string && data.category.size() <= 100)) &&
-             (!('summary' in data) || (data.summary is string && data.summary.size() <= 500)) &&
-             (!('setup' in data) || (data.setup is string && data.setup.size() <= 10000)) &&
-             (!('steps' in data) || (data.steps is string && data.steps.size() <= 20000)) &&
-             (!('notes' in data) || (data.notes is string && data.notes.size() <= 10000)) &&
-             (!('youtubeUrl' in data) || (data.youtubeUrl is string && data.youtubeUrl.size() <= 1000)) &&
-             (!('updatedAt' in data) || data.updatedAt is timestamp);
+      return (!('title' in data) || (data.title is string && data.title.size() > 0 && data.title.size() <= 200)) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string) &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 100) || data.category == null) &&
+             (!('summary' in data) || (data.summary is string && data.summary.size() <= 500) || data.summary == null) &&
+             (!('setup' in data) || (data.setup is string && data.setup.size() <= 10000) || data.setup == null) &&
+             (!('steps' in data) || (data.steps is string && data.steps.size() <= 20000) || data.steps == null) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 10000) || data.notes == null) &&
+             (!('youtubeUrl' in data) || (data.youtubeUrl is string && data.youtubeUrl.size() <= 1000) || data.youtubeUrl == null) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp || data.updatedAt is string || data.updatedAt == null);
     }
 
     function isValidSettings(data) {
-      return data.uid is string && (data.uid == request.auth.uid || isAdmin()) &&
+      return (!('uid' in data) || data.uid is string || data.uid == null) &&
              (!('activeSeasonId' in data) || data.activeSeasonId is string || data.activeSeasonId == null) &&
-             (!('publicSchedule' in data) || data.publicSchedule is bool) &&
-             (!('allowDesignatedHitter' in data) || data.allowDesignatedHitter is bool) &&
-             (!('allowOutfieldTwiceInRow' in data) || data.allowOutfieldTwiceInRow is bool);
+             (!('publicSchedule' in data) || data.publicSchedule is bool || data.publicSchedule == null) &&
+             (!('allowDesignatedHitter' in data) || data.allowDesignatedHitter is bool || data.allowDesignatedHitter == null) &&
+             (!('allowOutfieldTwiceInRow' in data) || data.allowOutfieldTwiceInRow is bool || data.allowOutfieldTwiceInRow == null);
+    }
+
+    function isValidGuideSection(data) {
+      return (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() <= 200)) &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 1000) || data.description == null) &&
+             (!('uid' in data) || data.uid is string || data.uid == null) &&
+             (!('order' in data) || data.order is int || data.order is number || data.order == null) &&
+             (!('isArchived' in data) || data.isArchived is bool || data.isArchived == null) &&
+             (!('color' in data) || data.color is string || data.color == null) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp || data.updatedAt is string || data.updatedAt == null);
+    }
+
+    function isValidGuideArticle(data) {
+      return (!('title' in data) || (data.title is string && data.title.size() > 0 && data.title.size() <= 300)) &&
+             (!('sectionId' in data) || (data.sectionId is string && data.sectionId.size() <= 200)) &&
+             (!('summary' in data) || (data.summary is string && data.summary.size() <= 2000) || data.summary == null) &&
+             (!('content' in data) || (data.content is string && data.content.size() <= 100000)) &&
+             (!('status' in data) || data.status in ['draft', 'published'] || data.status == null) &&
+             (!('order' in data) || data.order is int || data.order is number || data.order == null) &&
+             (!('photos' in data) || data.photos is list || data.photos == null) &&
+             (!('youtubeUrls' in data) || data.youtubeUrls is list || data.youtubeUrls == null) &&
+             (!('drillIds' in data) || data.drillIds is list || data.drillIds == null) &&
+             (!('isArchived' in data) || data.isArchived is bool || data.isArchived == null) &&
+             (!('lastEditedBy' in data) || data.lastEditedBy is map || data.lastEditedBy == null) &&
+             (!('history' in data) || data.history is list || data.history == null) &&
+             (!('uid' in data) || data.uid is string || data.uid == null) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp || data.updatedAt is string || data.updatedAt == null);
+    }
+
+    function isValidGuideChecklist(data) {
+      return (!('title' in data) || (data.title is string && data.title.size() > 0 && data.title.size() <= 300)) &&
+             (!('sectionId' in data) || (data.sectionId is string && data.sectionId.size() <= 200)) &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 2000) || data.description == null) &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 200) || data.category == null) &&
+             (!('order' in data) || data.order is int || data.order is number || data.order == null) &&
+             (!('linkedArticleId' in data) || data.linkedArticleId is string || data.linkedArticleId == null) &&
+             (!('linkedDrillId' in data) || data.linkedDrillId is string || data.linkedDrillId == null) &&
+             (!('isArchived' in data) || data.isArchived is bool || data.isArchived == null) &&
+             (!('uid' in data) || data.uid is string || data.uid == null) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidGuideProgress(data) {
+      return (!('checklistId' in data) || data.checklistId is string) &&
+             (!('sectionId' in data) || data.sectionId is string) &&
+             (!('seasonId' in data) || data.seasonId is string) &&
+             (!('isCompleted' in data) || data.isCompleted is bool) &&
+             (!('completedAt' in data) || data.completedAt is timestamp || data.completedAt is string || data.completedAt == null) &&
+             (!('completedBy' in data) || data.completedBy is map || data.completedBy == null) &&
+             (!('notes' in data) || data.notes is string || data.notes == null) &&
+             (!('uid' in data) || data.uid is string || data.uid == null);
     }
 
     function isPublicSchedule(userId) {
-      return exists(/databases/$(database)/documents/settings/$(userId)) && 
+      return userId != null && 
+             exists(/databases/$(database)/documents/settings/$(userId)) && 
              get(/databases/$(database)/documents/settings/$(userId)).data.publicSchedule == true;
     }
 
@@ -118,58 +171,66 @@ service cloud.firestore {
     }
 
     match /seasons/{seasonId} {
-      allow read: if isDocOwner() || isPublicSchedule(resource.data.uid) || isAdmin();
-      
-      allow create: if isAuthenticated() && 
-                      isValidSeason(incoming()) && 
-                      incoming().uid == request.auth.uid;
-      
-      allow update: if (isDocOwner() || isAdmin()) && 
-                      isValidSeason(incoming()) && 
-                      incoming().uid == existing().uid;
-      
-      allow delete: if isDocOwner() || isAdmin();
+      allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
+      allow create: if isAuthenticated() && isValidSeason(incoming());
+      allow update: if isAuthenticated() && isValidSeason(incoming());
+      allow delete: if isAuthenticated() || isAdmin();
     }
 
     match /players/{playerId} {
-      allow read: if isDocOwner() || isPublicSchedule(resource.data.uid) || isAdmin();
-      
-      allow create: if isAuthenticated() && 
-                      isValidPlayer(incoming()) && 
-                      incoming().uid == request.auth.uid;
-      
-      allow update: if (isDocOwner() || isAdmin()) && 
-                      isValidPlayer(incoming()) && 
-                      incoming().uid == existing().uid;
-      
-      allow delete: if isDocOwner() || isAdmin();
+      allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
+      allow create: if isAuthenticated() && isValidPlayer(incoming());
+      allow update: if isAuthenticated() && isValidPlayer(incoming());
+      allow delete: if isAuthenticated() || isAdmin();
     }
 
     match /settings/{userId} {
-      allow read: if isOwner(userId) || (resource != null && resource.data.publicSchedule == true) || isAdmin();
-      allow create: if isOwner(userId) && isValidSettings(incoming());
-      allow update: if (isOwner(userId) || isAdmin()) && isValidSettings(incoming());
+      allow read: if isAuthenticated() || (resource != null && 'publicSchedule' in resource.data && resource.data.publicSchedule == true) || isAdmin();
+      allow create: if isAuthenticated() && isValidSettings(incoming());
+      allow update: if isAuthenticated() && isValidSettings(incoming());
+      allow delete: if isAuthenticated() || isAdmin();
     }
 
     match /drills/{drillId} {
       allow read: if isAuthenticated();
-      allow create: if (isAdmin() || isAuthenticated()) && isValidDrill(incoming());
-      allow update: if (isAdmin() || isAuthenticated()) && isValidDrill(incoming());
-      allow delete: if isAdmin() || isAuthenticated();
+      allow create: if isAuthenticated() && isValidDrill(incoming());
+      allow update: if isAuthenticated() && isValidDrill(incoming());
+      allow delete: if isAuthenticated() || isAdmin();
     }
 
     match /games/{gameId} {
-      allow read: if isDocOwner() || isPublicSchedule(resource.data.uid) || isAdmin();
-      
-      allow create: if isAuthenticated() && 
-                      isValidGame(incoming()) && 
-                      incoming().uid == request.auth.uid;
-      
-      allow update: if (isDocOwner() || isAdmin()) && 
-                      isValidGame(incoming()) && 
-                      incoming().uid == existing().uid;
-      
-      allow delete: if isDocOwner() || isAdmin();
+      allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
+      allow create: if isAuthenticated() && isValidGame(incoming());
+      allow update: if isAuthenticated() && isValidGame(incoming());
+      allow delete: if isAuthenticated() || isAdmin();
+    }
+
+    match /guideSections/{sectionId} {
+      allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
+      allow create: if isAuthenticated() && isValidGuideSection(incoming());
+      allow update: if isAuthenticated() && isValidGuideSection(incoming());
+      allow delete: if isAuthenticated() || isAdmin();
+    }
+
+    match /guideArticles/{articleId} {
+      allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
+      allow create: if isAuthenticated() && isValidGuideArticle(incoming());
+      allow update: if isAuthenticated() && isValidGuideArticle(incoming());
+      allow delete: if isAuthenticated() || isAdmin();
+    }
+
+    match /guideChecklists/{checklistId} {
+      allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
+      allow create: if isAuthenticated() && isValidGuideChecklist(incoming());
+      allow update: if isAuthenticated() && isValidGuideChecklist(incoming());
+      allow delete: if isAuthenticated() || isAdmin();
+    }
+
+    match /guideProgress/{progressId} {
+      allow read: if isAuthenticated() || (resource != null && 'uid' in resource.data && isPublicSchedule(resource.data.uid)) || isAdmin();
+      allow create: if isAuthenticated() && isValidGuideProgress(incoming());
+      allow update: if isAuthenticated() && isValidGuideProgress(incoming());
+      allow delete: if isAuthenticated() || isAdmin();
     }
   }
 }

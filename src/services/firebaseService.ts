@@ -1,7 +1,8 @@
-import { doc, updateDoc, deleteDoc, addDoc, collection, getDocs, query, serverTimestamp } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, addDoc, setDoc, collection, getDocs, query, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { OperationType } from "../types";
 import { handleFirestoreError } from "../lib/utils";
+import { STARTER_GUIDE_SECTIONS } from "../lib/starterGuides";
 
 /**
  * Removes undefined values from an object recursively to prevent Firestore errors.
@@ -154,6 +155,190 @@ export const firebaseService = {
       await updateDoc(doc(db, 'settings', userId), stripUndefined(data));
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `settings/${userId}`);
+    }
+  },
+
+  // ==========================================
+  // Coaching Guides Methods
+  // ==========================================
+
+  // Guide Sections
+  async addGuideSection(data: any) {
+    try {
+      return await addDoc(collection(db, 'guideSections'), stripUndefined({
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'guideSections');
+    }
+  },
+
+  async updateGuideSection(sectionId: string, data: any) {
+    try {
+      await updateDoc(doc(db, 'guideSections', sectionId), stripUndefined({
+        ...data,
+        updatedAt: serverTimestamp()
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `guideSections/${sectionId}`);
+    }
+  },
+
+  async deleteGuideSection(sectionId: string) {
+    try {
+      await deleteDoc(doc(db, 'guideSections', sectionId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `guideSections/${sectionId}`);
+    }
+  },
+
+  // Guide Articles
+  async addGuideArticle(data: any) {
+    try {
+      return await addDoc(collection(db, 'guideArticles'), stripUndefined({
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'guideArticles');
+    }
+  },
+
+  async updateGuideArticle(articleId: string, data: any) {
+    try {
+      await updateDoc(doc(db, 'guideArticles', articleId), stripUndefined({
+        ...data,
+        updatedAt: serverTimestamp()
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `guideArticles/${articleId}`);
+    }
+  },
+
+  async deleteGuideArticle(articleId: string) {
+    try {
+      await deleteDoc(doc(db, 'guideArticles', articleId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `guideArticles/${articleId}`);
+    }
+  },
+
+  // Guide Checklists
+  async addGuideChecklist(data: any) {
+    try {
+      return await addDoc(collection(db, 'guideChecklists'), stripUndefined({
+        ...data,
+        createdAt: serverTimestamp()
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'guideChecklists');
+    }
+  },
+
+  async updateGuideChecklist(checklistId: string, data: any) {
+    try {
+      await updateDoc(doc(db, 'guideChecklists', checklistId), stripUndefined(data));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `guideChecklists/${checklistId}`);
+    }
+  },
+
+  async deleteGuideChecklist(checklistId: string) {
+    try {
+      await deleteDoc(doc(db, 'guideChecklists', checklistId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `guideChecklists/${checklistId}`);
+    }
+  },
+
+  // Guide Progress (Season-specific checkmarks)
+  async toggleGuideProgress(
+    uid: string,
+    seasonId: string,
+    checklistId: string,
+    sectionId: string,
+    isCompleted: boolean,
+    completedBy?: { uid: string; displayName: string }
+  ) {
+    const progressDocId = `${seasonId}_${checklistId}`;
+    try {
+      await setDoc(doc(db, 'guideProgress', progressDocId), stripUndefined({
+        uid,
+        seasonId,
+        checklistId,
+        sectionId,
+        isCompleted,
+        completedAt: isCompleted ? serverTimestamp() : null,
+        completedBy: isCompleted ? (completedBy || null) : null
+      }), { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `guideProgress/${progressDocId}`);
+    }
+  },
+
+  // Seed default starter guides (Phase 4 content)
+  async seedStarterGuides(uid: string) {
+    try {
+      for (const sectionData of STARTER_GUIDE_SECTIONS) {
+        // 1. Create section
+        const sectionDocRef = await addDoc(collection(db, 'guideSections'), stripUndefined({
+          uid,
+          name: sectionData.name,
+          description: sectionData.description,
+          color: sectionData.color,
+          order: sectionData.order,
+          isArchived: false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }));
+
+        const sectionDocId = sectionDocRef.id;
+        const articleIdMap: Record<string, string> = {};
+
+        // 2. Create articles for this section
+        for (const articleData of sectionData.articles) {
+          const articleDocRef = await addDoc(collection(db, 'guideArticles'), stripUndefined({
+            uid,
+            sectionId: sectionDocId,
+            title: articleData.title,
+            summary: articleData.summary,
+            content: articleData.content,
+            status: articleData.status,
+            order: articleData.order,
+            youtubeUrls: articleData.youtubeUrls || [],
+            drillIds: [],
+            isArchived: false,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          }));
+          articleIdMap[articleData.id] = articleDocRef.id;
+        }
+
+        // 3. Create checklist items
+        for (const checklistData of sectionData.checklists) {
+          const linkedArticleDocId = checklistData.linkedArticleId
+            ? (articleIdMap[checklistData.linkedArticleId] || null)
+            : null;
+
+          await addDoc(collection(db, 'guideChecklists'), stripUndefined({
+            uid,
+            sectionId: sectionDocId,
+            title: checklistData.title,
+            category: checklistData.category || null,
+            order: checklistData.order,
+            linkedArticleId: linkedArticleDocId,
+            isArchived: false,
+            createdAt: serverTimestamp()
+          }));
+        }
+      }
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'guideSections');
+      return false;
     }
   }
 };

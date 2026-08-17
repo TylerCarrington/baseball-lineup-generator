@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Drill } from '../types';
 import { ArrowLeft, Edit2, Trash2, ExternalLink } from 'lucide-react';
 import { CATEGORIES, getCategoryTheme } from '../lib/drillCategories';
+import { ConfirmationModal } from './ui/ConfirmationModal';
 
 interface DrillDetailViewProps {
   drills: Drill[];
@@ -28,6 +29,8 @@ export const DrillDetailView: React.FC<DrillDetailViewProps> = ({
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const drill = drills.find(d => d.id === id);
   const theme = getCategoryTheme(drill?.category);
@@ -139,12 +142,7 @@ export const DrillDetailView: React.FC<DrillDetailViewProps> = ({
               Edit Drill
             </button>
             <button 
-              onClick={async () => {
-                if (window.confirm('Are you sure you want to delete this drill?')) {
-                  await onDeleteDrill(drill.id);
-                  navigate('/drills');
-                }
-              }}
+              onClick={() => setShowDeleteConfirm(true)}
               className="flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl font-bold hover:bg-red-100 dark:hover:bg-red-500/20 transition-all shadow-sm"
             >
               <Trash2 size={18} />
@@ -391,6 +389,26 @@ export const DrillDetailView: React.FC<DrillDetailViewProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        title="Delete Drill"
+        message={`Are you sure you want to delete "${drill.title}"? This action cannot be undone.`}
+        confirmText={isDeleting ? "Deleting..." : "Delete Drill"}
+        variant="danger"
+        onClose={() => !isDeleting && setShowDeleteConfirm(false)}
+        onConfirm={async () => {
+          try {
+            setIsDeleting(true);
+            await onDeleteDrill(drill.id);
+            navigate('/drills');
+          } catch (error) {
+            console.error('Failed to delete drill:', error);
+            setIsDeleting(false);
+            setShowDeleteConfirm(false);
+          }
+        }}
+      />
     </div>
   );
 };

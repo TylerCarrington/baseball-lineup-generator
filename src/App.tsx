@@ -27,6 +27,8 @@ import { Button } from './components/ui/Button';
 import { DrillLibraryView } from './components/DrillLibraryView';
 import { DrillDetailView } from './components/DrillDetailView';
 import { CreateDrillView } from './components/CreateDrillView';
+import { GuidesTab } from './components/Guides/GuidesTab';
+import { PublicGuidesView } from './components/Guides/PublicGuidesView';
 
 // --- Connection Test ---
 async function testConnection() {
@@ -64,7 +66,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   const { games, selectedGame, setGames } = useGames(user, isAuthReady, selectedGameId, activeSeasonId);
   const { drills, addDrill, updateDrill, deleteDrill } = useDrills(user);
   
-  const isAdmin = user?.email === 'tylercarringtonwa@gmail.com';
+  const isAdmin = user?.email?.toLowerCase() === 'tylercarringtonwa@gmail.com';
 
   const handleLogout = async () => {
     await logout();
@@ -81,6 +83,10 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950"><div className="text-slate-900 dark:text-emerald-500"><Trophy size={48} /></div></div>;
+
+  if (location.pathname.startsWith('/shared/guides/')) {
+    return <PublicGuidesView />;
+  }
 
   if (location.pathname.startsWith('/shared/')) return <SharedView darkMode={darkMode} setDarkMode={setDarkMode} />;
 
@@ -100,6 +106,8 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     </div>
   );
 
+  const activeSeason = seasons.find(s => s.id === activeSeasonId) || null;
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       <Navigation user={user} currentTab={currentTab} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} handleTabChange={(t) => { navigate(`/${t}`); setIsMobileMenuOpen(false); }} handleLogout={handleLogout} seasons={seasons} activeSeasonId={activeSeasonId} onSeasonChange={(id) => firebaseService.updateSettings(user.uid, { activeSeasonId: id })} />
@@ -114,6 +122,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
           <Route path="/drills" element={<DrillLibraryView drills={drills} isAdmin={isAdmin} onDeleteDrill={deleteDrill} darkMode={darkMode} />} />
           <Route path="/drills/new" element={<CreateDrillView onAddDrill={addDrill} darkMode={darkMode} />} />
           <Route path="/drills/:id" element={<DrillDetailView drills={drills} isAdmin={isAdmin} onUpdateDrill={updateDrill} onDeleteDrill={deleteDrill} darkMode={darkMode} />} />
+          <Route path="/guides/*" element={<GuidesTab user={user} activeSeason={activeSeason} seasons={seasons} drills={drills} isAdmin={isAdmin} darkMode={darkMode} />} />
         </Routes>
       </main>
       <ConfirmationModal isOpen={deleteConfirmation.isOpen} title={deleteConfirmation.title} message={deleteConfirmation.message} onConfirm={confirmDelete} onClose={() => setDeleteConfirmation(prev => ({ ...prev, isOpen: false }))} variant="danger" />

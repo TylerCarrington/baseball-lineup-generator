@@ -893,7 +893,7 @@ export function PracticeAgendaView({ game, readOnly = false, allowEditWhenLocked
                         if (lowerName === 'warmups' || lowerName === 'warmup') {
                           updates.category = 'Conditioning & Warm-Up';
                         } else if (lowerName === 'game') {
-                          updates.category = 'Teamwork & Situational';
+                          updates.category = 'Games & Competitions';
                         }
                       }
                       

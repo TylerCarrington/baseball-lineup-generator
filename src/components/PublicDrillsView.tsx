@@ -4,7 +4,7 @@ import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firesto
 import { db } from '../firebase';
 import { Drill, TeamSettings } from '../types';
 import { Search, PlayCircle, BookOpen, ChevronRight, ArrowLeft, ExternalLink, Dumbbell, Youtube } from 'lucide-react';
-import { CATEGORIES, getCategoryTheme } from '../lib/drillCategories';
+import { CATEGORIES, getCategoryTheme, normalizeCategory } from '../lib/drillCategories';
 
 function extractYoutubeId(url: string): string | null {
   const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -53,12 +53,18 @@ export const PublicDrillsView: React.FC = () => {
 
         // 2. Fetch drills owned by this UID
         const drillSnap = await getDocs(query(collection(db, 'drills'), where('uid', '==', uid)));
-        let drillList = drillSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Drill[];
+        let drillList = drillSnap.docs.map(d => {
+          const data = d.data();
+          return { id: d.id, ...data, category: normalizeCategory(data.category) };
+        }) as Drill[];
         
         // Fallback: if no drills are owned by this UID (or they are untagged), load all drills
         if (drillList.length === 0) {
           const allDrillsSnap = await getDocs(collection(db, 'drills'));
-          drillList = allDrillsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Drill[];
+          drillList = allDrillsSnap.docs.map(d => {
+            const data = d.data();
+            return { id: d.id, ...data, category: normalizeCategory(data.category) };
+          }) as Drill[];
         }
         
         // Sort by createdAt descending

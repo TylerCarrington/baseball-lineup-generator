@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Drill, TeamSettings } from '../types';
-import { Search, PlayCircle, BookOpen, ChevronRight, ArrowLeft, ExternalLink, Dumbbell, Youtube } from 'lucide-react';
+import { Search, PlayCircle, BookOpen, ChevronRight, ArrowLeft, ExternalLink, Dumbbell, Youtube, Copy, Check } from 'lucide-react';
 import { CATEGORIES, getCategoryTheme, normalizeCategory } from '../lib/drillCategories';
 
 function extractYoutubeId(url: string): string | null {
@@ -13,10 +13,13 @@ function extractYoutubeId(url: string): string | null {
 }
 
 export const PublicDrillsView: React.FC = () => {
-  const { uid } = useParams<{ uid: string }>();
+  const { uid, '*': splat } = useParams<{ uid: string; '*': string }>();
+  const navigate = useNavigate();
+
+  const drillId = splat?.startsWith('drill/') ? splat.replace('drill/', '') : null;
 
   const [drills, setDrills] = useState<Drill[]>([]);
-  const [selectedDrill, setSelectedDrill] = useState<Drill | null>(null);
+  const selectedDrill = drillId ? drills.find(d => d.id === drillId) : null;
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,13 +108,37 @@ export const PublicDrillsView: React.FC = () => {
     return matchesSearch && matchesCat;
   });
 
+  const [copiedCSV, setCopiedCSV] = useState(false);
+
+  const handleExportCSV = () => {
+    const headers = ['Category', 'Drill Title', 'Summary', 'Video URL'];
+    const rows = filteredDrills.map(drill => {
+      const escapeCSV = (str: string) => `"${(str || '').replace(/"/g, '""')}"`;
+      return [
+        escapeCSV(drill.category || 'General'),
+        escapeCSV(drill.title),
+        escapeCSV(drill.summary || ''),
+        escapeCSV(drill.youtubeUrl || '')
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    
+    navigator.clipboard.writeText(csvContent).then(() => {
+      setCopiedCSV(true);
+      setTimeout(() => setCopiedCSV(false), 2000);
+    }).catch(err => {
+      console.error('Failed to copy CSV: ', err);
+    });
+  };
+
   return (
     <div className="w-full flex flex-col gap-6">
         {selectedDrill ? (
           /* Drill Detail View */
           <div className="flex flex-col gap-6">
             <button
-              onClick={() => setSelectedDrill(null)}
+              onClick={() => navigate(`/shared/${uid}/drills`)}
               className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-fit"
             >
               <ArrowLeft size={14} />
@@ -189,6 +216,16 @@ export const PublicDrillsView: React.FC = () => {
         ) : (
           /* Drills List View */
           <div className="space-y-6">
+            <div className="flex justify-end">
+              <button 
+                onClick={handleExportCSV}
+                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl font-bold transition-all shadow-sm text-sm"
+                title="Export to CSV"
+              >
+                {copiedCSV ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} className="text-emerald-600 dark:text-emerald-400" />}
+                {copiedCSV ? <span className="text-emerald-500">Copied</span> : <span>Export CSV</span>}
+              </button>
+            </div>
             {/* Search & Filters */}
             <div className="flex flex-col gap-4">
               <div className="relative flex-1">
@@ -246,7 +283,7 @@ export const PublicDrillsView: React.FC = () => {
                   return (
                     <div 
                       key={drill.id} 
-                      onClick={() => setSelectedDrill(drill)}
+                      onClick={() => navigate(`/shared/${uid}/drills/drill/${drill.id}`)}
                       className={`group flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl ${theme.cardHover} hover:shadow-xs transition-all cursor-pointer`}
                     >
                       <div className="flex items-center gap-4 min-w-0">

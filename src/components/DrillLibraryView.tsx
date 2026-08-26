@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Drill } from '../types';
-import { Search, Plus, Trash2, PlayCircle, BookOpen, ChevronRight, Wrench, Share2 } from 'lucide-react';
+import { Search, Plus, Trash2, PlayCircle, BookOpen, ChevronRight, Wrench, Share2, Copy, Check } from 'lucide-react';
 import { CATEGORIES, getCategoryTheme } from '../lib/drillCategories';
 import { ConfirmationModal } from './ui/ConfirmationModal';
 import { toast } from 'sonner';
@@ -45,6 +45,32 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
     return matchesSearch && matchesCat;
   });
 
+  const [copiedCSV, setCopiedCSV] = useState(false);
+
+  const handleExportCSV = () => {
+    const headers = ['Category', 'Drill Title', 'Summary', 'Video URL'];
+    const rows = filteredDrills.map(drill => {
+      const escapeCSV = (str: string) => `"${(str || '').replace(/"/g, '""')}"`;
+      return [
+        escapeCSV(drill.category || 'General'),
+        escapeCSV(drill.title),
+        escapeCSV(drill.summary || ''),
+        escapeCSV(drill.youtubeUrl || '')
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    
+    navigator.clipboard.writeText(csvContent).then(() => {
+      setCopiedCSV(true);
+      setTimeout(() => setCopiedCSV(false), 2000);
+      toast.success('Drills exported to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy CSV: ', err);
+      toast.error('Failed to copy CSV');
+    });
+  };
+
   return (
     <div className={`p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 ${darkMode ? 'dark text-slate-200' : 'text-slate-800'}`}>
       {/* Header */}
@@ -55,6 +81,15 @@ export const DrillLibraryView: React.FC<DrillLibraryViewProps> = ({
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+          <button 
+            onClick={handleExportCSV}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl font-bold transition-all shadow-sm"
+            title="Export to CSV"
+          >
+            {copiedCSV ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} className="text-emerald-600 dark:text-emerald-400" />}
+            {copiedCSV ? <span className="text-emerald-500">Copied</span> : <span>Export CSV</span>}
+          </button>
+          
           <button 
             onClick={handleShareDrills}
             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl font-bold transition-all shadow-sm"

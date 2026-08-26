@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GuideChecklistItem, GuideArticle, Drill, GuideProgress } from '../../types';
-import { Check, Plus, BookOpen, Dumbbell, Trash2, Edit2, CheckCircle2, Circle, Sparkles, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, Plus, BookOpen, Dumbbell, Trash2, Edit2, CheckCircle2, Circle, Sparkles, Filter, ChevronDown, ChevronUp, Copy } from 'lucide-react';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
 
 interface SkillsChecklistViewProps {
@@ -71,6 +71,34 @@ export const SkillsChecklistView: React.FC<SkillsChecklistViewProps> = ({
 
   // Group by category
   const categories = Array.from(new Set(sectionChecklists.map(c => c.category || 'General')));
+
+  const [copiedCSV, setCopiedCSV] = useState(false);
+
+  const handleExportCSV = () => {
+    const headers = ['Category', 'Skill Title', 'Description', 'Status'];
+    const rows = filteredChecklists.map(item => {
+      const isCompleted = progressMap[item.id]?.isCompleted || false;
+      const status = isCompleted ? 'Completed' : 'To Cover';
+      
+      const escapeCSV = (str: string) => `"${(str || '').replace(/"/g, '""')}"`;
+      
+      return [
+        escapeCSV(item.category || 'General'),
+        escapeCSV(item.title),
+        escapeCSV(item.description || ''),
+        escapeCSV(status)
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    
+    navigator.clipboard.writeText(csvContent).then(() => {
+      setCopiedCSV(true);
+      setTimeout(() => setCopiedCSV(false), 2000);
+    }).catch(err => {
+      console.error('Failed to copy CSV: ', err);
+    });
+  };
 
   const handleOpenAdd = () => {
     setTitle('');
@@ -209,9 +237,18 @@ export const SkillsChecklistView: React.FC<SkillsChecklistViewProps> = ({
           </button>
         </div>
 
-        <span className="text-xs text-slate-400 font-medium">
-          Check off items as they are taught in practice
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-400 font-medium hidden sm:inline-block">
+            Check off items as they are taught in practice
+          </span>
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition-all shadow-xs"
+          >
+            {copiedCSV ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+            <span className={copiedCSV ? 'text-emerald-500' : ''}>{copiedCSV ? 'Copied' : 'Export CSV'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Add / Edit Inline Form Modal */}

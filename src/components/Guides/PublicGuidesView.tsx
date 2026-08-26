@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { GuideSection, GuideArticle, TeamSettings, GuideChecklistItem, GuideProgress, Drill } from '../../types';
@@ -25,7 +25,10 @@ function getSectionSortOrder(sec: GuideSection): number {
 }
 
 export const PublicGuidesView: React.FC = () => {
-  const { uid } = useParams<{ uid: string }>();
+  const { uid, '*': splat } = useParams<{ uid: string; '*': string }>();
+  const navigate = useNavigate();
+
+  const articleId = splat?.startsWith('article/') ? splat.replace('article/', '') : null;
 
   const [sections, setSections] = useState<GuideSection[]>([]);
   const [articles, setArticles] = useState<GuideArticle[]>([]);
@@ -33,7 +36,8 @@ export const PublicGuidesView: React.FC = () => {
   const [progressMap, setProgressMap] = useState<Record<string, GuideProgress>>({});
   const [drills, setDrills] = useState<Drill[]>([]);
   const [activeSectionId, setActiveSectionId] = useState<string>('');
-  const [selectedArticle, setSelectedArticle] = useState<GuideArticle | null>(null);
+  
+  const selectedArticle = articleId ? articles.find(a => a.id === articleId) : null;
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -163,7 +167,7 @@ export const PublicGuidesView: React.FC = () => {
         {selectedArticle ? (
           <div className="flex flex-col gap-6">
             <button
-              onClick={() => setSelectedArticle(null)}
+              onClick={() => navigate(`/shared/${uid}/guides`)}
               className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-fit"
             >
               <ArrowLeft size={14} />
@@ -246,7 +250,7 @@ export const PublicGuidesView: React.FC = () => {
                   {sectionArticles.map(art => (
                     <div
                       key={art.id}
-                      onClick={() => setSelectedArticle(art)}
+                      onClick={() => navigate(`/shared/${uid}/guides/article/${art.id}`)}
                       className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 rounded-2xl cursor-pointer shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
                     >
                       <div>
@@ -285,7 +289,7 @@ export const PublicGuidesView: React.FC = () => {
                     onAddChecklist={async () => {}}
                     onUpdateChecklist={async () => {}}
                     onDeleteChecklist={async () => {}}
-                    onOpenArticle={(art) => setSelectedArticle(art)}
+                    onOpenArticle={(art) => navigate(`/shared/${uid}/guides/article/${art.id}`)}
                     isAdmin={false}
                     activeSeasonName="Current Season"
                   />

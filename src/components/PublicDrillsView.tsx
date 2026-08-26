@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Drill, TeamSettings } from '../types';
-import { Search, PlayCircle, BookOpen, ChevronRight, ArrowLeft, ExternalLink, Dumbbell, Youtube, Copy, Check } from 'lucide-react';
+import { Search, PlayCircle, BookOpen, ChevronRight, ArrowLeft, ExternalLink, Dumbbell, Youtube } from 'lucide-react';
 import { CATEGORIES, getCategoryTheme, normalizeCategory } from '../lib/drillCategories';
 
 function extractYoutubeId(url: string): string | null {
@@ -108,124 +108,90 @@ export const PublicDrillsView: React.FC = () => {
     return matchesSearch && matchesCat;
   });
 
-  const [copiedCSV, setCopiedCSV] = useState(false);
-
-  const handleExportCSV = () => {
-    const headers = ['Category', 'Drill Title', 'Summary', 'Video URL'];
-    const rows = filteredDrills.map(drill => {
-      const escapeCSV = (str: string) => `"${(str || '').replace(/"/g, '""')}"`;
-      return [
-        escapeCSV(drill.category || 'General'),
-        escapeCSV(drill.title),
-        escapeCSV(drill.summary || ''),
-        escapeCSV(drill.youtubeUrl || '')
-      ].join(',');
-    });
-
-    const csvContent = [headers.join(','), ...rows].join('\n');
-    
-    navigator.clipboard.writeText(csvContent).then(() => {
-      setCopiedCSV(true);
-      setTimeout(() => setCopiedCSV(false), 2000);
-    }).catch(err => {
-      console.error('Failed to copy CSV: ', err);
-    });
-  };
-
   return (
     <div className="w-full flex flex-col gap-6">
-        {selectedDrill ? (
-          /* Drill Detail View */
-          <div className="flex flex-col gap-6">
-            <button
-              onClick={() => navigate(`/shared/${uid}/drills`)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-fit"
-            >
-              <ArrowLeft size={14} />
-              <span>Back to Library</span>
-            </button>
+      {selectedDrill ? (
+        /* Drill Detail View */
+        <div className="flex flex-col gap-6">
+          <button
+            onClick={() => navigate(`/shared/${uid}/drills`)}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-fit"
+          >
+            <ArrowLeft size={14} />
+            <span>Back to Library</span>
+          </button>
 
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-8 shadow-xs">
-              {/* Info */}
-              <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-2xl ${getCategoryTheme(selectedDrill.category).iconBox} flex items-center justify-center shrink-0`}>
-                  <PlayCircle size={24} />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                    {selectedDrill.title}
-                  </h2>
-                  <div className="mt-1.5 flex items-center gap-3 flex-wrap">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border ${getCategoryTheme(selectedDrill.category).badge}`}>
-                      <span className={`w-2 h-2 rounded-full ${getCategoryTheme(selectedDrill.category).dot}`} />
-                      {selectedDrill.category || 'Uncategorized'}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-8 shadow-xs">
+            {/* Info */}
+            <div className="flex items-start gap-4">
+              <div className={`w-12 h-12 rounded-2xl ${getCategoryTheme(selectedDrill.category).iconBox} flex items-center justify-center shrink-0`}>
+                <PlayCircle size={24} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  {selectedDrill.title}
+                </h2>
+                <div className="mt-1.5 flex items-center gap-3 flex-wrap">
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border ${getCategoryTheme(selectedDrill.category).badge}`}>
+                    <span className={`w-2 h-2 rounded-full ${getCategoryTheme(selectedDrill.category).dot}`} />
+                    {selectedDrill.category || 'Uncategorized'}
+                  </span>
+                  {selectedDrill.summary && (
+                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                      {selectedDrill.summary}
                     </span>
-                    {selectedDrill.summary && (
-                      <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                        {selectedDrill.summary}
-                      </span>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
+            </div>
 
-              {/* Video Embedding */}
-              {selectedDrill.youtubeUrl && extractYoutubeId(selectedDrill.youtubeUrl) && (
-                <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <iframe
-                    src={`https://www.youtube-nocookie.com/embed/${extractYoutubeId(selectedDrill.youtubeUrl)}`}
-                    title={selectedDrill.title}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="w-full h-full border-0"
-                  />
+            {/* Video Embedding */}
+            {selectedDrill.youtubeUrl && extractYoutubeId(selectedDrill.youtubeUrl) && (
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-slate-200 dark:border-slate-800 shadow-sm">
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${extractYoutubeId(selectedDrill.youtubeUrl)}`}
+                  title={selectedDrill.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full border-0"
+                />
+              </div>
+            )}
+
+            {/* Drill Body Content */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+              {selectedDrill.setup && (
+                <div className="space-y-3">
+                  <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Setup & Equipment</h3>
+                  <div className="p-5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap font-medium text-slate-700 dark:text-slate-200">
+                    {selectedDrill.setup}
+                  </div>
                 </div>
               )}
 
-              {/* Drill Body Content */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-                {selectedDrill.setup && (
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Setup & Equipment</h3>
-                    <div className="p-5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap font-medium text-slate-700 dark:text-slate-200">
-                      {selectedDrill.setup}
-                    </div>
-                  </div>
-                )}
-
-                {selectedDrill.steps && (
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Drill Instructions</h3>
-                    <div className="p-5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap font-medium text-slate-700 dark:text-slate-200">
-                      {selectedDrill.steps}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {selectedDrill.notes && (
-                <div className="pt-6 border-t border-slate-100 dark:border-slate-800/60 space-y-3">
-                  <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Coaching Tips & Notes</h3>
-                  <div className="p-5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/60 dark:border-indigo-900/40 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap font-medium text-indigo-900 dark:text-indigo-200">
-                    {selectedDrill.notes}
+              {selectedDrill.steps && (
+                <div className="space-y-3">
+                  <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Drill Instructions</h3>
+                  <div className="p-5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap font-medium text-slate-700 dark:text-slate-200">
+                    {selectedDrill.steps}
                   </div>
                 </div>
               )}
             </div>
+
+            {selectedDrill.notes && (
+              <div className="pt-6 border-t border-slate-100 dark:border-slate-800/60 space-y-3">
+                <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Coaching Tips & Notes</h3>
+                <div className="p-5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/60 dark:border-indigo-900/40 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap font-medium text-indigo-900 dark:text-indigo-200">
+                  {selectedDrill.notes}
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          /* Drills List View */
-          <div className="space-y-6">
-            <div className="flex justify-end">
-              <button 
-                onClick={handleExportCSV}
-                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl font-bold transition-all shadow-sm text-sm"
-                title="Export to CSV"
-              >
-                {copiedCSV ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} className="text-emerald-600 dark:text-emerald-400" />}
-                {copiedCSV ? <span className="text-emerald-500">Copied</span> : <span>Export CSV</span>}
-              </button>
-            </div>
+        </div>
+      ) : (
+        /* Drills List View */
+        <div className="space-y-6">
             {/* Search & Filters */}
             <div className="flex flex-col gap-4">
               <div className="relative flex-1">

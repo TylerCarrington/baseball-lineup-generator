@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { GuideSection } from '../../types';
-import { Plus, Folder, Archive, Edit2, AlertCircle, CheckCircle2, ChevronRight } from 'lucide-react';
+import { GuideSection, GuideArticle } from '../../types';
+import { Plus, Folder, Archive, Edit2, AlertCircle, CheckCircle2, ChevronRight, Sparkles, Trash2 } from 'lucide-react';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
+import { toast } from 'sonner';
 
 interface SectionListProps {
   sections: GuideSection[];
@@ -10,8 +11,11 @@ interface SectionListProps {
   onAddSection: (data: { name: string; description?: string; color?: string }) => Promise<any>;
   onUpdateSection: (sectionId: string, data: Partial<GuideSection>) => Promise<void>;
   onArchiveSection: (sectionId: string) => Promise<void>;
+  onDeleteSection?: (sectionId: string) => Promise<void>;
   perSectionMetrics: Record<string, { total: number; completed: number; percentage: number }>;
+  articles?: GuideArticle[];
   isAdmin?: boolean;
+  onOpenImportSkills?: () => void;
 }
 
 const SECTION_COLORS: { id: string; label: string; bg: string; text: string; border: string; activeBg: string }[] = [
@@ -29,17 +33,31 @@ export const SectionList: React.FC<SectionListProps> = ({
   onAddSection,
   onUpdateSection,
   onArchiveSection,
-  perSectionMetrics
+  onDeleteSection,
+  perSectionMetrics,
+  articles = [],
+  isAdmin = true,
+  onOpenImportSkills
 }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<GuideSection | null>(null);
   const [sectionToArchive, setSectionToArchive] = useState<GuideSection | null>(null);
+  const [sectionToDelete, setSectionToDelete] = useState<GuideSection | null>(null);
 
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('emerald');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Compute counts for section deletion check
+  const deleteGuideCount = sectionToDelete
+    ? articles.filter(a => a.sectionId === sectionToDelete.id && !a.isArchived).length
+    : 0;
+  const deleteSkillCount = sectionToDelete
+    ? (perSectionMetrics[sectionToDelete.id]?.total || 0)
+    : 0;
+  const isSectionToDeleteEmpty = deleteGuideCount === 0 && deleteSkillCount === 0;
 
   // Check near duplicates
   const nearDuplicateMatch = sections.find(s => {
@@ -107,6 +125,30 @@ export const SectionList: React.FC<SectionListProps> = ({
     }
   };
 
+  const confirmDelete = async () => {
+    if (!sectionToDelete) return;
+
+    if (!isSectionToDeleteEmpty) {
+      await onArchiveSection(sectionToDelete.id);
+      toast.info(`Category "${sectionToDelete.name}" was archived instead of deleted because it contains active guides/skills.`);
+      setSectionToDelete(null);
+      return;
+    }
+
+    try {
+      if (onDeleteSection) {
+        await onDeleteSection(sectionToDelete.id);
+        toast.success(`Category "${sectionToDelete.name}" deleted successfully.`);
+      } else {
+        toast.error("Deletion not supported in this context.");
+      }
+      setSectionToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete section:', error);
+      toast.error('Failed to delete section.');
+    }
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between px-1">
@@ -115,7 +157,7 @@ export const SectionList: React.FC<SectionListProps> = ({
         </h2>
         <button
           onClick={handleOpenCreate}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors cursor-pointer"
           title="Add Section"
         >
           <Plus size={14} />
@@ -131,7 +173,7 @@ export const SectionList: React.FC<SectionListProps> = ({
             </p>
             <button
               onClick={handleOpenCreate}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-colors shadow-xs cursor-pointer"
             >
               <Plus size={14} />
               <span>Create Section</span>
@@ -142,6 +184,8 @@ export const SectionList: React.FC<SectionListProps> = ({
           const isActive = section.id === activeSectionId;
           const metric = perSectionMetrics[section.id] || { total: 0, completed: 0, percentage: 0 };
           const colorConfig = SECTION_COLORS.find(c => c.id === (section.color || 'emerald')) || SECTION_COLORS[0];
+          const secGuideCount = articles.filter(a => a.sectionId === section.id && !a.isArchived).length;
+          const isEmpty = metric.total === 0 && secGuideCount === 0;
 
           return (
             <div
@@ -186,7 +230,7 @@ export const SectionList: React.FC<SectionListProps> = ({
                   <CheckCircle2 size={16} className={isActive ? 'text-emerald-300' : 'text-emerald-500'} />
                 )}
 
-                {/* Edit & Archive on Hover */}
+                {/* Edit, Archive, and Delete on Hover */}
                 <div className="opacity-0 group-hover:opacity-100 flex items-center transition-opacity">
                   <button
                     onClick={(e) => handleOpenEdit(e, section)}
@@ -209,6 +253,24 @@ export const SectionList: React.FC<SectionListProps> = ({
                   >
                     <Archive size={13} />
                   </button>
+                  {onDeleteSection && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSectionToDelete(section);
+                      }}
+                      className={`p-1.5 rounded-lg hover:bg-white/20 transition-colors ${
+                        isActive
+                          ? 'text-white hover:text-rose-200'
+                          : isEmpty
+                          ? 'text-slate-400 hover:text-rose-600'
+                          : 'text-slate-300 hover:text-rose-500'
+                      }`}
+                      title={isEmpty ? "Delete Empty Category" : "Delete Category"}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
 
                 <ChevronRight
@@ -223,6 +285,22 @@ export const SectionList: React.FC<SectionListProps> = ({
         })}
       </div>
 
+      {isAdmin && onOpenImportSkills && (
+        <button
+          type="button"
+          onClick={onOpenImportSkills}
+          className="w-full flex items-center justify-between px-3.5 py-3 bg-emerald-50/70 hover:bg-emerald-100/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-2xl transition-all text-xs font-bold shadow-2xs group cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+              <Sparkles size={13} />
+            </div>
+            <span>Import Skills Curriculum</span>
+          </div>
+          <ChevronRight size={15} className="text-emerald-500 transition-transform group-hover:translate-x-0.5" />
+        </button>
+      )}
+
       {/* Add / Edit Section Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -233,7 +311,7 @@ export const SectionList: React.FC<SectionListProps> = ({
               </h3>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -286,7 +364,7 @@ export const SectionList: React.FC<SectionListProps> = ({
                       key={c.id}
                       type="button"
                       onClick={() => setColor(c.id)}
-                      className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center gap-1 transition-all ${
+                      className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
                         color === c.id
                           ? `${c.activeBg} ring-2 ring-emerald-500/50 shadow-sm`
                           : `${c.bg} ${c.text} ${c.border}`
@@ -299,21 +377,41 @@ export const SectionList: React.FC<SectionListProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !name.trim()}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition-all"
-                >
-                  {isSubmitting ? 'Saving...' : editingSection ? 'Update Section' : 'Create Section'}
-                </button>
+              <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                {editingSection && onDeleteSection ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = editingSection;
+                      setIsCreateModalOpen(false);
+                      setEditingSection(null);
+                      setSectionToDelete(target);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <Trash2 size={14} />
+                    <span>Delete Category</span>
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !name.trim()}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+                  >
+                    {isSubmitting ? 'Saving...' : editingSection ? 'Update Section' : 'Create Section'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -329,6 +427,21 @@ export const SectionList: React.FC<SectionListProps> = ({
         onConfirm={confirmArchive}
         onClose={() => setSectionToArchive(null)}
         variant="danger"
+      />
+
+      {/* Confirmation Modal for Deleting Section */}
+      <ConfirmationModal
+        isOpen={Boolean(sectionToDelete)}
+        title={isSectionToDeleteEmpty ? "Delete Category" : "Cannot Delete Non-Empty Category"}
+        message={
+          isSectionToDeleteEmpty
+            ? `Are you sure you want to permanently delete the "${sectionToDelete?.name}" category? It contains 0 guides and 0 skills and will be removed permanently.`
+            : `The "${sectionToDelete?.name}" category contains ${deleteGuideCount > 0 ? `${deleteGuideCount} guide(s)` : ''}${deleteGuideCount > 0 && deleteSkillCount > 0 ? ' and ' : ''}${deleteSkillCount > 0 ? `${deleteSkillCount} skill(s)` : ''}. To prevent accidental data loss, please delete or move these items first, or archive the category instead.`
+        }
+        confirmText={isSectionToDeleteEmpty ? "Delete Category" : "Archive Category Instead"}
+        onConfirm={confirmDelete}
+        onClose={() => setSectionToDelete(null)}
+        variant={isSectionToDeleteEmpty ? "danger" : "warning"}
       />
     </div>
   );

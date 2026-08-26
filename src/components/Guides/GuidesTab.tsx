@@ -6,6 +6,7 @@ import { ArticleCard } from './ArticleCard';
 import { ArticleDetailView } from './ArticleDetailView';
 import { ArticleEditorModal } from './ArticleEditorModal';
 import { SkillsChecklistView } from './SkillsChecklistView';
+import { ImportSkillsModal } from './ImportSkillsModal';
 import { PrintGuideView } from './PrintGuideView';
 import { DrillDetailModal } from '../ui/DrillDetailModal';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
@@ -21,7 +22,10 @@ import {
   Folder,
   Layers,
   ArrowLeft,
-  Share2
+  Share2,
+  Sparkles,
+  Upload,
+  Edit2
 } from 'lucide-react';
 
 interface GuidesTabProps {
@@ -51,6 +55,7 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({
     addSection,
     updateSection,
     archiveSection,
+    deleteSection,
     addArticle,
     updateArticle,
     archiveArticle,
@@ -65,11 +70,13 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({
   const [viewMode, setViewMode] = useState<'all' | 'articles' | 'checklist'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isArticleEditorOpen, setIsArticleEditorOpen] = useState(false);
+  const [isGlobalImportModalOpen, setIsGlobalImportModalOpen] = useState(false);
   const [articleToEdit, setArticleToEdit] = useState<GuideArticle | null>(null);
   const [articleToArchive, setArticleToArchive] = useState<GuideArticle | null>(null);
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [activeModalDrill, setActiveModalDrill] = useState<Drill | null>(null);
   const [copiedShareLink, setCopiedShareLink] = useState(false);
+  const [showSectionList, setShowSectionList] = useState(false);
 
   // Default active section if none selected
   const effectiveSectionId = useMemo(() => {
@@ -211,6 +218,18 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({
                 <span className="hidden sm:inline">Print Section</span>
               </button>
             )}
+
+            {/* Import All Skills (Universal / Multi-Section) */}
+            {isAdmin && (
+              <button
+                onClick={() => setIsGlobalImportModalOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+                title="Import skills across all sections or load the Master Coaching Curriculum"
+              >
+                <Sparkles size={14} />
+                <span>Import All Skills</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -223,7 +242,7 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({
         </div>
       </div>
 
-      {/* 2. Main Two-Column Guide Explorer */}
+      {/* 2. Main Guide Explorer */}
       {selectedArticle ? (
         <ArticleDetailView
           article={selectedArticle}
@@ -235,126 +254,155 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({
           isAdmin={isAdmin}
         />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column (lg:col-span-4): Section List */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
-            {/* Mobile Section Horizontal Carousel */}
-            {activeSections.length > 0 && (
-              <div className="lg:hidden flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                {activeSections.map(s => {
-                  const isActive = s.id === effectiveSectionId;
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => setActiveSectionId(s.id)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
-                        isActive
-                          ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-md'
-                          : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
-                      }`}
-                    >
-                      <Folder size={14} />
-                      <span>{s.name}</span>
-                    </button>
-                  );
-                })}
+        <div className="flex flex-col gap-6">
+          {/* Horizontal Category Navigation Bar */}
+          {activeSections.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {activeSections.map(s => {
+                const isActive = s.id === effectiveSectionId;
+                const metric = readinessMetrics.perSection[s.id] || { percentage: 0 };
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setActiveSectionId(s.id)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 border cursor-pointer ${
+                      isActive
+                        ? 'bg-slate-900 dark:bg-emerald-600 text-white border-transparent shadow-sm'
+                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
+                  >
+                    <Folder size={13} className={isActive ? 'text-emerald-300' : 'text-emerald-500'} />
+                    <span>{s.name}</span>
+                    <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                    }`}>
+                      {metric.percentage}%
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className={showSectionList ? "grid grid-cols-1 lg:grid-cols-12 gap-6" : "w-full flex flex-col gap-6"}>
+            {/* Conditional Section List Drawer/Sidebar */}
+            {showSectionList && (
+              <div className="lg:col-span-4 flex flex-col gap-4 animate-in fade-in duration-150">
+                <SectionList
+                  sections={activeSections}
+                  activeSectionId={effectiveSectionId}
+                  onSelectSection={(id) => setActiveSectionId(id)}
+                  onAddSection={addSection}
+                  onUpdateSection={updateSection}
+                  onArchiveSection={archiveSection}
+                  onDeleteSection={deleteSection}
+                  perSectionMetrics={readinessMetrics.perSection}
+                  articles={activeArticles}
+                  isAdmin={isAdmin}
+                  onOpenImportSkills={() => setIsGlobalImportModalOpen(true)}
+                />
               </div>
             )}
 
-            {/* Desktop Section List */}
-            <div className="hidden lg:block">
-              <SectionList
-                sections={activeSections}
-                activeSectionId={effectiveSectionId}
-                onSelectSection={(id) => setActiveSectionId(id)}
-                onAddSection={addSection}
-                onUpdateSection={updateSection}
-                onArchiveSection={archiveSection}
-                perSectionMetrics={readinessMetrics.perSection}
-                isAdmin={isAdmin}
-              />
-            </div>
-          </div>
-
-          {/* Right Column (lg:col-span-8): Active Section Stage */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
-            {!currentSection ? (
-              <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-8 sm:p-12 text-center flex flex-col items-center justify-center min-h-[320px]">
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center mb-3">
-                  <Folder size={24} />
-                </div>
-                <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-1">
-                  No Section Selected
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
-                  Create or select a guide section on the left to start viewing and adding coaching articles and skills checklists.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Header & Controls Bar */}
-                <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  {/* View Mode Pills (All / Guides / Skills) */}
-                  <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold w-fit">
-                    <button
-                      onClick={() => setViewMode('all')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                        viewMode === 'all'
-                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs'
-                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <Layers size={13} />
-                      <span>All</span>
-                    </button>
-                    <button
-                      onClick={() => setViewMode('articles')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                        viewMode === 'articles'
-                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs'
-                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <BookOpen size={13} />
-                      <span>Guides ({filteredArticles.length})</span>
-                    </button>
-                    <button
-                      onClick={() => setViewMode('checklist')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                        viewMode === 'checklist'
-                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs'
-                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <CheckSquare size={13} />
-                      <span>Skills Checklist</span>
-                    </button>
+            {/* Main Active Section Stage */}
+            <div className={showSectionList ? "lg:col-span-8 flex flex-col gap-6" : "w-full flex flex-col gap-6"}>
+              {!currentSection ? (
+                <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-8 sm:p-12 text-center flex flex-col items-center justify-center min-h-[320px]">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center mb-3">
+                    <Folder size={24} />
                   </div>
+                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    No Section Selected
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
+                    Select a guide section or click "Edit Sections" to add or manage your coaching categories.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Header & Controls Bar */}
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* View Mode Pills (All / Guides / Skills) */}
+                      <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold w-fit">
+                        <button
+                          onClick={() => setViewMode('all')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                            viewMode === 'all'
+                              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs'
+                              : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          <Layers size={13} />
+                          <span>All</span>
+                        </button>
+                        <button
+                          onClick={() => setViewMode('articles')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                            viewMode === 'articles'
+                              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs'
+                              : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          <BookOpen size={13} />
+                          <span>Guides ({filteredArticles.length})</span>
+                        </button>
+                        <button
+                          onClick={() => setViewMode('checklist')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                            viewMode === 'checklist'
+                              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs'
+                              : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          <CheckSquare size={13} />
+                          <span>Skills Checklist</span>
+                        </button>
+                      </div>
 
-                  {/* Search Bar & Add Guide Button */}
-                  <div className="flex items-center gap-2 flex-1 sm:justify-end">
-                    <div className="relative flex-1 sm:max-w-xs">
-                      <Search size={14} className="absolute left-3.5 top-3 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Search guides & skills..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
+                      {/* Edit Sections Button next to tab switcher */}
+                      {isAdmin && (
+                        <button
+                          onClick={() => setShowSectionList(!showSectionList)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            showSectionList
+                              ? 'bg-emerald-600 text-white border-transparent shadow-xs'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                          }`}
+                          title={showSectionList ? 'Close Guide Sections Editor' : 'Edit Guide Sections & Categories'}
+                        >
+                          <Edit2 size={13} />
+                          <span>{showSectionList ? 'Close Section List' : 'Edit Sections'}</span>
+                        </button>
+                      )}
                     </div>
 
-                    {isAdmin && (
-                      <button
-                        onClick={handleOpenCreateArticle}
-                        className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md shadow-emerald-600/20 transition-all shrink-0"
-                      >
-                        <Plus size={14} />
-                        <span>Write Guide</span>
-                      </button>
-                    )}
+                    {/* Search Bar & Add Guide Button */}
+                    <div className="flex items-center gap-2 flex-1 sm:justify-end">
+                      <div className="relative flex-1 sm:max-w-xs">
+                        <Search size={14} className="absolute left-3.5 top-3 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search guides & skills..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+
+                      {isAdmin && (
+                        <button
+                          onClick={handleOpenCreateArticle}
+                          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md shadow-emerald-600/20 transition-all shrink-0 cursor-pointer"
+                        >
+                          <Plus size={14} />
+                          <span>Write Guide</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
 
                 {/* Content Area */}
                 {(viewMode === 'all' || viewMode === 'articles') && (
@@ -403,6 +451,7 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({
                   <SkillsChecklistView
                     sectionId={currentSection.id}
                     sectionName={currentSection.name}
+                    sections={activeSections}
                     checklists={activeChecklists}
                     articles={activeArticles}
                     drills={drills}
@@ -410,6 +459,7 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({
                     onToggleChecklist={(chkId, isComp) =>
                       toggleChecklistProgress(chkId, currentSection.id, isComp)
                     }
+                    onAddSection={addSection}
                     onAddChecklist={addChecklistItem}
                     onUpdateChecklist={updateChecklistItem}
                     onDeleteChecklist={deleteChecklistItem}
@@ -417,13 +467,34 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({
                     onOpenDrill={(drill) => setActiveModalDrill(drill)}
                     activeSeasonName={activeSeason?.name || 'Current Season'}
                     isAdmin={isAdmin}
+                    user={user}
                   />
                 )}
               </>
             )}
           </div>
         </div>
-      )}
+      </div>
+    )}
+
+      {/* Global Import Skills Modal (Multi-Section / All Sections) */}
+      <ImportSkillsModal
+        isOpen={isGlobalImportModalOpen}
+        onClose={() => setIsGlobalImportModalOpen(false)}
+        sections={activeSections}
+        existingChecklists={activeChecklists}
+        drills={drills}
+        articles={activeArticles}
+        onAddSection={addSection}
+        onAddChecklist={addChecklistItem}
+        onUpdateChecklist={updateChecklistItem}
+        onDeleteChecklist={deleteChecklistItem}
+        onToggleChecklist={(chkId, isComp) =>
+          toggleChecklistProgress(chkId, '', isComp)
+        }
+        user={user}
+        darkMode={darkMode}
+      />
 
       {/* Article Editor Modal */}
       <ArticleEditorModal

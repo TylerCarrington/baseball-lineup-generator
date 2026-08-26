@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
-import { GuideChecklistItem, GuideArticle, Drill, GuideProgress } from '../../types';
-import { Check, Plus, BookOpen, Dumbbell, Trash2, Edit2, CheckCircle2, Circle, Sparkles, Filter, ChevronDown, ChevronUp, Copy } from 'lucide-react';
+import { GuideChecklistItem, GuideArticle, Drill, GuideProgress, GuideSection } from '../../types';
+import { Check, Plus, BookOpen, Dumbbell, Trash2, Edit2, CheckCircle2, Circle, Sparkles, Filter, ChevronDown, ChevronUp, Copy, Upload } from 'lucide-react';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
+import { ImportSkillsModal } from './ImportSkillsModal';
+import { toast } from 'sonner';
 
 interface SkillsChecklistViewProps {
   sectionId: string;
   sectionName: string;
+  sections?: GuideSection[];
   checklists: GuideChecklistItem[];
   articles: GuideArticle[];
   drills: Drill[];
   progressMap: Record<string, GuideProgress>;
   onToggleChecklist: (checklistId: string, isCompleted: boolean) => Promise<void>;
+  onAddSection?: (data: { name: string; description?: string; color?: string }) => Promise<any>;
   onAddChecklist: (data: {
     sectionId: string;
     title: string;
@@ -25,26 +29,31 @@ interface SkillsChecklistViewProps {
   onOpenDrill?: (drill: Drill) => void;
   activeSeasonName?: string;
   isAdmin?: boolean;
+  user?: any;
 }
 
 export const SkillsChecklistView: React.FC<SkillsChecklistViewProps> = ({
   sectionId,
   sectionName,
+  sections = [],
   checklists,
   articles,
   drills,
   progressMap,
   onToggleChecklist,
+  onAddSection,
   onAddChecklist,
   onUpdateChecklist,
   onDeleteChecklist,
   onOpenArticle,
   onOpenDrill,
   activeSeasonName = 'Active Season',
-  isAdmin = true
+  isAdmin = true,
+  user
 }) => {
   const [filterMode, setFilterMode] = useState<'all' | 'uncompleted' | 'completed'>('all');
   const [isAdding, setIsAdding] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GuideChecklistItem | null>(null);
   const [itemToDelete, setItemToDelete] = useState<GuideChecklistItem | null>(null);
 
@@ -75,10 +84,12 @@ export const SkillsChecklistView: React.FC<SkillsChecklistViewProps> = ({
   const [copiedCSV, setCopiedCSV] = useState(false);
 
   const handleExportCSV = () => {
-    const headers = ['Category', 'Skill Title', 'Description', 'Status'];
+    const headers = ['Category', 'Skill Title', 'Description', 'Linked Drill', 'Status'];
     const rows = filteredChecklists.map(item => {
       const isCompleted = progressMap[item.id]?.isCompleted || false;
       const status = isCompleted ? 'Completed' : 'To Cover';
+      const linkedDrill = drills.find(d => d.id === item.linkedDrillId);
+      const linkedDrillTitle = linkedDrill ? linkedDrill.title : '';
       
       const escapeCSV = (str: string) => `"${(str || '').replace(/"/g, '""')}"`;
       
@@ -86,6 +97,7 @@ export const SkillsChecklistView: React.FC<SkillsChecklistViewProps> = ({
         escapeCSV(item.category || 'General'),
         escapeCSV(item.title),
         escapeCSV(item.description || ''),
+        escapeCSV(linkedDrillTitle),
         escapeCSV(status)
       ].join(',');
     });
@@ -94,9 +106,11 @@ export const SkillsChecklistView: React.FC<SkillsChecklistViewProps> = ({
     
     navigator.clipboard.writeText(csvContent).then(() => {
       setCopiedCSV(true);
+      toast.success('Skills checklist copied to clipboard as CSV (with drill links)!');
       setTimeout(() => setCopiedCSV(false), 2000);
     }).catch(err => {
       console.error('Failed to copy CSV: ', err);
+      toast.error('Failed to copy CSV to clipboard');
     });
   };
 
@@ -237,17 +251,32 @@ export const SkillsChecklistView: React.FC<SkillsChecklistViewProps> = ({
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-400 font-medium hidden sm:inline-block">
-            Check off items as they are taught in practice
-          </span>
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition-all shadow-xs"
-          >
-            {copiedCSV ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-            <span className={copiedCSV ? 'text-emerald-500' : ''}>{copiedCSV ? 'Copied' : 'Export CSV'}</span>
-          </button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <span className="text-xs text-slate-400 font-medium hidden sm:inline-block">
+              Check off items as they are taught in practice
+            </span>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition-all shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800"
+              title="Import Skills from CSV (with Drill Links)"
+            >
+              <Upload size={14} className="text-emerald-600 dark:text-emerald-400" />
+              <span>Import CSV</span>
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl transition-all shadow-xs"
+              title="Export Skills as CSV (includes drill links)"
+            >
+              {copiedCSV ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+              <span className={copiedCSV ? 'text-emerald-500' : ''}>{copiedCSV ? 'Copied' : 'Export CSV'}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -375,13 +404,22 @@ export const SkillsChecklistView: React.FC<SkillsChecklistViewProps> = ({
               No checklist items matching this filter.
             </p>
             {isAdmin && (
-              <button
-                onClick={handleOpenAdd}
-                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-xs"
-              >
-                <Plus size={14} />
-                <span>Add Your First Skill Checkpoint</span>
-              </button>
+              <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                <button
+                  onClick={handleOpenAdd}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
+                >
+                  <Plus size={14} />
+                  <span>Add Skill Checkpoint</span>
+                </button>
+                <button
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-colors"
+                >
+                  <Upload size={14} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Import from CSV</span>
+                </button>
+              </div>
             )}
           </div>
         ) : (
@@ -506,6 +544,25 @@ export const SkillsChecklistView: React.FC<SkillsChecklistViewProps> = ({
         }}
         onClose={() => setItemToDelete(null)}
         variant="danger"
+      />
+
+      {/* Import Skills from CSV Modal */}
+      <ImportSkillsModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        sectionId={sectionId}
+        sectionName={sectionName}
+        sections={sections}
+        existingChecklists={checklists}
+        drills={drills}
+        articles={articles}
+        onAddSection={onAddSection}
+        onAddChecklist={onAddChecklist}
+        onUpdateChecklist={onUpdateChecklist}
+        onDeleteChecklist={onDeleteChecklist}
+        onToggleChecklist={onToggleChecklist}
+        user={user}
+        darkMode={false}
       />
     </div>
   );

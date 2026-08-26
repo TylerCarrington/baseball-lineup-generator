@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -91,11 +91,8 @@ export const PublicGuidesView: React.FC = () => {
         artList.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
         setArticles(artList);
 
-        // 4. Fetch drills
-        const drillsSnap = await getDocs(query(
-          collection(db, 'drills'),
-          where('uid', '==', uid)
-        ));
+        // 4. Fetch drills (all drills for linking)
+        const drillsSnap = await getDocs(collection(db, 'drills'));
         const drillsList = drillsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Drill[];
         setDrills(drillsList);
 
@@ -132,6 +129,19 @@ export const PublicGuidesView: React.FC = () => {
 
     loadPublicGuides();
   }, [uid]);
+
+  // Compute readiness metrics per section (MUST be before any conditional returns to obey Rules of Hooks)
+  const readinessMetrics = useMemo(() => {
+    const perSection: Record<string, { total: number; completed: number; percentage: number }> = {};
+    sections.forEach(sec => {
+      const secChecklists = checklists.filter(c => c.sectionId === sec.id);
+      const secCompleted = secChecklists.filter(c => progressMap[c.id]?.isCompleted).length;
+      const total = secChecklists.length;
+      const percentage = total > 0 ? Math.round((secCompleted / total) * 100) : 0;
+      perSection[sec.id] = { total, completed: secCompleted, percentage };
+    });
+    return perSection;
+  }, [sections, checklists, progressMap]);
 
   if (loading) {
     return (
@@ -206,37 +216,40 @@ export const PublicGuidesView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Column: Sections */}
-            <div className="lg:col-span-4 flex flex-col gap-2">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 px-1 mb-1">
-                Sections
-              </h2>
-              {sections.map(section => {
-                const isActive = section.id === activeSectionId;
-                const secArts = articles.filter(a => a.sectionId === section.id);
-                return (
-                  <button
-                    key={section.id}
-                    onClick={() => setActiveSectionId(section.id)}
-                    className={`p-3.5 rounded-2xl text-left font-bold text-sm flex items-center justify-between border transition-all ${
-                      isActive
-                        ? 'bg-slate-900 dark:bg-emerald-600 text-white border-transparent shadow-md'
-                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Folder size={18} className="opacity-80" />
-                      <span>{section.name}</span>
-                    </div>
-                    <span className="text-xs opacity-75">{secArts.length} Guides</span>
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex flex-col gap-6">
+            {/* Horizontal Category Navigation Bar */}
+            {sections.length > 0 && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {sections.map(s => {
+                  const isActive = s.id === (currentSection?.id || activeSectionId);
+                  const metric = readinessMetrics[s.id] || { percentage: 0 };
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setActiveSectionId(s.id)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 border cursor-pointer ${
+                        isActive
+                          ? 'bg-slate-900 dark:bg-emerald-600 text-white border-transparent shadow-sm'
+                          : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <Folder size={13} className={isActive ? 'text-emerald-300' : 'text-emerald-500'} />
+                      <span>{s.name}</span>
+                      <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      }`}>
+                        {metric.percentage}%
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-            {/* Right Column: Articles in current section */}
-            <div className="lg:col-span-8 flex flex-col gap-4">
+            {/* Articles & Skills Checklist in current section */}
+            <div className="w-full flex flex-col gap-6">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 px-1">
                 {currentSection?.name} Guides ({sectionArticles.length})
               </h2>
@@ -246,7 +259,7 @@ export const PublicGuidesView: React.FC = () => {
                   No published guides in this section.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {sectionArticles.map(art => (
                     <div
                       key={art.id}
@@ -277,7 +290,7 @@ export const PublicGuidesView: React.FC = () => {
 
               {/* Skills Checklist Section */}
               {currentSection && (
-                <div className="mt-8">
+                <div className="mt-4">
                   <SkillsChecklistView
                     sectionId={currentSection.id}
                     sectionName={currentSection.name}

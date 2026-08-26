@@ -25,10 +25,116 @@ export interface CategoryTheme {
 export function normalizeCategory(category?: string | null): string {
   if (!category) return "Uncategorized";
   const trimmed = category.trim();
-  if (trimmed === "Hitting & Offense") return "Batting & Offense";
-  if (trimmed === "Throwing & Pitching") return "Pitching & Throwing";
-  if (trimmed === "Teamwork & Situational") return "Fielding & Defense";
-  if (trimmed === "Games") return "Games & Competitions";
+  if (!trimmed) return "Uncategorized";
+
+  const lower = trimmed.toLowerCase().replace(/&amp;/g, '&');
+  const clean = lower.replace(/[^a-z0-9]/g, '');
+
+  // Exact match to standard categories ignoring case
+  for (const cat of CATEGORIES) {
+    if (cat.toLowerCase() === lower || cat.toLowerCase().replace(/[^a-z0-9]/g, '') === clean) {
+      return cat;
+    }
+  }
+
+  // Batting & Offense synonyms
+  if (
+    clean.includes('batting') || 
+    clean.includes('hitting') || 
+    clean === 'offense' || 
+    clean.includes('offense') || 
+    clean.includes('bunt') || 
+    clean.includes('plateappearance') ||
+    clean.includes('swing')
+  ) {
+    return "Batting & Offense";
+  }
+
+  // Pitching & Throwing synonyms
+  if (
+    clean.includes('pitching') || 
+    clean.includes('throwing') || 
+    clean.includes('pitcher') || 
+    clean.includes('armcare') || 
+    clean.includes('longtoss') || 
+    clean.includes('bullpen') ||
+    clean === 'arm' ||
+    clean === 'arms'
+  ) {
+    return "Pitching & Throwing";
+  }
+
+  // Catching synonyms
+  if (
+    clean.includes('catching') || 
+    clean.includes('catcher') || 
+    clean.includes('blocking') || 
+    clean.includes('framing') || 
+    clean.includes('poptime') ||
+    clean.includes('receiving')
+  ) {
+    return "Catching";
+  }
+
+  // Fielding & Defense synonyms
+  if (
+    clean.includes('fielding') || 
+    clean.includes('defense') || 
+    clean.includes('defensive') || 
+    clean.includes('infield') || 
+    clean.includes('outfield') || 
+    clean.includes('groundball') || 
+    clean.includes('flyball') || 
+    clean.includes('doubleplay') || 
+    clean.includes('situational') || 
+    clean.includes('cutoff') ||
+    clean.includes('relay')
+  ) {
+    return "Fielding & Defense";
+  }
+
+  // Base Running synonyms
+  if (
+    clean.includes('baserunning') || 
+    clean.includes('baserunning') || 
+    clean.includes('baserunner') || 
+    clean.includes('sliding') || 
+    clean.includes('stealing') || 
+    clean === 'running' || 
+    clean === 'bases'
+  ) {
+    return "Base Running";
+  }
+
+  // Conditioning & Warm-Up synonyms
+  if (
+    clean.includes('conditioning') || 
+    clean.includes('warmup') || 
+    clean.includes('warm') || 
+    clean.includes('fitness') || 
+    clean.includes('agility') || 
+    clean.includes('stretching') || 
+    clean.includes('speed') || 
+    clean.includes('strength') || 
+    clean.includes('bands')
+  ) {
+    return "Conditioning & Warm-Up";
+  }
+
+  // Games & Competitions synonyms
+  if (
+    clean.includes('game') || 
+    clean.includes('games') || 
+    clean.includes('competition') || 
+    clean.includes('competitions') || 
+    clean.includes('scrimmage') || 
+    clean.includes('challenge') || 
+    clean.includes('derby') || 
+    clean.includes('contest')
+  ) {
+    return "Games & Competitions";
+  }
+
   return trimmed;
 }
 

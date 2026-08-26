@@ -31,6 +31,7 @@ import { GuidesTab } from './components/Guides/GuidesTab';
 import { PublicGuidesView } from './components/Guides/PublicGuidesView';
 import { PublicDrillsView } from './components/PublicDrillsView';
 import { PublicToolsView } from './components/PublicToolsView';
+import { PublicPortalLayout } from './components/PublicPortalLayout';
 import { PrintGuideWrapper } from './components/Guides/PrintGuideWrapper';
 import { ToolsMainView } from './components/Tools/ToolsMainView';
 
@@ -88,19 +89,9 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950"><div className="text-slate-900 dark:text-emerald-500"><Trophy size={48} /></div></div>;
 
-  if (location.pathname.startsWith('/shared/guides/')) {
-    return <PublicGuidesView />;
+  if (location.pathname.startsWith('/shared/')) {
+    return <PublicPortalLayout darkMode={darkMode} setDarkMode={setDarkMode} />;
   }
-
-  if (location.pathname.startsWith('/shared/drills/')) {
-    return <PublicDrillsView />;
-  }
-
-  if (location.pathname.startsWith('/shared/tools/')) {
-    return <PublicToolsView />;
-  }
-
-  if (location.pathname.startsWith('/shared/')) return <SharedView darkMode={darkMode} setDarkMode={setDarkMode} />;
 
   if (isPrintMode) {
     const isGuidePrint = location.pathname.includes('/guides/') || location.pathname.includes('/article/') || location.pathname.includes('/section/');

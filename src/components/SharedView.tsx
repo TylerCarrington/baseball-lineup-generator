@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Lock, 
   Trophy, 
@@ -35,13 +35,12 @@ import { BattingOrderView } from './GameDetail/BattingOrderView';
 import { PracticeAgendaView } from './GameDetail/PracticeAgendaView';
 
 export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
-  const location = useLocation();
   const navigate = useNavigate();
+  const { uid, '*': splat } = useParams<{ uid: string; '*': string }>();
   
-  // Manually parse params since SharedView is rendered directly by BaseballApp
-  const pathParts = location.pathname.split('/');
-  const ownerId = pathParts[2];
-  const gameId = pathParts[4];
+  const ownerId = uid;
+  // Check if splat contains "games/xxx"
+  const gameId = splat?.startsWith('games/') ? splat.replace('games/', '') : null;
   
   const { games, players, settings, loading, error } = useSharedData(ownerId);
   const selectedGame = gameId ? games.find(g => g.id === gameId) : null;
@@ -58,24 +57,24 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-slate-900 dark:border-emerald-500 border-t-transparent rounded-full mx-auto mb-4 animate-spin"></div>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Loading schedule...</p>
+      <div className="flex flex-col items-center justify-center py-24">
+        <div className="text-slate-900 dark:text-emerald-500 animate-pulse mb-6">
+          <Trophy size={64} />
         </div>
+        <div className="w-12 h-12 rounded-full border-4 border-slate-200 border-t-emerald-500 dark:border-slate-800 dark:border-t-emerald-500 animate-spin" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300">
-        <Card className="max-w-md w-full p-8 text-center" hover={false}>
-          <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Lock size={32} />
+      <div className="max-w-xl mx-auto py-12">
+        <Card className="p-12 text-center border-rose-200 dark:border-rose-900/50" hover={false}>
+          <div className="w-16 h-16 bg-rose-50 dark:bg-rose-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Lock size={32} className="text-rose-500" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Access Restricted</h2>
-          <p className="text-slate-500 dark:text-slate-400 mb-8">{error}</p>
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Access Error</h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-8">{error || "Could not load shared schedule"}</p>
           <Button 
             fullWidth
             onClick={() => navigate('/')}
@@ -89,31 +88,7 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 font-bold text-xl">
-            <div className="p-1.5 bg-emerald-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-emerald-600/20">
-              <Trophy size={16} />
-            </div>
-            <span className="text-slate-900 dark:text-white">Lineup+</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setDarkMode(!darkMode)}
-              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              icon={darkMode ? Sun : Moon}
-            />
-            <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-              Shared View
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 py-8">
+    <div className="w-full">
           {gameId && selectedGame ? (
             !selectedGame.isLocked ? (
               <div key="game-not-published" className="max-w-xl mx-auto">
@@ -126,7 +101,7 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                     The {selectedGame.type === 'practice' ? 'agenda' : 'lineup'} for this {selectedGame.type === 'practice' ? 'practice' : 'game'} is still being finalized. Please check back later.
                   </p>
                   <Button 
-                    onClick={() => navigate(`/shared/${ownerId}/games`)}
+                    onClick={() => navigate(`/shared/${ownerId}/schedule`)}
                     size="lg"
                   >
                     Back to Schedule
@@ -139,7 +114,7 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                   game={selectedGame} 
                   players={players}
                   readOnly={true} 
-                  onBack={() => navigate(`/shared/${ownerId}/games`)}
+                  onBack={() => navigate(`/shared/${ownerId}/schedule`)}
                 />
 
                 <Card className="overflow-hidden mb-8" hover={false}>
@@ -377,7 +352,7 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
                           key={game.id}
                           onClick={() => {
                             if (isPublished) {
-                              navigate(`/shared/${ownerId}/games/${game.id}`);
+                              navigate(`/shared/${ownerId}/schedule/games/${game.id}`);
                             }
                           }}
                           className={cn(
@@ -462,7 +437,6 @@ export function SharedView({ darkMode, setDarkMode }: SharedViewProps) {
               })()}
             </div>
           )}
-      </main>
     </div>
   );
 }

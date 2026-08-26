@@ -366,11 +366,14 @@ export const SkillsChecklistView: React.FC<SkillsChecklistViewProps> = ({
                 <div className="flex items-start gap-3.5 min-w-0 flex-1">
                   <button
                     type="button"
+                    disabled={!isAdmin}
                     onClick={() => onToggleChecklist(item.id, !isCompleted)}
                     className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all ${
                       isCompleted
                         ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 dark:hover:border-emerald-400 bg-white dark:bg-slate-800'
+                        : isAdmin
+                          ? 'border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 dark:hover:border-emerald-400 bg-white dark:bg-slate-800 cursor-pointer'
+                          : 'border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 cursor-default opacity-75'
                     }`}
                   >
                     {isCompleted && <Check size={16} strokeWidth={3} />}

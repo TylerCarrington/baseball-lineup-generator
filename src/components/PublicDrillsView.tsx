@@ -13,13 +13,7 @@ function extractYoutubeId(url: string): string | null {
 }
 
 export const PublicDrillsView: React.FC = () => {
-  const { uid: paramUid } = useParams<{ uid: string }>();
-  const location = useLocation();
-
-  // Extract UID from URL path (e.g. /shared/drills/:uid)
-  const pathParts = location.pathname.split('/');
-  const drillsIdx = pathParts.indexOf('drills');
-  const uid = paramUid || (drillsIdx !== -1 && pathParts[drillsIdx + 1] ? pathParts[drillsIdx + 1] : undefined);
+  const { uid } = useParams<{ uid: string }>();
 
   const [drills, setDrills] = useState<Drill[]>([]);
   const [selectedDrill, setSelectedDrill] = useState<Drill | null>(null);
@@ -51,22 +45,14 @@ export const PublicDrillsView: React.FC = () => {
           console.warn('Could not fetch settings for public drills view', e);
         }
 
-        // 2. Fetch drills owned by this UID
-        const drillSnap = await getDocs(query(collection(db, 'drills'), where('uid', '==', uid)));
-        let drillList = drillSnap.docs.map(d => {
+        // 2. Fetch all drills (global library + seeded drills)
+        const allDrillsSnap = await getDocs(collection(db, 'drills'));
+        let drillList = allDrillsSnap.docs.map(d => {
           const data = d.data();
+          // Include all drills, since the library is global as per the design
           return { id: d.id, ...data, category: normalizeCategory(data.category) };
         }) as Drill[];
-        
-        // Fallback: if no drills are owned by this UID (or they are untagged), load all drills
-        if (drillList.length === 0) {
-          const allDrillsSnap = await getDocs(collection(db, 'drills'));
-          drillList = allDrillsSnap.docs.map(d => {
-            const data = d.data();
-            return { id: d.id, ...data, category: normalizeCategory(data.category) };
-          }) as Drill[];
-        }
-        
+
         // Sort by createdAt descending
         drillList.sort((a, b) => {
           const timeA = a.createdAt ? (typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : (a.createdAt as any).seconds * 1000) : 0;
@@ -120,21 +106,7 @@ export const PublicDrillsView: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-4 sm:p-8">
-      <div className="max-w-5xl mx-auto flex flex-col gap-6">
-        {/* Header */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <Dumbbell size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight">Team Drills Library</h1>
-              <p className="text-xs text-slate-500">Public practice drills & activity database</p>
-            </div>
-          </div>
-        </div>
-
+    <div className="w-full flex flex-col gap-6">
         {selectedDrill ? (
           /* Drill Detail View */
           <div className="flex flex-col gap-6">
@@ -306,7 +278,6 @@ export const PublicDrillsView: React.FC = () => {
             )}
           </div>
         )}
-      </div>
     </div>
   );
 };

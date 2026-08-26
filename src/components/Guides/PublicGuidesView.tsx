@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { GuideSection, GuideArticle, TeamSettings } from '../../types';
+import { GuideSection, GuideArticle, TeamSettings, GuideChecklistItem, GuideProgress, Drill } from '../../types';
 import { BookOpen, Youtube, ArrowLeft, Folder, ExternalLink } from 'lucide-react';
 import { MarkdownContent } from './MarkdownContent';
 import { extractYoutubeId } from '../../lib/youtube';
+import { SkillsChecklistView } from './SkillsChecklistView';
 
 const SECTION_ORDER_MAP: Record<string, number> = {
   'batting': 1, 'hitting': 1,
@@ -24,16 +25,13 @@ function getSectionSortOrder(sec: GuideSection): number {
 }
 
 export const PublicGuidesView: React.FC = () => {
-  const { uid: paramUid } = useParams<{ uid: string }>();
-  const location = useLocation();
-
-  // Extract UID from URL path (e.g. /shared/guides/:uid)
-  const pathParts = location.pathname.split('/');
-  const guidesIdx = pathParts.indexOf('guides');
-  const uid = paramUid || (guidesIdx !== -1 && pathParts[guidesIdx + 1] ? pathParts[guidesIdx + 1] : undefined);
+  const { uid } = useParams<{ uid: string }>();
 
   const [sections, setSections] = useState<GuideSection[]>([]);
   const [articles, setArticles] = useState<GuideArticle[]>([]);
+  const [checklists, setChecklists] = useState<GuideChecklistItem[]>([]);
+  const [progressMap, setProgressMap] = useState<Record<string, GuideProgress>>({});
+  const [drills, setDrills] = useState<Drill[]>([]);
   const [activeSectionId, setActiveSectionId] = useState<string>('');
   const [selectedArticle, setSelectedArticle] = useState<GuideArticle | null>(null);
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
@@ -51,11 +49,13 @@ export const PublicGuidesView: React.FC = () => {
         setLoading(true);
         setError(null);
 
+        let fetchedSettings: TeamSettings | null = null;
         // 1. Fetch settings if available (non-blocking)
         try {
           const settingsSnap = await getDoc(doc(db, 'settings', uid));
           if (settingsSnap.exists()) {
-            setTeamSettings(settingsSnap.data() as TeamSettings);
+            fetchedSettings = settingsSnap.data() as TeamSettings;
+            setTeamSettings(fetchedSettings);
           }
         } catch (e) {
           console.warn('Could not fetch settings for public guide view', e);
@@ -86,6 +86,38 @@ export const PublicGuidesView: React.FC = () => {
         const artList = artSnap.docs.map(d => ({ id: d.id, ...d.data() })) as GuideArticle[];
         artList.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
         setArticles(artList);
+
+        // 4. Fetch drills
+        const drillsSnap = await getDocs(query(
+          collection(db, 'drills'),
+          where('uid', '==', uid)
+        ));
+        const drillsList = drillsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Drill[];
+        setDrills(drillsList);
+
+        // 5. Fetch guide checklists (skills)
+        const checklistsSnap = await getDocs(query(
+          collection(db, 'guideChecklists'),
+          where('uid', '==', uid)
+        ));
+        const checklistsList = checklistsSnap.docs
+          .map(d => ({ id: d.id, ...d.data() })) as GuideChecklistItem[];
+        setChecklists(checklistsList.filter(c => !c.isArchived));
+
+        // 6. Fetch guide progress
+        if (fetchedSettings) {
+          const progressSnap = await getDocs(query(
+            collection(db, 'guideProgress'),
+            where('uid', '==', uid),
+            where('seasonId', '==', fetchedSettings.activeSeasonId || 'legacy')
+          ));
+          const progressMapData: Record<string, GuideProgress> = {};
+          progressSnap.docs.forEach(d => {
+            const data = { id: d.id, ...d.data() } as GuideProgress;
+            progressMapData[data.checklistId] = data;
+          });
+          setProgressMap(progressMapData);
+        }
       } catch (err: any) {
         console.error('Error loading shared coaching guides:', err);
         setError('Unable to load shared coaching guides.');
@@ -99,7 +131,7 @@ export const PublicGuidesView: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+      <div className="flex flex-col items-center justify-center py-24">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
           <span className="text-sm font-bold text-slate-500">Loading Playbook Guides...</span>
@@ -110,8 +142,8 @@ export const PublicGuidesView: React.FC = () => {
 
   if (error || sections.length === 0) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-md text-center">
+      <div className="flex items-center justify-center py-24">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-md w-full text-center">
           <BookOpen size={32} className="mx-auto text-slate-400 mb-3" />
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Guides Not Found</h2>
           <p className="text-xs text-slate-500 mt-2">
@@ -126,21 +158,7 @@ export const PublicGuidesView: React.FC = () => {
   const sectionArticles = articles.filter(a => a.sectionId === currentSection?.id);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-4 sm:p-8">
-      <div className="max-w-5xl mx-auto flex flex-col gap-6">
-        {/* Header */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <BookOpen size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight">Team Coaching Guides</h1>
-              <p className="text-xs text-slate-500">Player & parent reference library</p>
-            </div>
-          </div>
-        </div>
-
+    <div className="w-full flex flex-col gap-6">
         {/* Article Reader Mode */}
         {selectedArticle ? (
           <div className="flex flex-col gap-6">
@@ -252,10 +270,30 @@ export const PublicGuidesView: React.FC = () => {
                   ))}
                 </div>
               )}
+
+              {/* Skills Checklist Section */}
+              {currentSection && (
+                <div className="mt-8">
+                  <SkillsChecklistView
+                    sectionId={currentSection.id}
+                    sectionName={currentSection.name}
+                    checklists={checklists}
+                    articles={articles}
+                    drills={drills}
+                    progressMap={progressMap}
+                    onToggleChecklist={async () => {}}
+                    onAddChecklist={async () => {}}
+                    onUpdateChecklist={async () => {}}
+                    onDeleteChecklist={async () => {}}
+                    onOpenArticle={(art) => setSelectedArticle(art)}
+                    isAdmin={false}
+                    activeSeasonName="Current Season"
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 };

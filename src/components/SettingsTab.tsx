@@ -30,7 +30,7 @@ export function SettingsTab({
   activeSeasonId,
   players
 }: SettingsTabProps) {
-  const publicLink = `${window.location.origin}${window.location.pathname}#/shared/${user?.uid}/games`;
+  const publicLink = `${window.location.origin}${window.location.pathname}#/shared/${user?.uid}/schedule`;
   
   const [isCreatingSeason, setIsCreatingSeason] = useState(false);
   const [newSeasonName, setNewSeasonName] = useState('');
@@ -195,8 +195,8 @@ export function SettingsTab({
           <div className="flex flex-col p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 gap-4 transition-colors duration-300">
             <div className="flex items-start sm:items-center justify-between gap-4">
               <div className="flex-1">
-                <h3 className="font-bold text-slate-900 dark:text-slate-100">Public Schedule Sharing</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Allow others to view your game schedule and lineups without logging in.</p>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100">Public Team Portal Sharing</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Allow others to view your team's schedule, drills, and guides without logging in.</p>
               </div>
               <button 
                 onClick={() => handleUpdateSettings({ publicSchedule: !settings?.publicSchedule })}

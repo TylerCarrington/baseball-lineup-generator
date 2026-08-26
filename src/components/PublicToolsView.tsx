@@ -15,14 +15,11 @@ import {
 } from 'lucide-react';
 
 export const PublicToolsView: React.FC = () => {
-  const { uid: paramUid } = useParams<{ uid: string }>();
+  const { uid } = useParams<{ uid: string }>();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Extract UID from URL path (e.g. /shared/tools/:uid)
-  const pathParts = location.pathname.split('/');
-  const toolsIdx = pathParts.indexOf('tools');
-  const ownerId = paramUid || (toolsIdx !== -1 && pathParts[toolsIdx + 1] ? pathParts[toolsIdx + 1] : undefined);
+  const ownerId = uid;
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +75,7 @@ export const PublicToolsView: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+      <div className="flex flex-col items-center justify-center py-24">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-slate-900 dark:border-emerald-500 border-t-transparent rounded-full mx-auto mb-4 animate-spin"></div>
           <p className="text-slate-500 dark:text-slate-400 font-medium">Loading coaching tools...</p>
@@ -89,7 +86,7 @@ export const PublicToolsView: React.FC = () => {
 
   if (error || !ownerId) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+      <div className="flex items-center justify-center py-24">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-md text-center shadow-md">
           <Wrench size={32} className="mx-auto text-slate-400 mb-3" />
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Tools Dashboard Not Found</h2>
@@ -102,15 +99,15 @@ export const PublicToolsView: React.FC = () => {
   }
 
   const navigateToSubtool = (toolName: string) => {
-    navigate(`/shared/tools/${ownerId}/${toolName}`);
+    navigate(`/shared/${ownerId}/tools/${toolName}`);
   };
 
   const navigateBackToTools = () => {
-    navigate(`/shared/tools/${ownerId}`);
+    navigate(`/shared/${ownerId}/tools`);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-4 sm:p-8">
+    <div className="w-full text-slate-900 dark:text-white">
       {isPitchCounter ? (
         <div className="max-w-4xl mx-auto">
           <PitchCounterView
@@ -131,18 +128,7 @@ export const PublicToolsView: React.FC = () => {
       ) : (
         /* Tools Landing / List Page for shared visitors */
         <div className="max-w-4xl mx-auto space-y-8">
-          {/* Header */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                <Wrench size={24} />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight">Coaching Tools</h1>
-                <p className="text-xs text-slate-500">Interactive baseball utilities & logs</p>
-              </div>
-            </div>
-          </div>
+        {/* Header removed as it's now in the Layout */}
 
           {/* Tools Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -85,29 +85,42 @@ export function SettingsTab({
             
             <div className="space-y-2 mt-2">
               {[{ id: 'legacy', name: 'Legacy Season' }, ...seasons].map((season) => (
-                <div key={season.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <span className="font-medium text-slate-700 dark:text-slate-200">{season.name}</span>
-                  <div className="flex items-center gap-2">
-                    {activeSeasonId === season.id ? (
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded">Active</span>
-                    ) : (
-                      <button
-                        onClick={() => handleUpdateSettings({ activeSeasonId: season.id })}
-                        className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white px-2 py-1"
-                      >
-                        Set Active
-                      </button>
-                    )}
-                    {season.id !== 'legacy' && (
-                      <button
-                        onClick={() => setSeasonToDelete(season)}
-                        className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
-                        title="Delete Season"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
+                <div key={season.id} className="flex flex-col gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-700 dark:text-slate-200">{season.name}</span>
+                    <div className="flex items-center gap-2">
+                      {activeSeasonId === season.id ? (
+                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded">Active</span>
+                      ) : (
+                        <button
+                          onClick={() => handleUpdateSettings({ activeSeasonId: season.id })}
+                          className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white px-2 py-1"
+                        >
+                          Set Active
+                        </button>
+                      )}
+                      {season.id !== 'legacy' && (
+                        <button
+                          onClick={() => setSeasonToDelete(season)}
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                          title="Delete Season"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  {season.id !== 'legacy' && (
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Allow Extra Outfielder (EF)</span>
+                      <button 
+                        onClick={() => firebaseService.updateSeason(season.id, { allowExtraOutfielder: !(season as Season).allowExtraOutfielder })}
+                        className={`w-10 h-5 rounded-full transition-colors relative shrink-0 ${(season as Season).allowExtraOutfielder ? 'bg-slate-900 dark:bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                      >
+                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${(season as Season).allowExtraOutfielder ? 'left-[22px]' : 'left-0.5'}`} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

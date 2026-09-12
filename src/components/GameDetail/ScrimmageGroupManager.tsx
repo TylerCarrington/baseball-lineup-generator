@@ -599,9 +599,17 @@ export const ScrimmageGroupManager: React.FC<ScrimmageGroupManagerProps> = ({
                               </>
                             )}
                             
-                            <button
+                            <div
+                              role="button"
+                              tabIndex={0}
                               onClick={() => setEditingCell({ inning: inningKey, position: pos })}
-                              className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] border ${
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  setEditingCell({ inning: inningKey, position: pos });
+                                }
+                              }}
+                              className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] print:min-w-0 border cursor-pointer ${
                                 isOut
                                   ? 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-200'
                                   : isDuplicate
@@ -617,7 +625,7 @@ export const ScrimmageGroupManager: React.FC<ScrimmageGroupManagerProps> = ({
                                 <span className="text-slate-300 italic">Empty</span>
                               )}
                               {isOut && <AlertCircle size={12} className="ml-2" />}
-                            </button>
+                            </div>
                           </td>
                         );
                       })}

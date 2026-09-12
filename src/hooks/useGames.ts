@@ -60,8 +60,8 @@ export function useGames(user: User | null, isAuthReady: boolean, selectedGameId
   }, [games]);
 
   const selectedGame = useMemo(() => {
-    return games.find(g => g.id === selectedGameId) || null;
-  }, [games, selectedGameId]);
+    return allGames.find(g => g.id === selectedGameId) || null;
+  }, [allGames, selectedGameId]);
 
   return {
     games,

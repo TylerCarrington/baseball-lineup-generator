@@ -1,6 +1,6 @@
-import { Game, Player, RSVPStatus } from '../types';
+import { Game, Player, RSVPStatus, Season } from '../types';
 
-export function generateLineup(game: Game, players: Player[], settings: any): Record<string, Record<string, string>> {
+export function generateLineup(game: Game, players: Player[], settings: any, seasons?: Season[]): Record<string, Record<string, string>> {
   const availablePlayers = players.filter(p => game.rsvps[p.id] !== RSVPStatus.NO);
   if (availablePlayers.length < 8) {
     throw new Error("At least 8 players are required to generate a lineup.");
@@ -10,6 +10,12 @@ export function generateLineup(game: Game, players: Player[], settings: any): Re
     "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
     "Shortstop", "Left Field", "Center Field", "Right Field"
   ];
+  if (seasons) {
+    const gameSeason = seasons.find(s => s.id === game.seasonId);
+    if (gameSeason?.allowExtraOutfielder) {
+      fieldPositions.push("Extra Outfielder");
+    }
+  }
 
   const canPlay = (player: Player, pos: string) => {
     if (pos === "Pitcher") return player.positions.includes("Starting Pitcher") || player.positions.includes("Relief Pitcher");
@@ -195,7 +201,7 @@ export function generateLineup(game: Game, players: Player[], settings: any): Re
   return lineup;
 }
 
-export function fixLineup(game: Game, players: Player[]): { newLineup: Record<string, Record<string, string>>, newGroups?: string[][], fixedAny: boolean, skippedDueToLocks: boolean } {
+export function fixLineup(game: Game, players: Player[], seasons?: Season[]): { newLineup: Record<string, Record<string, string>>, newGroups?: string[][], fixedAny: boolean, skippedDueToLocks: boolean } {
   if (!game.lineup) return { newLineup: {}, fixedAny: false, skippedDueToLocks: false };
 
   const newLineup = JSON.parse(JSON.stringify(game.lineup));
@@ -218,6 +224,12 @@ export function fixLineup(game: Game, players: Player[]): { newLineup: Record<st
     "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
     "Shortstop", "Left Field", "Center Field", "Right Field"
   ];
+  if (seasons) {
+    const gameSeason = seasons.find(s => s.id === game.seasonId);
+    if (gameSeason?.allowExtraOutfielder) {
+      fieldPositions.push("Extra Outfielder");
+    }
+  }
 
   const isPosLocked = (pos: string, inning: number) => {
     if (game.lockedInnings?.includes(inning)) return true;

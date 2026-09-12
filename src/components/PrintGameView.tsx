@@ -21,8 +21,10 @@ const POSITION_COORDINATES: Record<string, { x: number; y: number; anchor: strin
   "Third Base": { x: 12, y: 50, anchor: "end" },
   "Shortstop": { x: 28, y: 32, anchor: "end" },
   "Left Field": { x: 15, y: 10, anchor: "middle" },
-  "Center Field": { x: 50, y: 4, anchor: "middle" },
-  "Right Field": { x: 85, y: 10, anchor: "middle" }
+  "Center Field": { x: 50, y: 5.5, anchor: "middle" },
+  "Right Field": { x: 85, y: 10, anchor: "middle" },
+  "Extra Outfielder": { x: 50, y: -8.5, anchor: "middle" },
+  "Designated Hitter": { x: 50, y: -16, anchor: "middle" }
 };
 
 export function PrintGameView({ game, players }: PrintGameViewProps) {
@@ -87,11 +89,13 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
     const benchPlayers = attendingPlayers.filter(p => !assignedPlayerIds.has(p.id));
 
     return (
-      <div key={inning} className="relative border border-black p-1.5 rounded-md bg-white">
-        <div className="absolute top-0.5 left-1.5 font-bold text-[10px] uppercase tracking-tighter text-black">Inning {inning}</div>
+      <div key={inning} className="relative border border-black p-1 rounded bg-white flex flex-col justify-between avoid-break">
+        <div className="flex justify-between items-center px-1">
+          <span className="font-black text-[9px] uppercase tracking-wider text-black">Inning {inning}</span>
+        </div>
         
-        <div className="aspect-square relative w-[80%] mx-auto overflow-visible py-2 mt-1">
-          <svg viewBox="-20 -10 140 120" className="w-full h-full text-black overflow-visible">
+        <div className="w-[78%] max-w-[215px] aspect-[140/125] mx-auto relative overflow-visible my-0.5">
+          <svg viewBox="-20 -20 140 130" className="w-full h-full text-black overflow-visible">
             {/* Diamond lines - Shrink from center (50, 50) */}
             <path d="M 50 82 L 82 50 L 50 18 L 18 50 Z" fill="none" stroke="black" strokeWidth="0.4" />
             <circle cx="50" cy="82" r="1" fill="black" />   {/* Home */}
@@ -106,6 +110,8 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
               const player = players.find(p => p.id === pId);
               if (!player) return null;
               
+              const isExtraOutfielder = pos === "Extra Outfielder";
+
               return (
                 <g key={pos}>
                   <text 
@@ -118,11 +124,11 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
                   </text>
                   <text 
                     x={coords.x} 
-                    y={coords.y + 7} 
+                    y={coords.y + 6.5} 
                     textAnchor={coords.anchor as any}
-                    className="fill-black font-extrabold text-[6px]"
+                    className="fill-black font-extrabold text-[5.5px]"
                   >
-                    #{player.jerseyNumber || ''}
+                    {player.jerseyNumber ? `#${player.jerseyNumber}` : ''}{isExtraOutfielder ? (player.jerseyNumber ? ' (EF)' : '(EF)') : ''}
                   </text>
                 </g>
               );
@@ -131,18 +137,20 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
         </div>
 
         {/* Bench List */}
-        <div className="mt-1 border-t border-black pt-0.5">
-          <div className="text-[7px] font-bold text-black uppercase leading-none mb-0.5">Bench</div>
-          <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
-            {benchPlayers.length > 0 ? (
-              benchPlayers.map(p => (
-                <span key={p.id} className="text-[10px] text-black whitespace-nowrap font-medium">
-                  {p.name} {p.jerseyNumber && `#${p.jerseyNumber}`}
-                </span>
-              ))
-            ) : (
-              <span className="text-[7px] text-black italic font-medium">None</span>
-            )}
+        <div className="mt-0.5 border-t border-black/70 pt-0.5 px-0.5">
+          <div className="flex items-center gap-1">
+            <span className="text-[7.5px] font-black text-black uppercase tracking-wider shrink-0">Bench:</span>
+            <div className="flex flex-wrap gap-x-1.5 gap-y-0 text-[8px] font-medium leading-tight text-black truncate">
+              {benchPlayers.length > 0 ? (
+                benchPlayers.map(p => (
+                  <span key={p.id} className="whitespace-nowrap">
+                    {p.name}{p.jerseyNumber ? ` #${p.jerseyNumber}` : ''}
+                  </span>
+                ))
+              ) : (
+                <span className="text-[7.5px] text-neutral-600 italic">None</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -150,16 +158,44 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
   };
 
   return (
-    <div className="bg-white text-black min-h-screen p-6 font-sans">
-      <div className="max-w-5xl mx-auto">
+    <div className="bg-white text-black min-h-screen p-4 sm:p-6 print:p-0 print:m-0 print:min-h-0 print-page font-sans">
+      <style>{`
+        @page {
+          size: portrait;
+          margin: 8mm 8mm;
+        }
+        @media print {
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .print-page {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            page-break-after: avoid !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .avoid-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+        }
+      `}</style>
+      <div className="max-w-5xl mx-auto print:max-w-none print:w-full">
         
         {/* Print Header */}
-        <div className="border-b-2 border-black pb-3 mb-6 flex justify-between items-end">
+        <div className="border-b-2 border-black pb-2 mb-3 flex justify-between items-end avoid-break">
           <div>
-            <h1 className="text-3xl font-extrabold uppercase tracking-tight leading-none mb-1">
+            <h1 className="text-2xl font-black uppercase tracking-tight leading-none mb-1">
               {game.type === 'practice' ? 'Practice' : game.name}
             </h1>
-            <div className="text-black flex items-center gap-4 text-sm font-bold">
+            <div className="text-black flex items-center gap-3 text-xs font-bold">
               <span>{gameDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
               {game.time && (
                 <span>{(() => {
@@ -178,7 +214,7 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[10px] font-black uppercase text-black tracking-widest">Lineup+ Official Card</div>
+            <div className="text-[9px] font-black uppercase text-black tracking-widest">Lineup+ Official Card</div>
           </div>
         </div>
 
@@ -326,23 +362,23 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
           </div>
         ) : (
           /* Multi-column Layout for Games */
-          <div className="grid grid-cols-[200px_1fr] gap-8">
+          <div className="grid grid-cols-[190px_1fr] gap-4 print:gap-4 items-start">
             
             {/* Left Column: Batting Order */}
-            <div className="border-r border-black pr-6">
-              <h2 className="text-sm font-black uppercase tracking-widest text-black mb-4 pb-1 border-b border-black">Batting Order</h2>
+            <div className="border-r border-black pr-3.5 avoid-break">
+              <h2 className="text-xs font-black uppercase tracking-widest text-black mb-1.5 pb-0.5 border-b border-black">Batting Order</h2>
               {battingOrderPlayers.length > 0 ? (
-                <ol className="space-y-1.5">
+                <ol className="space-y-0.5">
                   {battingOrderPlayers.map((player, idx) => (
-                    <li key={player.id} className="flex items-center gap-3 py-1 border-b border-black last:border-0 text-black">
-                      <span className="w-5 text-sm font-black text-black">{(idx + 1).toString().padStart(2, '0')}</span>
+                    <li key={player.id} className="flex items-center gap-2 py-0.5 border-b border-black/30 last:border-0 text-black">
+                      <span className="w-4 text-xs font-black text-black shrink-0">{(idx + 1).toString().padStart(2, '0')}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold truncate leading-tight">
+                        <div className="text-xs font-bold truncate leading-tight">
                           {player.name}
-                          <span className="ml-1 opacity-60">({firstInningPositionMap[player.id] || 'EH'})</span>
+                          <span className="ml-1 opacity-60 font-semibold text-[10px]">({firstInningPositionMap[player.id] || 'EH'})</span>
                         </div>
-                        {player.jerseyNumber && <div className="text-[10px] text-black font-black leading-none">#{player.jerseyNumber}</div>}
                       </div>
+                      {player.jerseyNumber && <div className="text-[10px] text-black font-black leading-none shrink-0">#{player.jerseyNumber}</div>}
                     </li>
                   ))}
                 </ol>
@@ -351,33 +387,33 @@ export function PrintGameView({ game, players }: PrintGameViewProps) {
               )}
 
               {/* Not Attending Section */}
-              <div className="mt-8">
-                <h2 className="text-[10px] font-black uppercase tracking-widest text-black mb-2 pb-0.5 border-b border-black">Not Attending</h2>
+              <div className="mt-3 pt-1.5 border-t border-black">
+                <h2 className="text-[9px] font-black uppercase tracking-widest text-black mb-1">Not Attending</h2>
                 {notAttendingPlayers.length > 0 ? (
-                  <ul className="space-y-1">
+                  <ul className="space-y-0.5">
                     {notAttendingPlayers.map(player => (
-                      <li key={player.id} className="text-[10px] text-black font-black">
+                      <li key={player.id} className="text-[9px] text-black font-bold">
                         {player.name} {player.jerseyNumber && `#${player.jerseyNumber}`}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-[8px] text-black italic font-bold">None</p>
+                  <p className="text-[8px] text-black italic font-medium">None</p>
                 )}
               </div>
             </div>
 
             {/* Right Column: Inning Diamonds */}
-            <div>
-              <h2 className="text-sm font-black uppercase tracking-widest text-black mb-4 pb-1 border-b border-black">Fielding Lineup</h2>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="avoid-break">
+              <h2 className="text-xs font-black uppercase tracking-widest text-black mb-1.5 pb-0.5 border-b border-black">Fielding Lineup</h2>
+              <div className="grid grid-cols-2 gap-2">
                 {[1, 2, 3, 4, 5, 6].map(inning => renderDiamond(inning))}
               </div>
             </div>
           </div>
         )}
 
-        <div className="mt-8 pt-4 border-t border-black text-[8px] text-black text-center uppercase tracking-widest font-black">
+        <div className="mt-2.5 pt-1.5 border-t border-black text-[8px] text-black text-center uppercase tracking-widest font-black avoid-break">
           Created with Lineup+
         </div>
 

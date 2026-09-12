@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { Game, Player, RSVPStatus, OperationType } from '../../types';
+import { Game, Player, RSVPStatus, OperationType, Season } from '../../types';
 import { GameHeader } from './GameHeader';
 import { GameDetailTabs } from './GameDetailTabs';
 import { RSVPManager } from './RSVPManager';
@@ -29,6 +29,7 @@ interface GameDetailViewProps {
   darkMode: boolean;
   setShowClearLineupConfirm: (show: boolean) => void;
   setGames: React.Dispatch<React.SetStateAction<Game[]>>;
+  seasons: Season[];
 }
 
 export const GameDetailView: React.FC<GameDetailViewProps> = ({
@@ -40,7 +41,8 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
   isAuthReady,
   darkMode,
   setShowClearLineupConfirm,
-  setGames
+  setGames,
+  seasons
 }) => {
   const { settings } = useSettings(user, isAuthReady);
   const {
@@ -79,7 +81,7 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
     handleTogglePublish,
     handleUpdateNumGroups,
     handleToggleBattingOrderCheck
-  } = useGameActions(games, players, settings);
+  } = useGameActions(games, players, settings, seasons);
 
   const handleMovePlayerToPosition = async (playerId: string, newPositionIndex: number) => {
     if (!game.id || !user) return;
@@ -302,6 +304,7 @@ export const GameDetailView: React.FC<GameDetailViewProps> = ({
                   setEditingCell={setEditingCell}
                   handleUpdateLineupCell={handleUpdateLineupCell}
                   darkMode={darkMode}
+                  seasons={seasons}
                 />
               )
             )}

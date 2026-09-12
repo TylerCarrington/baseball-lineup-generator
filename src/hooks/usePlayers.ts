@@ -53,6 +53,7 @@ export function usePlayers(user: User | null, isAuthReady: boolean, activeSeason
 
   return {
     players,
+    allPlayers,
     playersMap,
     setPlayers: setAllPlayers
   };

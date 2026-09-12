@@ -38,6 +38,7 @@ export const POSITION_MAPPING: Record<string, string> = {
   "Left Field": "LF",
   "Center Field": "CF",
   "Right Field": "RF",
+  "Extra Outfielder": "EF",
   "Designated Hitter": "DH"
 };
 
@@ -52,5 +53,6 @@ export const ALL_POSITIONS = [
   "Left Field",
   "Center Field",
   "Right Field",
+  "Extra Outfielder",
   "Designated Hitter"
 ];

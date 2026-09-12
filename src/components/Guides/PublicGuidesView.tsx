@@ -7,6 +7,7 @@ import { BookOpen, Youtube, ArrowLeft, Folder, ExternalLink } from 'lucide-react
 import { MarkdownContent } from './MarkdownContent';
 import { extractYoutubeId } from '../../lib/youtube';
 import { SkillsChecklistView } from './SkillsChecklistView';
+import { DrillDetailModal } from '../ui/DrillDetailModal';
 
 const SECTION_ORDER_MAP: Record<string, number> = {
   'batting': 1, 'hitting': 1,
@@ -41,6 +42,7 @@ export const PublicGuidesView: React.FC = () => {
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeModalDrill, setActiveModalDrill] = useState<Drill | null>(null);
 
   useEffect(() => {
     async function loadPublicGuides() {
@@ -303,6 +305,7 @@ export const PublicGuidesView: React.FC = () => {
                     onUpdateChecklist={async () => {}}
                     onDeleteChecklist={async () => {}}
                     onOpenArticle={(art) => navigate(`/shared/${uid}/guides/article/${art.id}`)}
+                    onOpenDrill={(drill) => setActiveModalDrill(drill)}
                     isAdmin={false}
                     activeSeasonName="Current Season"
                   />
@@ -311,6 +314,11 @@ export const PublicGuidesView: React.FC = () => {
             </div>
           </div>
         )}
+      <DrillDetailModal
+        isOpen={Boolean(activeModalDrill)}
+        onClose={() => setActiveModalDrill(null)}
+        drill={activeModalDrill}
+      />
     </div>
   );
 };

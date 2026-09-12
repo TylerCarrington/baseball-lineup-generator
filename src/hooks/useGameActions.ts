@@ -7,7 +7,8 @@ import {
   Player, 
   RSVPStatus, 
   OperationType, 
-  TeamSettings 
+  TeamSettings,
+  Season
 } from '../types';
 import { handleFirestoreError } from '../lib/utils';
 import { 
@@ -19,7 +20,7 @@ import {
   splitScrimmageGroups 
 } from '../lib/lineupLogic';
 
-export function useGameActions(games: Game[], players: Player[], settings: TeamSettings | null) {
+export function useGameActions(games: Game[], players: Player[], settings: TeamSettings | null, seasons: Season[]) {
 
   const recalculateBattingOrder = (currentOrder: string[], rsvps: Record<string, RSVPStatus>, allPlayers: Player[]) => {
     const yesPlayers = currentOrder.filter(id => rsvps[id] === RSVPStatus.YES && allPlayers.some(p => p.id === id));
@@ -270,7 +271,7 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
     if (!game) return;
 
     try {
-      const newLineup = generateLineup(game, players, settings);
+      const newLineup = generateLineup(game, players, settings, seasons);
       await updateDoc(doc(db, 'games', gameId), {
         lineup: newLineup,
         battingOrderChecks: {} // Reset checks when generating lineup
@@ -285,7 +286,7 @@ export function useGameActions(games: Game[], players: Player[], settings: TeamS
     if (!game) return;
 
     try {
-      const { newLineup, newGroups, fixedAny, skippedDueToLocks } = fixLineup(game, players);
+      const { newLineup, newGroups, fixedAny, skippedDueToLocks } = fixLineup(game, players, seasons);
       
       if (fixedAny) {
         const updates: any = { 

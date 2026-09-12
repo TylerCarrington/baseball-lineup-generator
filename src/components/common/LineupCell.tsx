@@ -46,7 +46,7 @@ export const LineupCell = React.memo<LineupCellProps>(({
       return <span className="text-slate-300 dark:text-slate-600 italic">Empty</span>;
     }
     return (
-      <div className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] border ${
+      <div className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] print:min-w-0 border ${
         isOut
           ? 'bg-rose-500 dark:bg-rose-900/50 text-white border-rose-600 dark:border-rose-800'
           : isDuplicate
@@ -148,9 +148,17 @@ export const LineupCell = React.memo<LineupCellProps>(({
         </>
       )}
       
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setEditingCell && setEditingCell({ inning: inningKey, position: pos })}
-        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] border ${
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setEditingCell && setEditingCell({ inning: inningKey, position: pos });
+          }
+        }}
+        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all min-w-[100px] print:min-w-0 border cursor-pointer ${
           isOut
             ? 'bg-rose-500 dark:bg-rose-900/50 text-white border-rose-600 dark:border-rose-800 shadow-md shadow-rose-200 dark:shadow-none'
             : isDuplicate
@@ -171,7 +179,7 @@ export const LineupCell = React.memo<LineupCellProps>(({
           <span className="text-slate-300 dark:text-slate-600 italic">Empty</span>
         )}
         {isOut && <AlertCircle size={12} className="ml-2" />}
-      </button>
+      </div>
     </>
   );
 });

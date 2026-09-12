@@ -67,8 +67,11 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
   const activeSeasonId = settings?.activeSeasonId || 'legacy';
   const { seasons } = useSeasons(user, isAuthReady);
 
-  const { players } = usePlayers(user, isAuthReady, activeSeasonId);
+  const { players, allPlayers } = usePlayers(user, isAuthReady, activeSeasonId);
   const { games, selectedGame, setGames } = useGames(user, isAuthReady, selectedGameId, activeSeasonId);
+
+  // When viewing a specific game (especially via direct print link), ensure we use players from that game's season
+  const gamePlayers = selectedGame ? allPlayers.filter(p => (p.seasonId || 'legacy') === (selectedGame.seasonId || 'legacy')) : players;
   const { drills, addDrill, updateDrill, deleteDrill } = useDrills(user);
   
   const isAdmin = user?.email?.toLowerCase() === 'tylercarringtonwa@gmail.com';
@@ -93,16 +96,6 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     return <PublicPortalLayout darkMode={darkMode} setDarkMode={setDarkMode} />;
   }
 
-  if (isPrintMode) {
-    const isGuidePrint = location.pathname.includes('/guides/') || location.pathname.includes('/article/') || location.pathname.includes('/section/');
-    if (isGuidePrint) {
-      const activeSeasonForPrint = seasons.find(s => s.id === activeSeasonId) || null;
-      return <PrintGuideWrapper user={user} activeSeasonId={activeSeasonId} activeSeason={activeSeasonForPrint} drills={drills} />;
-    }
-    if (!selectedGame || loading) return <div className="text-center py-12">Loading game for print...</div>;
-    return <PrintGameView game={selectedGame} players={players} games={games} user={user} isAuthReady={isAuthReady} setGames={setGames} />;
-  }
-
   if (!user) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 transition-colors">
       <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl shadow-xl p-8 text-center border border-slate-200 dark:border-slate-800">
@@ -114,6 +107,16 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
     </div>
   );
 
+  if (isPrintMode) {
+    const isGuidePrint = location.pathname.includes('/guides/') || location.pathname.includes('/article/') || location.pathname.includes('/section/');
+    if (isGuidePrint) {
+      const activeSeasonForPrint = seasons.find(s => s.id === activeSeasonId) || null;
+      return <PrintGuideWrapper user={user} activeSeasonId={activeSeasonId} activeSeason={activeSeasonForPrint} drills={drills} />;
+    }
+    if (!selectedGame || loading) return <div className="text-center py-12">Loading game for print...</div>;
+    return <PrintGameView game={selectedGame} players={gamePlayers} games={games} user={user} isAuthReady={isAuthReady} setGames={setGames} />;
+  }
+
   const activeSeason = seasons.find(s => s.id === activeSeasonId) || null;
 
   return (
@@ -124,7 +127,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
           <Route path="/" element={<Navigate to="/games" replace />} />
           <Route path="/games" element={<GamesTab games={games} players={players} user={user} settings={settings} showPastGames={showPastGames} setShowPastGames={setShowPastGames} handleCopyLink={handleCopyLink} handleTabChange={(t) => navigate(`/${t}`)} copySuccess={copySuccess} startCreateLineup={() => navigate('/games/new')} handleViewGame={(id) => navigate(`/games/${id}`)} setDeleteConfirmation={setDeleteConfirmation} />} />
           <Route path="/games/new" element={<CreateGameView players={players} user={user} activeSeasonId={activeSeasonId} />} />
-          <Route path="/games/:id" element={selectedGame ? <GameDetailView game={selectedGame} players={players} games={games} user={user} isAuthReady={isAuthReady} darkMode={darkMode} setShowClearLineupConfirm={setShowClearLineupConfirm} onBack={() => navigate('/games')} setGames={setGames} /> : <div className="text-center py-12 text-slate-500">Loading game...</div>} />
+          <Route path="/games/:id" element={selectedGame ? <GameDetailView game={selectedGame} players={gamePlayers} games={games} user={user} isAuthReady={isAuthReady} darkMode={darkMode} setShowClearLineupConfirm={setShowClearLineupConfirm} onBack={() => navigate('/games')} setGames={setGames} seasons={seasons} /> : <div className="text-center py-12 text-slate-500">Loading game...</div>} />
           <Route path="/roster" element={<RosterTab players={players} user={user} startCreateLineup={() => navigate('/games/new')} setDeleteConfirmation={setDeleteConfirmation} activeSeasonId={activeSeasonId} />} />
           <Route path="/settings" element={<SettingsTab settings={settings} handleUpdateSettings={(u) => firebaseService.updateSettings(user.uid, u)} darkMode={darkMode} setDarkMode={setDarkMode} user={user} handleCopyLink={handleCopyLink} copySuccess={copySuccess} seasons={seasons} activeSeasonId={activeSeasonId} players={players} />} />
           <Route path="/drills" element={<DrillLibraryView drills={drills} isAdmin={isAdmin} onDeleteDrill={deleteDrill} onAddDrill={addDrill} onUpdateDrill={updateDrill} darkMode={darkMode} user={user} />} />

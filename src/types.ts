@@ -18,6 +18,7 @@ export interface Season {
   name: string;
   uid: string;
   createdAt: any;
+  allowExtraOutfielder?: boolean;
 }
 
 export interface Player {

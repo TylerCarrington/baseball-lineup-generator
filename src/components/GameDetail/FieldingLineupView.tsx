@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Check, Lock, Unlock, AlertCircle, Wrench, RefreshCw, Trash2 } from 'lucide-react';
-import { Game, Player, RSVPStatus } from '../../types';
+import { Game, Player, RSVPStatus, Season } from '../../types';
 import { getPositionAbbreviation } from '../../lib/utils';
 import { LineupCell } from '../common/LineupCell';
 import { NotAttendingList } from '../common/NotAttendingList';
@@ -19,6 +19,7 @@ interface FieldingLineupViewProps {
   setEditingCell: (cell: { inning: string, position: string } | null) => void;
   handleUpdateLineupCell: (gameId: string, inning: string, position: string, playerId: string) => void;
   darkMode: boolean;
+  seasons: Season[];
 }
 
 export const FieldingLineupView: React.FC<FieldingLineupViewProps> = ({
@@ -34,12 +35,20 @@ export const FieldingLineupView: React.FC<FieldingLineupViewProps> = ({
   editingCell,
   setEditingCell,
   handleUpdateLineupCell,
-  darkMode
+  darkMode,
+  seasons
 }) => {
-  const fieldPositions = [
-    "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
-    "Shortstop", "Left Field", "Center Field", "Right Field"
-  ];
+  const fieldPositions = useMemo(() => {
+    const basePositions = [
+      "Pitcher", "Catcher", "First Base", "Second Base", "Third Base", 
+      "Shortstop", "Left Field", "Center Field", "Right Field"
+    ];
+    const gameSeason = seasons.find(s => s.id === game.seasonId);
+    if (gameSeason?.allowExtraOutfielder) {
+      basePositions.push("Extra Outfielder");
+    }
+    return basePositions;
+  }, [game.seasonId, seasons]);
 
   const fixButtonInfo = useMemo(() => {
     if (!game.lineup || Object.keys(game.lineup).length === 0) return null;
@@ -190,7 +199,7 @@ export const FieldingLineupView: React.FC<FieldingLineupViewProps> = ({
                       >
                         {game.lockedPositions?.includes(pos) ? <Lock size={14} /> : <Unlock size={14} />}
                       </button>
-                      <span className="whitespace-nowrap">{pos}</span>
+                      <span className="whitespace-normal sm:whitespace-nowrap">{pos}</span>
                     </div>
                   </th>
                   {[1, 2, 3, 4, 5, 6].map(inning => {

@@ -1,22 +1,22 @@
 // Lineup+ Progressive Web App Service Worker
-const CACHE_NAME = 'lineup-plus-v1';
+const CACHE_NAME = 'lineup-plus-v2';
 const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-  '/pwa-192x192.png',
-  '/pwa-512x512.png',
-  '/pwa-maskable-512x512.png',
-  '/apple-touch-icon.png',
-  '/icon.svg',
-  '/favicon.ico'
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './pwa-192x192.png',
+  './pwa-512x512.png',
+  './pwa-maskable-512x512.png',
+  './apple-touch-icon.png',
+  './icon.svg',
+  './favicon.ico'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn('Precache partial fallback:', err);
+        console.warn('[PWA] Precache partial fallback:', err);
       });
     })
   );
@@ -39,7 +39,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only intercept GET requests from the app's own origin
+  // Only intercept GET requests
   if (
     event.request.method !== 'GET' ||
     !event.request.url.startsWith(self.location.origin) ||
@@ -50,17 +50,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for navigation (HTML page)
+  // Navigation requests (HTML page)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match('/index.html') || caches.match('/');
+        return caches.match('./index.html') || caches.match('./') || caches.match(event.request);
       })
     );
     return;
   }
 
-  // Stale-while-revalidate for local static assets
+  // Stale-while-revalidate for local assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const networkFetch = fetch(event.request)

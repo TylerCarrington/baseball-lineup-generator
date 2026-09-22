@@ -34,6 +34,7 @@ import { PublicToolsView } from './components/PublicToolsView';
 import { PublicPortalLayout } from './components/PublicPortalLayout';
 import { PrintGuideWrapper } from './components/Guides/PrintGuideWrapper';
 import { ToolsMainView } from './components/Tools/ToolsMainView';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 // --- Connection Test ---
 async function testConnection() {
@@ -139,6 +140,7 @@ function BaseballApp({ darkMode, setDarkMode }: { darkMode: boolean; setDarkMode
       </main>
       <ConfirmationModal isOpen={deleteConfirmation.isOpen} title={deleteConfirmation.title} message={deleteConfirmation.message} onConfirm={confirmDelete} onClose={() => setDeleteConfirmation(prev => ({ ...prev, isOpen: false }))} variant="danger" />
       <ConfirmationModal isOpen={showClearLineupConfirm} title="Clear Lineup" message="Are you sure you want to clear the entire fielding lineup for all innings?" onConfirm={() => selectedGameId && firebaseService.updateGame(selectedGameId, { lineup: {}, lockedInnings: [], lockedPositions: [] }).then(() => setShowClearLineupConfirm(false))} onClose={() => setShowClearLineupConfirm(false)} variant="danger" />
+      <OfflineIndicator />
     </div>
   );
 }

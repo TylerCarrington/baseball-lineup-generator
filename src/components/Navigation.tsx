@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Trophy, User as UserIcon, Menu, LogOut, ChevronDown } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { Season } from '../types';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface NavigationProps {
   user: User;
@@ -121,6 +122,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           </nav>
         </div>
         <div className="flex items-center gap-4">
+          <PWAInstallButton />
           <div className="hidden sm:flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
             <UserIcon size={16} />
             <span>{user.displayName}</span>

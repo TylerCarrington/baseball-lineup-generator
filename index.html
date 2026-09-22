@@ -8,13 +8,29 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Lineup+" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
     <title>Lineup+</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(function(registration) {
+              console.log('[PWA] Service Worker registered with scope:', registration.scope);
+            })
+            .catch(function(error) {
+              console.warn('[PWA] Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
 
